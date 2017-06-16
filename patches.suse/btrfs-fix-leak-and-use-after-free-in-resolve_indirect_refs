@@ -1,0 +1,61 @@
+From enadolski@suse.com  Fri Jun 16 14:56:32 2017
+From: Edmund Nadolski <enadolski@suse.com>
+Subject: btrfs: fix leak and use-after-free in resolve_indirect_refs
+References: bsc#974590 bsc#1030061 bsc#1022914 bsc#1017461
+Patch-mainline: not yet, needs testing on linux-next
+
+The resolve_indirect_refs() calls prelim_ref_insert() which can free the
+ref on a merge.  This call has to be moved after new parents are added,
+since those get a memcpy from the ref. The ref also can be leaked when a
+BACKREF_FOUND_SHARED is detected.
+
+Signed-off-by: Edmund Nadolski <enadolski@suse.de>
+Signed-off-by: Jeff Mahoney <jeffm@suse.com>
+---
+ fs/btrfs/backref.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/fs/btrfs/backref.c b/fs/btrfs/backref.c
+index 1c822cc..72a1ed3 100644
+--- a/fs/btrfs/backref.c
++++ b/fs/btrfs/backref.c
+@@ -603,6 +603,7 @@ static int resolve_indirect_refs(struct btrfs_fs_info *fs_info,
+ 		}
+ 
+ 		if (root_objectid && ref->root_id != root_objectid) {
++			release_pref(ref);
+ 			ret = BACKREF_FOUND_SHARED;
+ 			goto out;
+ 		}
+@@ -629,9 +630,6 @@ static int resolve_indirect_refs(struct btrfs_fs_info *fs_info,
+ 		ref->parent = node ? node->val : 0;
+ 		ref->inode_list = unode_aux_to_inode_list(node);
+ 
+-		/* Now it's a direct ref, put it in the the direct tree */
+-		prelim_ref_insert(fs_info, &preftrees->direct, ref);
+-
+ 		/* Add a prelim_ref(s) for any other parent(s). */
+ 		while ((node = ulist_next(parents, &uiter))) {
+ 			struct prelim_ref *new_ref;
+@@ -639,6 +637,7 @@ static int resolve_indirect_refs(struct btrfs_fs_info *fs_info,
+ 			new_ref = kmem_cache_alloc(btrfs_prelim_ref_cache,
+ 						   GFP_NOFS);
+ 			if (!new_ref) {
++				release_pref(ref);
+ 				ret = -ENOMEM;
+ 				goto out;
+ 			}
+@@ -648,6 +647,9 @@ static int resolve_indirect_refs(struct btrfs_fs_info *fs_info,
+ 			prelim_ref_insert(fs_info, &preftrees->direct, new_ref);
+ 		}
+ 
++		/* Now it's a direct ref, put it in the the direct tree */
++		prelim_ref_insert(fs_info, &preftrees->direct, ref);
++
+ 		ulist_reinit(parents);
+ 	}
+ out:
+-- 
+2.10.2
+
+
