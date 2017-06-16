@@ -1,0 +1,62 @@
+From jeffm@suse.com  Fri Jun 16 14:56:32 2017
+From: Jeff Mahoney <jeffm@suse.com>
+Subject: btrfs: add a node counter to each of the rbtrees
+References: bsc#974590 bsc#1030061 bsc#1022914 bsc#1017461
+Patch-mainline: not yet, needs testing on linux-next
+
+This patch adds counters to each of the rbtrees so that we can tell
+how large they are growing for a given workload.  These counters
+will be exported by tracepoints in the next patch.
+
+Signed-off-by: Jeff Mahoney <jeffm@suse.com>
+---
+ fs/btrfs/backref.c |    7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+--- a/fs/btrfs/backref.c
++++ b/fs/btrfs/backref.c
+@@ -136,9 +136,10 @@ struct prelim_ref {
+ 
+ struct preftree {
+ 	struct rb_root root;
++	unsigned count;
+ };
+ 
+-#define PREFTREE_INIT	{ .root = RB_ROOT }
++#define PREFTREE_INIT	{ .root = RB_ROOT, .count = 0 }
+ 
+ struct preftrees {
+ 	struct preftree direct;    /* BTRFS_SHARED_[DATA|BLOCK]_REF_KEY */
+@@ -247,6 +248,7 @@ static void prelim_ref_insert(struct pre
+ 		}
+ 	}
+ 
++	preftree->count++;
+ 	rb_link_node(&newref->rbnode, parent, p);
+ 	rb_insert_color(&newref->rbnode, root);
+ }
+@@ -260,6 +262,7 @@ static void prelim_release(struct preftr
+ 		ref = rb_entry(node, struct prelim_ref, rbnode);
+ 		node = rb_next(&ref->rbnode);
+ 		rb_erase(&ref->rbnode, &preftree->root);
++		preftree->count--;
+ 		release_pref(ref);
+ 	}
+ }
+@@ -593,6 +596,7 @@ static int resolve_indirect_refs(struct
+ 		BUG_ON(ref->parent);	/* should not be a direct ref */
+ 
+ 		rb_erase(&ref->rbnode, &preftrees->indirect.root);
++		preftrees->indirect.count--;
+ 
+ 		if (ref->count == 0) {
+ 			release_pref(ref);
+@@ -1221,6 +1225,7 @@ again:
+ 		}
+ 
+ 		rb_erase(&ref->rbnode, &preftrees.direct.root);
++		preftrees.direct.count--;
+ 		release_pref(ref);
+ 	}
+ 	WARN_ON(!RB_EMPTY_ROOT(&preftrees.direct.root));
+
