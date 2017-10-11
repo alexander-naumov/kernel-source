@@ -1,10 +1,10 @@
 From: Mitch Williams <mitch.a.williams@intel.com>
-Date: Mon, 19 Jun 2017 16:41:46 -0700
+Date: Tue, 29 Aug 2017 05:32:30 -0400
 Subject: i40e: add private flag to control source pruning
-Patch-mainline: Not yet, testing
+Patch-mainline: Queued in subsystem maintainer repository
+Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Git-commit: 64615b5418bac1d3b3a50a83fb2e42091fe299fe
 References: bsc#1034075
-
-TEST PATCH
 
 By default, our devices do source pruning, that is, they drop receive
 packets that have the source MAC matching one of the receive filters.
@@ -19,13 +19,18 @@ flags. It's OK to reset when the device is closed and in most cases we
 need the reset the apply these changes.
 
 Signed-off-by: Mitch Williams <mitch.a.williams@intel.com>
+Tested-by: Andrew Bowers <andrewx.bowers@intel.com>
+Signed-off-by: Jeff Kirsher <jeffrey.t.kirsher@intel.com>
 Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
 ---
- drivers/net/ethernet/intel/i40e/i40e.h         |    2 ++
- drivers/net/ethernet/intel/i40e/i40e_ethtool.c |   13 +++++++++++++
- drivers/net/ethernet/intel/i40e/i40e_main.c    |   25 +++++++++++++++++++++++++
+ drivers/net/ethernet/intel/i40e/i40e.h         |  2 ++
+ drivers/net/ethernet/intel/i40e/i40e_ethtool.c | 13 +++++++++++++
+ drivers/net/ethernet/intel/i40e/i40e_main.c    | 25 +++++++++++++++++++++++++
  3 files changed, 40 insertions(+)
 
+diff --git a/drivers/net/ethernet/intel/i40e/i40e.h b/drivers/net/ethernet/intel/i40e/i40e.h
+index d1d0467003e5..b1ab596a4c76 100644
 --- a/drivers/net/ethernet/intel/i40e/i40e.h
 +++ b/drivers/net/ethernet/intel/i40e/i40e.h
 @@ -104,6 +104,7 @@
@@ -44,9 +49,11 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  
  	/* tracks features that get auto disabled by errors */
  	u64 auto_disable_flags;
+diff --git a/drivers/net/ethernet/intel/i40e/i40e_ethtool.c b/drivers/net/ethernet/intel/i40e/i40e_ethtool.c
+index 2664ed8daddf..d8cce9752e8e 100644
 --- a/drivers/net/ethernet/intel/i40e/i40e_ethtool.c
 +++ b/drivers/net/ethernet/intel/i40e/i40e_ethtool.c
-@@ -235,6 +235,7 @@ static const char i40e_priv_flags_string
+@@ -235,6 +235,7 @@ static const char i40e_priv_flags_strings[][ETH_GSTRING_LEN] = {
  	"veb-stats",
  	"packet-split",
  	"hw-atr-eviction",
@@ -54,7 +61,7 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  };
  
  #define I40E_PRIV_FLAGS_STR_LEN ARRAY_SIZE(i40e_priv_flags_strings)
-@@ -2797,6 +2798,8 @@ static u32 i40e_get_priv_flags(struct ne
+@@ -2797,6 +2798,8 @@ static u32 i40e_get_priv_flags(struct net_device *dev)
  		I40E_PRIV_FLAGS_PS : 0;
  	ret_flags |= pf->auto_disable_flags & I40E_FLAG_HW_ATR_EVICT_CAPABLE ?
  		0 : I40E_PRIV_FLAGS_HW_ATR_EVICT;
@@ -63,7 +70,7 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  
  	return ret_flags;
  }
-@@ -2864,6 +2867,16 @@ static int i40e_set_priv_flags(struct ne
+@@ -2864,6 +2867,16 @@ static int i40e_set_priv_flags(struct net_device *dev, u32 flags)
  	else
  		pf->auto_disable_flags |= I40E_FLAG_HW_ATR_EVICT_CAPABLE;
  
@@ -80,9 +87,11 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  	/* if needed, issue reset to cause things to take effect */
  	if (reset_required)
  		i40e_do_reset(pf, BIT(__I40E_PF_RESET_REQUESTED));
+diff --git a/drivers/net/ethernet/intel/i40e/i40e_main.c b/drivers/net/ethernet/intel/i40e/i40e_main.c
+index adefd9ce13c7..44dbf4e83a6e 100644
 --- a/drivers/net/ethernet/intel/i40e/i40e_main.c
 +++ b/drivers/net/ethernet/intel/i40e/i40e_main.c
-@@ -9485,6 +9485,31 @@ static int i40e_add_vsi(struct i40e_vsi
+@@ -9485,6 +9485,31 @@ static int i40e_add_vsi(struct i40e_vsi *vsi)
  
  		enabled_tc = i40e_pf_get_tc_map(pf);
  
@@ -96,7 +105,7 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
 +			ctxt.pf_num = pf->hw.pf_id;
 +			ctxt.vf_num = 0;
 +			ctxt.info.valid_sections |=
-+			     cpu_to_le16(I40E_AQ_VSI_PROP_SWITCH_VALID);
++				     cpu_to_le16(I40E_AQ_VSI_PROP_SWITCH_VALID);
 +			ctxt.info.switch_id =
 +				   cpu_to_le16(I40E_AQ_VSI_SW_ID_FLAG_LOCAL_LB);
 +			ret = i40e_aq_update_vsi_params(hw, &ctxt, NULL);
@@ -105,7 +114,7 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
 +					 "update vsi failed, err %s aq_err %s\n",
 +					 i40e_stat_str(&pf->hw, ret),
 +					 i40e_aq_str(&pf->hw,
-+						    pf->hw.aq.asq_last_status));
++						     pf->hw.aq.asq_last_status));
 +				ret = -ENOENT;
 +				goto err;
 +			}
@@ -114,3 +123,6 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  		/* MFP mode setup queue map and update VSI */
  		if ((pf->flags & I40E_FLAG_MFP_ENABLED) &&
  		    !(pf->hw.func_caps.iscsi)) { /* NIC type PF */
+-- 
+2.14.2
+
