@@ -1,10 +1,11 @@
-From 77a43f3bf5bd46347f3c3a780a295a16dd9e01ee Mon Sep 17 00:00:00 2001
 From: Jan Kara <jack@suse.cz>
 Date: Fri, 26 May 2017 17:45:45 -0400
-Subject: [PATCH 5/7] ext4: fix data corruption for mmap writes
+Subject: [PATCH] ext4: fix data corruption for mmap writes
+Patch-mainline: 4.4.92
+References: bnc#1012382 bsc#1012829
 Git-commit: a056bdaae7a181f7dcc876cfab2f94538e508709
-Patch-mainline: v4.12-rc5
-References: bsc#1012829
+
+commit a056bdaae7a181f7dcc876cfab2f94538e508709 upstream.
 
 mpage_submit_page() can race with another process growing i_size and
 writing data via mmap to the written-back page. As mpage_submit_page()
@@ -15,21 +16,21 @@ Fix the problem by sampling i_size only after the page has been
 write-protected in page tables by clear_page_dirty_for_io() call.
 
 Reported-by: Michael Zimmer <michael@swarm64.com>
-Cc: stable@vger.kernel.org
+CC: stable@vger.kernel.org
 Fixes: cb20d5188366f04d96d2e07b1240cc92170ade40
 Signed-off-by: Jan Kara <jack@suse.cz>
 Signed-off-by: Theodore Ts'o <tytso@mit.edu>
-Acked-by: Jan Kara <jack@suse.cz>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- fs/ext4/inode.c | 18 ++++++++++++++++--
- 1 file changed, 16 insertions(+), 2 deletions(-)
+ fs/ext4/inode.c | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
 
 diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 7076bfd324fd..d4eb2991d566 100644
+index 1796d1bd9a1d..194a6baa4283 100644
 --- a/fs/ext4/inode.c
 +++ b/fs/ext4/inode.c
-@@ -2097,15 +2097,29 @@ static int ext4_writepage(struct page *page,
+@@ -1946,15 +1946,29 @@ static int ext4_writepage(struct page *page,
  static int mpage_submit_page(struct mpage_da_data *mpd, struct page *page)
  {
  	int len;
@@ -38,7 +39,11 @@ index 7076bfd324fd..d4eb2991d566 100644
  	int err;
  
  	BUG_ON(page->index != mpd->first_page);
-+	clear_page_dirty_for_io(page);
+-	if (page->index == size >> PAGE_CACHE_SHIFT)
+-		len = size & ~PAGE_CACHE_MASK;
+-	else
+-		len = PAGE_CACHE_SIZE;
+ 	clear_page_dirty_for_io(page);
 +	/*
 +	 * We have to be very careful here!  Nothing protects writeback path
 +	 * against i_size changes and the page can be writeably mapped into
@@ -53,14 +58,13 @@ index 7076bfd324fd..d4eb2991d566 100644
 +	 * after page tables are updated.
 +	 */
 +	size = i_size_read(mpd->inode);
- 	if (page->index == size >> PAGE_CACHE_SHIFT)
- 		len = size & ~PAGE_CACHE_MASK;
- 	else
- 		len = PAGE_CACHE_SIZE;
--	clear_page_dirty_for_io(page);
++	if (page->index == size >> PAGE_SHIFT)
++		len = size & ~PAGE_MASK;
++	else
++		len = PAGE_SIZE;
  	err = ext4_bio_write_page(&mpd->io_submit, page, len, mpd->wbc, false);
  	if (!err)
  		mpd->wbc->nr_to_write--;
 -- 
-2.10.0
+2.14.2
 

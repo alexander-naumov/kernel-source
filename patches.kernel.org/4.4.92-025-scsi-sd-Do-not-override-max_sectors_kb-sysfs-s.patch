@@ -1,9 +1,11 @@
 From: "Martin K. Petersen" <martin.petersen@oracle.com>
 Date: Wed, 27 Sep 2017 21:38:59 -0400
-Subject: scsi: sd: Do not override max_sectors_kb sysfs setting
+Subject: [PATCH] scsi: sd: Do not override max_sectors_kb sysfs setting
+Patch-mainline: 4.4.92
+References: bnc#1012382 bsc#1025461
 Git-commit: 77082ca503bed061f7fbda7cfd7c93beda967a41
-Patch-mainline: v4.14-rc4
-References: bsc#1025461
+
+commit 77082ca503bed061f7fbda7cfd7c93beda967a41 upstream.
 
 A user may lower the max_sectors_kb setting in sysfs to accommodate
 certain workloads. Previously we would always set the max I/O size to
@@ -14,19 +16,21 @@ Keep the current heuristics for the initial setting of max_sectors_kb.
 For subsequent invocations, only update the current queue limit if it
 exceeds the capabilities of the hardware.
 
-Cc: <stable@vger.kernel.org>
 Reported-by: Don Brace <don.brace@microsemi.com>
 Reviewed-by: Martin Wilck <mwilck@suse.com>
 Tested-by: Don Brace <don.brace@microsemi.com>
 Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
-Acked-by: Martin Wilck <mwilck@suse.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/scsi/sd.c |   19 ++++++++++++++-----
+ drivers/scsi/sd.c | 19 ++++++++++++++-----
  1 file changed, 14 insertions(+), 5 deletions(-)
 
+diff --git a/drivers/scsi/sd.c b/drivers/scsi/sd.c
+index 8750c86f95f9..7e1681cf287c 100644
 --- a/drivers/scsi/sd.c
 +++ b/drivers/scsi/sd.c
-@@ -2961,8 +2961,6 @@ static int sd_revalidate_disk(struct gen
+@@ -2878,8 +2878,6 @@ static int sd_revalidate_disk(struct gendisk *disk)
  		sd_read_write_same(sdkp, buffer);
  	}
  
@@ -35,7 +39,7 @@ Acked-by: Martin Wilck <mwilck@suse.com>
  	/*
  	 * We now have all cache related info, determine how we deal
  	 * with flush requests.
-@@ -2977,7 +2975,7 @@ static int sd_revalidate_disk(struct gen
+@@ -2894,7 +2892,7 @@ static int sd_revalidate_disk(struct gendisk *disk)
  	q->limits.max_dev_sectors = logical_to_sectors(sdp, dev_max);
  
  	/*
@@ -44,7 +48,7 @@ Acked-by: Martin Wilck <mwilck@suse.com>
  	 * unless the reported value is unreasonably small, large, or
  	 * garbage.
  	 */
-@@ -2991,8 +2989,19 @@ static int sd_revalidate_disk(struct gen
+@@ -2908,8 +2906,19 @@ static int sd_revalidate_disk(struct gendisk *disk)
  		rw_max = min_not_zero(logical_to_sectors(sdp, dev_max),
  				      (sector_t)BLK_DEF_MAX_SECTORS);
  
@@ -66,3 +70,6 @@ Acked-by: Martin Wilck <mwilck@suse.com>
  
  	set_capacity(disk, logical_to_sectors(sdp, sdkp->capacity));
  	sd_config_write_same(sdkp);
+-- 
+2.14.2
+
