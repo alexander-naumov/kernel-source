@@ -1,0 +1,38 @@
+From: Yuval Mintz <Yuval.Mintz@qlogic.com>
+Date: Mon, 19 Sep 2016 17:47:41 +0300
+Subject: qed: Fix stack corruption on probe
+Patch-mainline: v4.8-rc8
+Git-commit: 67a99b7061c07b190ac6c39f136afedbb7aa86e9
+References: bsc#966318 FATE#320158 bsc#966316 FATE#320159
+
+Commit fe56b9e6a8d95 ("qed: Add module with basic common support")
+has introduced a stack corruption during probe, where filling a
+local struct with data to be sent to management firmware is incorrectly
+filled; The data is written outside of the struct and corrupts
+the stack.
+
+Changes from v1:
+----------------
+ - Correct the value written [Caught by David Laight]
+
+Fixes: fe56b9e6a8d95 ("qed: Add module with basic common support")
+Signed-off-by: Yuval Mintz <Yuval.Mintz@caviumnetworks.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Thomas Bogendoerfer <tbogendoerfer@suse.de>
+---
+ drivers/net/ethernet/qlogic/qed/qed_mcp.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/drivers/net/ethernet/qlogic/qed/qed_mcp.c
++++ b/drivers/net/ethernet/qlogic/qed/qed_mcp.c
+@@ -1142,8 +1142,8 @@ qed_mcp_send_drv_version(struct qed_hwfn
+ 	p_drv_version = &union_data.drv_version;
+ 	p_drv_version->version = p_ver->version;
+ 
+-	for (i = 0; i < MCP_DRV_VER_STR_SIZE - 1; i += 4) {
+-		val = cpu_to_be32(p_ver->name[i]);
++	for (i = 0; i < (MCP_DRV_VER_STR_SIZE - 4) / sizeof(u32); i++) {
++		val = cpu_to_be32(*((u32 *)&p_ver->name[i * sizeof(u32)]));
+ 		*(__be32 *)&p_drv_version->name[i * sizeof(u32)] = val;
+ 	}
+ 
