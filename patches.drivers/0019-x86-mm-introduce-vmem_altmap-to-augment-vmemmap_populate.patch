@@ -152,7 +152,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  		rc = PTR_ERR(pmem->virt_addr);
 --- a/include/linux/memory_hotplug.h
 +++ b/include/linux/memory_hotplug.h
-@@ -278,7 +278,8 @@ extern int offline_pages(unsigned long s
+@@ -279,7 +279,8 @@ extern int offline_pages(unsigned long s
  extern bool is_memblock_offlined(struct memory_block *mem);
  extern void remove_memory(int nid, u64 start, u64 size);
  extern int sparse_add_one_section(struct zone *zone, unsigned long start_pfn);
@@ -229,7 +229,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  #endif /* _LINUX_MEMREMAP_H_ */
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
-@@ -2238,7 +2238,14 @@ pud_t *vmemmap_pud_populate(pgd_t *pgd,
+@@ -2235,7 +2235,14 @@ pud_t *vmemmap_pud_populate(pgd_t *pgd,
  pmd_t *vmemmap_pmd_populate(pud_t *pud, unsigned long addr, int node);
  pte_t *vmemmap_pte_populate(pmd_t *pmd, unsigned long addr, int node);
  void *vmemmap_alloc_block(unsigned long size, int node);
@@ -419,7 +419,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	unsigned long start_pfn;
  	int scn_nr;
 @@ -753,7 +769,7 @@ static int __remove_section(struct zone
- 	start_pfn = section_nr_to_pfn(scn_nr);
+ 	start_pfn = section_nr_to_pfn((unsigned long)scn_nr);
  	__remove_zone(zone, start_pfn);
  
 -	sparse_remove_one_section(zone, ms);
@@ -500,7 +500,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  #include <linux/stop_machine.h>
  #include <linux/sort.h>
  #include <linux/pfn.h>
-@@ -4895,8 +4896,9 @@ static inline unsigned long wait_table_b
+@@ -4960,8 +4961,9 @@ static inline unsigned long wait_table_b
  void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
  		unsigned long start_pfn, enum memmap_context context)
  {
@@ -511,7 +511,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	unsigned long pfn;
  	struct zone *z;
  	unsigned long nr_initialised = 0;
-@@ -4907,6 +4909,13 @@ void __meminit memmap_init_zone(unsigned
+@@ -4972,6 +4974,13 @@ void __meminit memmap_init_zone(unsigned
  	if (highest_memmap_pfn < end_pfn - 1)
  		highest_memmap_pfn = end_pfn - 1;
  
