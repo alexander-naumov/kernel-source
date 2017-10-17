@@ -1,0 +1,35 @@
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Tue, 1 Aug 2017 12:11:07 -0700
+Subject: i40e: Initialize 64-bit statistics TX ring seqcount
+Patch-mainline: v4.13-rc5
+Git-commit: 7d6d067790289e4f61f59fa60550ca5918aa25bd
+References: bsc#969476 FATE#319648 bsc#969477 FATE#319816
+
+On 32-bit hosts and with CONFIG_DEBUG_LOCK_ALLOC we should be seeing a
+lockdep splat indicating this seqcount is not correctly initialized, fix
+that.
+
+Fixes: 980e9b118642 ("i40e: Add support for 64 bit netstats")
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: David Chang <dchang@suse.com>
+---
+ drivers/net/ethernet/intel/i40e/i40e_txrx.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/net/ethernet/intel/i40e/i40e_txrx.c b/drivers/net/ethernet/intel/i40e/i40e_txrx.c
+index 0ffed711d4ed..523a4f10d11b 100644
+--- a/drivers/net/ethernet/intel/i40e/i40e_txrx.c
++++ b/drivers/net/ethernet/intel/i40e/i40e_txrx.c
+@@ -990,6 +990,8 @@ int i40e_setup_tx_descriptors(struct i40e_ring *tx_ring)
+ 	if (!tx_ring->tx_bi)
+ 		goto err;
+ 
++	u64_stats_init(&tx_ring->syncp);
++
+ 	/* round up to nearest 4K */
+ 	tx_ring->size = tx_ring->count * sizeof(struct i40e_tx_desc);
+ 	/* add u32 for head writeback, align after this takes care of
+-- 
+2.12.3
+
