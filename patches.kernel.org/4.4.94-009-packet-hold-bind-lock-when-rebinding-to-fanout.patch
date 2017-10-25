@@ -1,9 +1,11 @@
 From: Willem de Bruijn <willemb@google.com>
 Date: Thu, 14 Sep 2017 17:14:41 -0400
-Subject: packet: hold bind lock when rebinding to fanout hook
-Patch-mainline: v4.14-rc2
+Subject: [PATCH] packet: hold bind lock when rebinding to fanout hook
+Patch-mainline: 4.4.94
+References: CVE-2017-15649 bnc#1012382 bsc#1064388
 Git-commit: 008ba2a13f2d04c947adc536d19debb8fe66f110
-References: CVE-2017-15649 bsc#1064388
+
+[ Upstream commit 008ba2a13f2d04c947adc536d19debb8fe66f110 ]
 
 Packet socket bind operations must hold the po->bind_lock. This keeps
 po->running consistent with whether the socket is actually on a ptype
@@ -25,14 +27,14 @@ Fixes: dc99f600698d ("packet: Add fanout support.")
 Reported-by: nixioaming <nixiaoming@huawei.com>
 Signed-off-by: Willem de Bruijn <willemb@google.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>
-Acked-by: Michal Kubecek <mkubecek@suse.cz>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  net/packet/af_packet.c | 16 +++++++++++-----
  1 file changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
-index b70055fc30cb..bc2250b10fa6 100644
+index b70055fc30cb..c35198880cb7 100644
 --- a/net/packet/af_packet.c
 +++ b/net/packet/af_packet.c
 @@ -1652,10 +1652,6 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
@@ -64,7 +66,7 @@ index b70055fc30cb..bc2250b10fa6 100644
  	}
 +	spin_unlock(&po->bind_lock);
 +
-+	if (err && !atomic_read(&match->sk_ref)) {
++	if (err && !refcount_read(&match->sk_ref)) {
 +		list_del(&match->list);
 +		kfree(match);
 +	}
@@ -73,5 +75,5 @@ index b70055fc30cb..bc2250b10fa6 100644
  	if (err && rollover) {
  		kfree(rollover);
 -- 
-2.14.2
+2.14.3
 

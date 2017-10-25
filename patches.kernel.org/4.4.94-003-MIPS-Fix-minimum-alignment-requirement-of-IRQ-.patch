@@ -1,9 +1,11 @@
 From: Matt Redfearn <matt.redfearn@imgtec.com>
 Date: Mon, 10 Jul 2017 09:43:31 +0100
-Subject: MIPS: Fix minimum alignment requirement of IRQ stack
+Subject: [PATCH] MIPS: Fix minimum alignment requirement of IRQ stack
+Patch-mainline: 4.4.94
+References: bnc#1012382 git-fixes
 Git-commit: 5fdc66e046206306bf61ff2d626bfa52ca087f7b
-Patch-mainline: v4.13-rc1
-References: git-fixes
+
+commit 5fdc66e046206306bf61ff2d626bfa52ca087f7b upstream.
 
 Commit db8466c581cc ("MIPS: IRQ Stack: Unwind IRQ stack onto task
 stack") erroneously set the initial stack pointer of the IRQ stack to a
@@ -24,11 +26,14 @@ Cc: linux-mips@linux-mips.org
 Cc: linux-kernel@vger.kernel.org
 Patchwork: https://patchwork.linux-mips.org/patch/16760/
 Signed-off-by: Ralf Baechle <ralf@linux-mips.org>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- arch/mips/include/asm/irq.h |    2 +-
+ arch/mips/include/asm/irq.h | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
+diff --git a/arch/mips/include/asm/irq.h b/arch/mips/include/asm/irq.h
+index 77edb22f855d..5433ccc9d706 100644
 --- a/arch/mips/include/asm/irq.h
 +++ b/arch/mips/include/asm/irq.h
 @@ -18,7 +18,7 @@
@@ -40,3 +45,6 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  
  extern void *irq_stack[NR_CPUS];
  
+-- 
+2.14.3
+
