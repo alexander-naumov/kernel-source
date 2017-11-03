@@ -1,8 +1,7 @@
 From: Roland Dreier <roland@purestorage.com>
 Date: Tue, 6 Jun 2017 09:22:00 -0700
 Subject: IB/addr: Fix setting source address in addr6_resolve()
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dledford/rdma.git
+Patch-mainline: v4.12-rc6
 Git-commit: 79e25959403e6a79552db28a87abed34de32a1df
 References: bsc#1044082
 
