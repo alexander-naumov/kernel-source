@@ -1,0 +1,33 @@
+From: Tobias Klauser <tklauser@distanz.ch>
+Date: Tue, 21 Feb 2017 15:27:28 +0100
+Subject: bnxt_en: use eth_hw_addr_random()
+Patch-mainline: v4.11-rc1
+Git-commit: 1faaa78f36cb2915ae89138ba5846f87ade85dcb
+References: bsc#963575 FATE#320144
+
+Use eth_hw_addr_random() to set a random MAC address in order to make
+sure bp->dev->addr_assign_type will be properly set to NET_ADDR_RANDOM.
+
+Signed-off-by: Tobias Klauser <tklauser@distanz.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: David Chang <dchang@suse.com>
+---
+ drivers/net/ethernet/broadcom/bnxt/bnxt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/broadcom/bnxt/bnxt.c b/drivers/net/ethernet/broadcom/bnxt/bnxt.c
+index 6946ff3a4564..42993114cd69 100644
+--- a/drivers/net/ethernet/broadcom/bnxt/bnxt.c
++++ b/drivers/net/ethernet/broadcom/bnxt/bnxt.c
+@@ -4127,7 +4127,7 @@ int bnxt_hwrm_func_qcaps(struct bnxt *bp)
+ 			/* overwrite netdev dev_adr with admin VF MAC */
+ 			memcpy(bp->dev->dev_addr, vf->mac_addr, ETH_ALEN);
+ 		} else {
+-			random_ether_addr(bp->dev->dev_addr);
++			eth_hw_addr_random(bp->dev);
+ 			rc = bnxt_approve_mac(bp, bp->dev->dev_addr);
+ 		}
+ 		return rc;
+-- 
+2.13.6
+
