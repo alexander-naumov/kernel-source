@@ -1,0 +1,73 @@
+From: Michael Chan <michael.chan@broadcom.com>
+Date: Mon, 19 Sep 2016 03:58:05 -0400
+Subject: bnxt_en: Re-arrange bnxt_hwrm_func_qcaps().
+Patch-mainline: v4.9-rc1
+Git-commit: 7cc5a20e38fcaf395ac59e7ed6c3decb575a0dc7
+References: bsc#963575 FATE#320144
+
+Re-arrange the code so that the generation of the random MAC address for
+the VF is at the end of the function.  The next patch will add one more step
+to call bnxt_approve_mac() to get the firmware to approve the random MAC
+address.
+
+Signed-off-by: Michael Chan <michael.chan@broadcom.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: David Chang <dchang@suse.com>
+---
+ drivers/net/ethernet/broadcom/bnxt/bnxt.c | 23 ++++++++++++-----------
+ 1 file changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/ethernet/broadcom/bnxt/bnxt.c b/drivers/net/ethernet/broadcom/bnxt/bnxt.c
+index 62962a24ccf2..9ccc1d79e3dc 100644
+--- a/drivers/net/ethernet/broadcom/bnxt/bnxt.c
++++ b/drivers/net/ethernet/broadcom/bnxt/bnxt.c
+@@ -4073,6 +4073,11 @@ int bnxt_hwrm_func_qcaps(struct bnxt *bp)
+ 	if (rc)
+ 		goto hwrm_func_qcaps_exit;
+ 
++	bp->tx_push_thresh = 0;
++	if (resp->flags &
++	    cpu_to_le32(FUNC_QCAPS_RESP_FLAGS_PUSH_MODE_SUPPORTED))
++		bp->tx_push_thresh = BNXT_TX_PUSH_THRESH;
++
+ 	if (BNXT_PF(bp)) {
+ 		struct bnxt_pf_info *pf = &bp->pf;
+ 
+@@ -4103,12 +4108,6 @@ int bnxt_hwrm_func_qcaps(struct bnxt *bp)
+ 		struct bnxt_vf_info *vf = &bp->vf;
+ 
+ 		vf->fw_fid = le16_to_cpu(resp->fid);
+-		memcpy(vf->mac_addr, resp->mac_address, ETH_ALEN);
+-		if (is_valid_ether_addr(vf->mac_addr))
+-			/* overwrite netdev dev_adr with admin VF MAC */
+-			memcpy(bp->dev->dev_addr, vf->mac_addr, ETH_ALEN);
+-		else
+-			random_ether_addr(bp->dev->dev_addr);
+ 
+ 		vf->max_rsscos_ctxs = le16_to_cpu(resp->max_rsscos_ctx);
+ 		vf->max_cp_rings = le16_to_cpu(resp->max_cmpl_rings);
+@@ -4120,14 +4119,16 @@ int bnxt_hwrm_func_qcaps(struct bnxt *bp)
+ 		vf->max_l2_ctxs = le16_to_cpu(resp->max_l2_ctxs);
+ 		vf->max_vnics = le16_to_cpu(resp->max_vnics);
+ 		vf->max_stat_ctxs = le16_to_cpu(resp->max_stat_ctx);
++
++		memcpy(vf->mac_addr, resp->mac_address, ETH_ALEN);
++		if (is_valid_ether_addr(vf->mac_addr))
++			/* overwrite netdev dev_adr with admin VF MAC */
++			memcpy(bp->dev->dev_addr, vf->mac_addr, ETH_ALEN);
++		else
++			random_ether_addr(bp->dev->dev_addr);
+ #endif
+ 	}
+ 
+-	bp->tx_push_thresh = 0;
+-	if (resp->flags &
+-	    cpu_to_le32(FUNC_QCAPS_RESP_FLAGS_PUSH_MODE_SUPPORTED))
+-		bp->tx_push_thresh = BNXT_TX_PUSH_THRESH;
+-
+ hwrm_func_qcaps_exit:
+ 	mutex_unlock(&bp->hwrm_cmd_lock);
+ 	return rc;
+-- 
+2.13.6
+
