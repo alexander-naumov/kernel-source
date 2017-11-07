@@ -1,10 +1,11 @@
-From ea6789980fdaa610d7eb63602c746bf6ec70cd2b Mon Sep 17 00:00:00 2001
 From: David Howells <dhowells@redhat.com>
 Date: Wed, 11 Oct 2017 23:32:27 +0100
 Subject: [PATCH] assoc_array: Fix a buggy node-splitting case
+Patch-mainline: 4.4.96
+References: CVE-2017-12193 bnc#1012382 bsc#1066192
 Git-commit: ea6789980fdaa610d7eb63602c746bf6ec70cd2b
-Patch-mainline: 4.14-rc7
-References: CVE-2017-12193 bsc#1066192
+
+commit ea6789980fdaa610d7eb63602c746bf6ec70cd2b upstream.
 
 This fixes CVE-2017-12193.
 
@@ -37,17 +38,18 @@ The problem manifests itself as:
 Fixes: 3cb989501c26 ("Add a generic associative array implementation.")
 Reported-and-tested-by: WU Fan <u3536072@connect.hku.hk>
 Signed-off-by: David Howells <dhowells@redhat.com>
-Cc: stable@vger.kernel.org [v3.13-rc1+]
 Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
-Acked-by: Takashi Iwai <tiwai@suse.de>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- lib/assoc_array.c |   51 +++++++++++++++++----------------------------------
+ lib/assoc_array.c | 51 +++++++++++++++++----------------------------------
  1 file changed, 17 insertions(+), 34 deletions(-)
 
+diff --git a/lib/assoc_array.c b/lib/assoc_array.c
+index 59fd7c0b119c..5cd093589c5a 100644
 --- a/lib/assoc_array.c
 +++ b/lib/assoc_array.c
-@@ -598,21 +598,31 @@ static bool assoc_array_insert_into_term
+@@ -598,21 +598,31 @@ static bool assoc_array_insert_into_terminal_node(struct assoc_array_edit *edit,
  		if ((edit->segment_cache[ASSOC_ARRAY_FAN_OUT] ^ base_seg) == 0)
  			goto all_leaves_cluster_together;
  
@@ -86,7 +88,7 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  	 *
  	 * We need a new node (n0) to replace the current one and a new node to
  	 * take the expelled nodes (n1).
-@@ -717,33 +727,6 @@ found_slot_for_multiple_occupancy:
+@@ -717,33 +727,6 @@ static bool assoc_array_insert_into_terminal_node(struct assoc_array_edit *edit,
  	pr_devel("<--%s() = ok [split node]\n", __func__);
  	return true;
  
@@ -120,3 +122,6 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  all_leaves_cluster_together:
  	/* All the leaves, new and old, want to cluster together in this node
  	 * in the same slot, so we have to replace this node with a shortcut to
+-- 
+2.15.0
+
