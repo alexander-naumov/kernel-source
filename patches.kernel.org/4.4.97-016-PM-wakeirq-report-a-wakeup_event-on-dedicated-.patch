@@ -1,10 +1,11 @@
-From 09bb6e93956ae5175b96905b723ec879c3ca0765 Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <grygorii.strashko@ti.com>
-Date: Mon, 13 Feb 2017 12:43:22 -0800
+Date: Sat, 7 Oct 2017 22:37:43 +0000
 Subject: [PATCH] PM / wakeirq: report a wakeup_event on dedicated wekup irq
+Patch-mainline: 4.4.97
+References: bnc#1012382 bsc#1031717
 Git-commit: 09bb6e93956ae5175b96905b723ec879c3ca0765
-Patch-mainline: 4.11-rc1
-References: bsc#1031717
+
+[ Upstream commit 09bb6e93956ae5175b96905b723ec879c3ca0765 ]
 
 There are two reasons for reporting wakeup event when dedicated wakeup
 IRQ is triggered:
@@ -35,19 +36,22 @@ Fixes: 4990d4fe327b (PM / Wakeirq: Add automated device wake IRQ handling)
 Signed-off-by: Grygorii Strashko <grygorii.strashko@ti.com>
 Tested-by: Keerthy <j-keerthy@ti.com>
 [ tony@atomide.com: added missing return to avoid warnings ]
-
 Tested-by: Tony Lindgren <tony@atomide.com>
 Signed-off-by: Tony Lindgren <tony@atomide.com>
 Signed-off-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
-Acked-by: Takashi Iwai <tiwai@suse.de>
 
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/base/power/wakeirq.c |    7 +++++++
+ drivers/base/power/wakeirq.c | 7 +++++++
  1 file changed, 7 insertions(+)
 
+diff --git a/drivers/base/power/wakeirq.c b/drivers/base/power/wakeirq.c
+index 404d94c6c8bc..feba1b211898 100644
 --- a/drivers/base/power/wakeirq.c
 +++ b/drivers/base/power/wakeirq.c
-@@ -141,6 +141,13 @@ static irqreturn_t handle_threaded_wake_
+@@ -141,6 +141,13 @@ static irqreturn_t handle_threaded_wake_irq(int irq, void *_wirq)
  	struct wake_irq *wirq = _wirq;
  	int res;
  
@@ -61,3 +65,6 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  	/* We don't want RPM_ASYNC or RPM_NOWAIT here */
  	res = pm_runtime_resume(wirq->dev);
  	if (res < 0)
+-- 
+2.15.0
+
