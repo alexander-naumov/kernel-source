@@ -43,8 +43,8 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  }
  EXPORT_SYMBOL_GPL(cxl_free_afu_irqs);
  
-@@ -180,7 +180,7 @@ int cxl_start_context(struct cxl_context
- 	 */
+@@ -176,7 +176,7 @@ int cxl_start_context(struct cxl_context
+ 
  	cxl_ctx_get();
  
 -	if ((rc = cxl_attach_process(ctx, kernel, wed , 0))) {
@@ -52,7 +52,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		put_pid(ctx->pid);
  		cxl_ctx_put();
  		goto out;
-@@ -346,11 +346,11 @@ int cxl_afu_reset(struct cxl_context *ct
+@@ -342,11 +342,11 @@ int cxl_afu_reset(struct cxl_context *ct
  	struct cxl_afu *afu = ctx->afu;
  	int rc;
  
@@ -211,7 +211,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		rc = -EIO;
  		goto err_put_afu;
  	}
-@@ -212,8 +212,8 @@ static long afu_ioctl_start_work(struct
+@@ -210,8 +210,8 @@ static long afu_ioctl_start_work(struct
  
  	trace_cxl_attach(ctx, work.work_element_descriptor, work.num_interrupts, amr);
  
@@ -220,9 +220,9 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
 +	if ((rc = cxl_ops->attach_process(ctx, false, work.work_element_descriptor,
 +							amr))) {
  		afu_release_irqs(ctx, ctx);
- 		cxl_ctx_put();
  		goto out;
-@@ -225,6 +225,7 @@ out:
+ 	}
+@@ -222,6 +222,7 @@ out:
  	mutex_unlock(&ctx->status_mutex);
  	return rc;
  }
@@ -230,7 +230,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  static long afu_ioctl_process_element(struct cxl_context *ctx,
  				      int __user *upe)
  {
-@@ -262,7 +263,7 @@ long afu_ioctl(struct file *file, unsign
+@@ -259,7 +260,7 @@ long afu_ioctl(struct file *file, unsign
  	if (ctx->status == CLOSED)
  		return -EIO;
  
@@ -239,7 +239,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		return -EIO;
  
  	pr_devel("afu_ioctl\n");
-@@ -292,7 +293,7 @@ int afu_mmap(struct file *file, struct v
+@@ -289,7 +290,7 @@ int afu_mmap(struct file *file, struct v
  	if (ctx->status != STARTED)
  		return -EIO;
  
@@ -248,7 +248,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		return -EIO;
  
  	return cxl_context_iomap(ctx, vm);
-@@ -339,7 +340,7 @@ ssize_t afu_read(struct file *file, char
+@@ -336,7 +337,7 @@ ssize_t afu_read(struct file *file, char
  	int rc;
  	DEFINE_WAIT(wait);
  
@@ -257,7 +257,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		return -EIO;
  
  	if (count < CXL_READ_MIN_SIZE)
-@@ -352,7 +353,7 @@ ssize_t afu_read(struct file *file, char
+@@ -349,7 +350,7 @@ ssize_t afu_read(struct file *file, char
  		if (ctx_event_pending(ctx))
  			break;
  
@@ -297,7 +297,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  
  	pr_devel("hwirq %#lx mapped to virq %u\n", hwirq, virq);
  
-@@ -194,7 +196,7 @@ int cxl_register_one_irq(struct cxl *ada
+@@ -195,7 +197,7 @@ int cxl_register_one_irq(struct cxl *ada
  {
  	int hwirq, virq;
  
@@ -306,7 +306,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		return hwirq;
  
  	if (!(virq = cxl_map_irq(adapter, hwirq, handler, cookie, name)))
-@@ -206,7 +208,7 @@ int cxl_register_one_irq(struct cxl *ada
+@@ -207,7 +209,7 @@ int cxl_register_one_irq(struct cxl *ada
  	return 0;
  
  err:
@@ -315,7 +315,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  	return -ENOMEM;
  }
  
-@@ -229,7 +231,8 @@ int afu_allocate_irqs(struct cxl_context
+@@ -230,7 +232,8 @@ int afu_allocate_irqs(struct cxl_context
  	/* Initialize the list head to hold irq names */
  	INIT_LIST_HEAD(&ctx->irq_names);
  
@@ -325,7 +325,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  		return rc;
  
  	/* Multiplexed PSL Interrupt */
-@@ -267,7 +270,7 @@ int afu_allocate_irqs(struct cxl_context
+@@ -268,7 +271,7 @@ int afu_allocate_irqs(struct cxl_context
  	return 0;
  
  out:
@@ -334,7 +334,7 @@ Acked-by: Dinar Valeev <dvaleev@suse.com>
  	afu_irq_name_free(ctx);
  	return -ENOMEM;
  }
-@@ -318,7 +321,7 @@ void afu_release_irqs(struct cxl_context
+@@ -319,7 +322,7 @@ void afu_release_irqs(struct cxl_context
  	}
  
  	afu_irq_name_free(ctx);
