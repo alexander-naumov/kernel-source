@@ -84,7 +84,7 @@ Acked-by: Nikolay Borisov <nborisov@suse.com>
 +
  	if (percpu_counter_compare(&space_info->total_bytes_pinned,
 -				   bytes - delayed_rsv->size) < 0) {
-+				   bytes < 0)) {
++				   bytes) < 0) {
  		spin_unlock(&delayed_rsv->lock);
  		return -ENOSPC;
  	}
