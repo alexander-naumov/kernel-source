@@ -1,23 +1,26 @@
-From d3c6716f6aac38a998d66e849a931f155c66f57b Mon Sep 17 00:00:00 2001
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
 Date: Tue, 17 Oct 2017 20:32:07 +0200
 Subject: [PATCH] mac80211: use constant time comparison with keys
+Patch-mainline: 4.4.99
+References: bnc#1012382 bsc#1066471
 Git-commit: 2bdd713b92a9cade239d3c7d15205a09f556624d
-Patch-mainline: v4.14-rc7
-References: bsc#1066471
+
+commit 2bdd713b92a9cade239d3c7d15205a09f556624d upstream.
 
 Otherwise we risk leaking information via timing side channel.
 
 Fixes: fdf7cb4185b6 ("mac80211: accept key reinstall without changing anything")
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
 Signed-off-by: Johannes Berg <johannes.berg@intel.com>
-Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
+Cc: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  net/mac80211/key.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/net/mac80211/key.c b/net/mac80211/key.c
-index bd653379eedb..11db78c73d11 100644
+index 88f3fad740bf..61286227f307 100644
 --- a/net/mac80211/key.c
 +++ b/net/mac80211/key.c
 @@ -19,6 +19,7 @@
@@ -28,7 +31,7 @@ index bd653379eedb..11db78c73d11 100644
  #include <asm/unaligned.h>
  #include "ieee80211_i.h"
  #include "driver-ops.h"
-@@ -635,7 +636,7 @@ int ieee80211_key_link(struct ieee80211_key *key,
+@@ -633,7 +634,7 @@ int ieee80211_key_link(struct ieee80211_key *key,
  	 * new version of the key to avoid nonce reuse or replay issues.
  	 */
  	if (old_key && key->conf.keylen == old_key->conf.keylen &&
@@ -38,5 +41,5 @@ index bd653379eedb..11db78c73d11 100644
  		ret = 0;
  		goto out;
 -- 
-2.14.2
+2.15.0
 

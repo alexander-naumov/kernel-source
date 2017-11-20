@@ -1,10 +1,11 @@
 From: Johannes Berg <johannes.berg@intel.com>
 Date: Tue, 5 Sep 2017 14:54:54 +0200
 Subject: [PATCH] mac80211: accept key reinstall without changing anything
+Patch-mainline: 4.4.99
+References: CVE-2017-13080 bnc#1012382 bsc#1063667
 Git-commit: fdf7cb4185b60c68e1a75e61691c4afdc15dea0e
-Patch-mainline: Queued
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
-References: CVE-2017-13080 bsc#1063667
+
+commit fdf7cb4185b60c68e1a75e61691c4afdc15dea0e upstream.
 
 When a key is reinstalled we can reset the replay counters
 etc. which can lead to nonce reuse and/or replay detection
@@ -22,16 +23,26 @@ coming from userspace but don't take any action on it since
 it's the same key; this keeps the PN replay counters intact.
 
 Signed-off-by: Johannes Berg <johannes.berg@intel.com>
-Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
+Cc: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- net/mac80211/key.c | 19 ++++++++++++++++---
- 1 file changed, 16 insertions(+), 3 deletions(-)
+ net/mac80211/key.c | 20 +++++++++++++++++---
+ 1 file changed, 17 insertions(+), 3 deletions(-)
 
 diff --git a/net/mac80211/key.c b/net/mac80211/key.c
-index 44388d6a1d8e..14f9e2211995 100644
+index 44388d6a1d8e..88f3fad740bf 100644
 --- a/net/mac80211/key.c
 +++ b/net/mac80211/key.c
-@@ -617,9 +617,6 @@ int ieee80211_key_link(struct ieee80211_key *key,
+@@ -4,6 +4,7 @@
+  * Copyright 2006-2007	Jiri Benc <jbenc@suse.cz>
+  * Copyright 2007-2008	Johannes Berg <johannes@sipsolutions.net>
+  * Copyright 2013-2014  Intel Mobile Communications GmbH
++ * Copyright 2017	Intel Deutschland GmbH
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 as
+@@ -617,9 +618,6 @@ int ieee80211_key_link(struct ieee80211_key *key,
  
  	pairwise = key->conf.flags & IEEE80211_KEY_FLAG_PAIRWISE;
  	idx = key->conf.keyidx;
@@ -41,7 +52,7 @@ index 44388d6a1d8e..14f9e2211995 100644
  
  	mutex_lock(&sdata->local->key_mtx);
  
-@@ -630,6 +627,21 @@ int ieee80211_key_link(struct ieee80211_key *key,
+@@ -630,6 +628,21 @@ int ieee80211_key_link(struct ieee80211_key *key,
  	else
  		old_key = key_mtx_dereference(sdata->local, sdata->keys[idx]);
  
@@ -63,7 +74,7 @@ index 44388d6a1d8e..14f9e2211995 100644
  	increment_tailroom_need_count(sdata);
  
  	ieee80211_key_replace(sdata, sta, pairwise, old_key, key);
-@@ -645,6 +657,7 @@ int ieee80211_key_link(struct ieee80211_key *key,
+@@ -645,6 +658,7 @@ int ieee80211_key_link(struct ieee80211_key *key,
  		ret = 0;
  	}
  
@@ -72,5 +83,5 @@ index 44388d6a1d8e..14f9e2211995 100644
  
  	return ret;
 -- 
-2.14.2
+2.15.0
 
