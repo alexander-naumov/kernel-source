@@ -1,9 +1,11 @@
 From: Juergen Gross <jgross@suse.com>
 Date: Tue, 10 Jan 2017 14:32:52 +0100
-References: bnc#1019163
-Patch-mainline: 4.11-rc1
+Subject: [PATCH] xen/netback: set default upper limit of tx/rx queues to 8
+Patch-mainline: 4.4.98
+References: bnc#1012382 bnc#1019163
 Git-commit: 56dd5af9bc23d0d5d23bb207c477715b4c2216c5
-Subject: xen/netback: set default upper limit of tx/rx queues to 8
+
+[ Upstream commit 56dd5af9bc23d0d5d23bb207c477715b4c2216c5 ]
 
 The default for the maximum number of tx/rx queues of one interface is
 the number of cpus of the system today. As each queue pair reserves 512
@@ -15,12 +17,16 @@ via a module parameter if required.
 
 Signed-off-by: Juergen Gross <jgross@suse.com>
 Reviewed-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  drivers/net/xen-netback/netback.c | 6 ++++--
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
-index 47b4810..f9bcf4a 100644
+index 72ee1c305cc4..02db20b26749 100644
 --- a/drivers/net/xen-netback/netback.c
 +++ b/drivers/net/xen-netback/netback.c
 @@ -67,6 +67,7 @@ module_param(rx_drain_timeout_msecs, uint, 0444);
@@ -47,5 +53,5 @@ index 47b4810..f9bcf4a 100644
  	if (fatal_skb_slots < XEN_NETBK_LEGACY_SLOTS_MAX) {
  		pr_info("fatal_skb_slots too small (%d), bump it to XEN_NETBK_LEGACY_SLOTS_MAX (%d)\n",
 -- 
-cgit v0.12
+2.15.0
 
