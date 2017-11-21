@@ -1,0 +1,146 @@
+From 90fc8ff8b3b8c4c4b59493c55f3395c3c7fa277a Mon Sep 17 00:00:00 2001
+From: Steve French <smfrench@gmail.com>
+Date: Mon, 20 Nov 2017 17:40:01 +0100
+Subject: [PATCH 22/23] SMB3: parsing for new snapshot timestamp mount parm 
+ (FATE#324404).
+Patch-mainline: v4.10-rc1
+Git-commit: 8b217fe7fcadd162944a88b14990b9723c27419f
+References: fate#324404, fate#322075
+
+New mount option "snapshot=<time>" to allow mounting an earlier
+version of the remote volume (if such a snapshot exists on
+the server).
+
+Note that eventually specifying a snapshot time of 1 will allow
+the user to mount the oldest snapshot. A subsequent patch
+add the processing for that and another for actually specifying
+the "time warp" create context on SMB2/SMB3 open.
+
+Check to make sure SMB2 negotiated, and ensure that
+we use a different tcon if mount same share twice
+but with different snaphshot times
+
+Signed-off-by: Steve French <smfrench@gmail.com>
+Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
+Acked-by: Aurelien Aptel <aaptel@suse.com>
+
+---
+ fs/cifs/cifsglob.h |  2 ++
+ fs/cifs/connect.c  | 38 +++++++++++++++++++++++++++++++++++---
+ 2 files changed, 37 insertions(+), 3 deletions(-)
+
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index f452e3bce5d8..dd3f99ee1bb4 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -520,6 +520,7 @@ struct smb_vol {
+ 	struct sockaddr_storage dstaddr; /* destination address */
+ 	struct sockaddr_storage srcaddr; /* allow binding to a local IP */
+ 	struct nls_table *local_nls;
++	__u64 snapshot_time; /* needed for timewarp tokens */
+ };
+ 
+ #define CIFS_MOUNT_MASK (CIFS_MOUNT_NO_PERM | CIFS_MOUNT_SET_UID | \
+@@ -926,6 +927,7 @@ struct cifs_tcon {
+ 	__u32 maximal_access;
+ 	__u32 vol_serial_number;
+ 	__le64 vol_create_time;
++	__u64 snapshot_time; /* for timewarp tokens - timestamp of snapshot */
+ 	__u32 ss_flags;		/* sector size flags */
+ 	__u32 perf_sector_size; /* best sector size for perf */
+ 	__u32 max_chunks;
+diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
+index aa8e18510a5a..9760e4320da7 100644
+--- a/fs/cifs/connect.c
++++ b/fs/cifs/connect.c
+@@ -98,6 +98,7 @@ enum {
+ 	Opt_cruid, Opt_gid, Opt_file_mode,
+ 	Opt_dirmode, Opt_port,
+ 	Opt_rsize, Opt_wsize, Opt_actimeo,
++	Opt_snapshot,
+ 
+ 	/* Mount options which take string value */
+ 	Opt_user, Opt_pass, Opt_ip,
+@@ -191,6 +192,7 @@ static const match_table_t cifs_mount_option_tokens = {
+ 	{ Opt_rsize, "rsize=%s" },
+ 	{ Opt_wsize, "wsize=%s" },
+ 	{ Opt_actimeo, "actimeo=%s" },
++	{ Opt_snapshot, "snapshot=%s" },
+ 
+ 	{ Opt_blank_user, "user=" },
+ 	{ Opt_blank_user, "username=" },
+@@ -1616,6 +1618,14 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
+ 				goto cifs_parse_mount_err;
+ 			}
+ 			break;
++		case Opt_snapshot:
++			if (get_option_ul(args, &option)) {
++				cifs_dbg(VFS, "%s: Invalid snapshot time\n",
++					 __func__);
++				goto cifs_parse_mount_err;
++			}
++			vol->snapshot_time = option;
++			break;
+ 
+ 		/* String Arguments */
+ 
+@@ -2600,7 +2610,7 @@ static int match_tcon(struct cifs_tcon *tcon, const char *unc)
+ }
+ 
+ static struct cifs_tcon *
+-cifs_find_tcon(struct cifs_ses *ses, const char *unc)
++cifs_find_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+ {
+ 	struct list_head *tmp;
+ 	struct cifs_tcon *tcon;
+@@ -2608,8 +2618,14 @@ cifs_find_tcon(struct cifs_ses *ses, const char *unc)
+ 	spin_lock(&cifs_tcp_ses_lock);
+ 	list_for_each(tmp, &ses->tcon_list) {
+ 		tcon = list_entry(tmp, struct cifs_tcon, tcon_list);
+-		if (!match_tcon(tcon, unc))
++		if (!match_tcon(tcon, volume_info->UNC))
+ 			continue;
++
++#ifdef CONFIG_CIFS_SMB2
++		if (tcon->snapshot_time != volume_info->snapshot_time)
++			continue;
++#endif /* CONFIG_CIFS_SMB2 */
++
+ 		++tcon->tc_count;
+ 		spin_unlock(&cifs_tcp_ses_lock);
+ 		return tcon;
+@@ -2650,7 +2666,7 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+ 	int rc, xid;
+ 	struct cifs_tcon *tcon;
+ 
+-	tcon = cifs_find_tcon(ses, volume_info->UNC);
++	tcon = cifs_find_tcon(ses, volume_info);
+ 	if (tcon) {
+ 		cifs_dbg(FYI, "Found match on UNC path\n");
+ 		/* existing tcon already has a reference */
+@@ -2671,6 +2687,22 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+ 		goto out_fail;
+ 	}
+ 
++	if (volume_info->snapshot_time) {
++#ifdef CONFIG_CIFS_SMB2
++		if (ses->server->vals->protocol_id == 0) {
++			cifs_dbg(VFS,
++			     "Use SMB2 or later for snapshot mount option\n");
++			rc = -EOPNOTSUPP;
++			goto out_fail;
++		} else
++			tcon->snapshot_time = volume_info->snapshot_time;
++#else
++		cifs_dbg(VFS, "Snapshot mount option requires SMB2 support\n");
++		rc = -EOPNOTSUPP;
++		goto out_fail;
++#endif /* CONFIG_CIFS_SMB2 */
++	}
++
+ 	tcon->ses = ses;
+ 	if (volume_info->password) {
+ 		tcon->password = kstrdup(volume_info->password, GFP_KERNEL);
+-- 
+2.12.3
+
