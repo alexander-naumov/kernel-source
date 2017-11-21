@@ -1,0 +1,99 @@
+From a61b86cc9ce9d2255f4fa11b0e9b1c804451107c Mon Sep 17 00:00:00 2001
+From: Pavel Shilovsky <pshilov@microsoft.com>
+Date: Mon, 20 Nov 2017 17:23:02 +0100
+Subject: [PATCH 13/23] CIFS: Enable encryption during session setup phase 
+ (FATE#324404).
+Patch-mainline: v4.11
+Git-commit: cabfb3680f78981d26c078a26e5c748531257ebb
+References: fate#324404, fate#322075
+
+In order to allow encryption on SMB connection we need to exchange
+a session key and generate encryption and decryption keys.
+
+Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
+Acked-by: Aurelien Aptel <aaptel@suse.com>
+
+---
+ fs/cifs/sess.c    | 22 ++++++++++------------
+ fs/cifs/smb2pdu.c | 11 ++---------
+ 2 files changed, 12 insertions(+), 21 deletions(-)
+
+diff --git a/fs/cifs/sess.c b/fs/cifs/sess.c
+index 1a014758d873..dbd5bd8e532c 100644
+--- a/fs/cifs/sess.c
++++ b/fs/cifs/sess.c
+@@ -344,13 +344,12 @@ void build_ntlmssp_negotiate_blob(unsigned char *pbuffer,
+ 	/* BB is NTLMV2 session security format easier to use here? */
+ 	flags = NTLMSSP_NEGOTIATE_56 |	NTLMSSP_REQUEST_TARGET |
+ 		NTLMSSP_NEGOTIATE_128 | NTLMSSP_NEGOTIATE_UNICODE |
+-		NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_EXTENDED_SEC;
+-	if (ses->server->sign) {
++		NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_EXTENDED_SEC |
++		NTLMSSP_NEGOTIATE_SEAL;
++	if (ses->server->sign)
+ 		flags |= NTLMSSP_NEGOTIATE_SIGN;
+-		if (!ses->server->session_estab ||
+-				ses->ntlmssp->sesskey_per_smbsess)
+-			flags |= NTLMSSP_NEGOTIATE_KEY_XCH;
+-	}
++	if (!ses->server->session_estab || ses->ntlmssp->sesskey_per_smbsess)
++		flags |= NTLMSSP_NEGOTIATE_KEY_XCH;
+ 
+ 	sec_blob->NegotiateFlags = cpu_to_le32(flags);
+ 
+@@ -407,13 +406,12 @@ int build_ntlmssp_auth_blob(unsigned char **pbuffer,
+ 	flags = NTLMSSP_NEGOTIATE_56 |
+ 		NTLMSSP_REQUEST_TARGET | NTLMSSP_NEGOTIATE_TARGET_INFO |
+ 		NTLMSSP_NEGOTIATE_128 | NTLMSSP_NEGOTIATE_UNICODE |
+-		NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_EXTENDED_SEC;
+-	if (ses->server->sign) {
++		NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_EXTENDED_SEC |
++		NTLMSSP_NEGOTIATE_SEAL;
++	if (ses->server->sign)
+ 		flags |= NTLMSSP_NEGOTIATE_SIGN;
+-		if (!ses->server->session_estab ||
+-				ses->ntlmssp->sesskey_per_smbsess)
+-			flags |= NTLMSSP_NEGOTIATE_KEY_XCH;
+-	}
++	if (!ses->server->session_estab || ses->ntlmssp->sesskey_per_smbsess)
++		flags |= NTLMSSP_NEGOTIATE_KEY_XCH;
+ 
+ 	tmp = *pbuffer + sizeof(AUTHENTICATE_MESSAGE);
+ 	sec_blob->NegotiateFlags = cpu_to_le32(flags);
+diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
+index d9e78565ee08..a658d51f28d0 100644
+--- a/fs/cifs/smb2pdu.c
++++ b/fs/cifs/smb2pdu.c
+@@ -889,15 +889,13 @@ ssetup_exit:
+ 
+ 	if (!rc) {
+ 		mutex_lock(&server->srv_mutex);
+-		if (server->sign && server->ops->generate_signingkey) {
++		if (server->ops->generate_signingkey) {
+ 			rc = server->ops->generate_signingkey(ses);
+-			kfree(ses->auth_key.response);
+-			ses->auth_key.response = NULL;
+ 			if (rc) {
+ 				cifs_dbg(FYI,
+ 					"SMB3 session key generation failed\n");
+ 				mutex_unlock(&server->srv_mutex);
+-				goto keygen_exit;
++				return rc;
+ 			}
+ 		}
+ 		if (!server->session_estab) {
+@@ -913,11 +911,6 @@ ssetup_exit:
+ 		spin_unlock(&GlobalMid_Lock);
+ 	}
+ 
+-keygen_exit:
+-	if (!server->sign) {
+-		kfree(ses->auth_key.response);
+-		ses->auth_key.response = NULL;
+-	}
+ 	if (spnego_key) {
+ 		key_invalidate(spnego_key);
+ 		key_put(spnego_key);
+-- 
+2.12.3
+
