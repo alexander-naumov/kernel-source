@@ -1,7 +1,11 @@
 From: Jan Beulich <jbeulich@suse.com>
-Subject: xen-blkback: don't leak stack data via response ring
-Patch-mainline: Submitted, 2017-06-20 - git://git.kernel.org/pub/scm/linux/kernel/git/konrad/xen.git stable/for-jens-4.12
-References: bsc#1042863 XSA-216
+Date: Tue, 13 Jun 2017 16:28:27 -0400
+Subject: [PATCH] xen-blkback: don't leak stack data via response ring
+References: bnc#1012382 bsc#1042863 XSA-216
+Patch-mainline: 4.4.100
+Git-commit: 089bc0143f489bd3a4578bdff5f4ca68fb26f341
+
+commit 089bc0143f489bd3a4578bdff5f4ca68fb26f341 upstream.
 
 Rather than constructing a local structure instance on the stack, fill
 the fields directly on the shared ring, just like other backends do.
@@ -10,15 +14,23 @@ identical (the old code did make this assumption too).
 
 This is XSA-216.
 
-Reported by: Anthony Perard <anthony.perard@citrix.com>
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+[bwh: Backported to 4.4: adjust context]
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
-v2: Add __packed to fix handling 32-bit guests by 64-bit host.
+ drivers/block/xen-blkback/blkback.c | 23 ++++++++++++-----------
+ drivers/block/xen-blkback/common.h  | 25 +++++--------------------
+ 2 files changed, 17 insertions(+), 31 deletions(-)
 
+diff --git a/drivers/block/xen-blkback/blkback.c b/drivers/block/xen-blkback/blkback.c
+index 33e23a7a691f..a295ad6a1674 100644
 --- a/drivers/block/xen-blkback/blkback.c
 +++ b/drivers/block/xen-blkback/blkback.c
-@@ -1411,33 +1411,34 @@ static int dispatch_rw_block_io(struct x
+@@ -1407,33 +1407,34 @@ static int dispatch_rw_block_io(struct xen_blkif *blkif,
  static void make_response(struct xen_blkif *blkif, u64 id,
  			  unsigned short op, int st)
  {
@@ -64,9 +76,11 @@ v2: Add __packed to fix handling 32-bit guests by 64-bit host.
  	blk_rings->common.rsp_prod_pvt++;
  	RING_PUSH_RESPONSES_AND_CHECK_NOTIFY(&blk_rings->common, notify);
  	spin_unlock_irqrestore(&blkif->blk_ring_lock, flags);
+diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
+index c929ae22764c..04cfee719334 100644
 --- a/drivers/block/xen-blkback/common.h
 +++ b/drivers/block/xen-blkback/common.h
-@@ -74,9 +74,8 @@ extern unsigned int xen_blkif_max_ring_o
+@@ -74,9 +74,8 @@ extern unsigned int xen_blkif_max_ring_order;
  struct blkif_common_request {
  	char dummy;
  };
@@ -115,3 +129,6 @@ v2: Add __packed to fix handling 32-bit guests by 64-bit host.
  
  union blkif_back_rings {
  	struct blkif_back_ring        native;
+-- 
+2.15.0
+

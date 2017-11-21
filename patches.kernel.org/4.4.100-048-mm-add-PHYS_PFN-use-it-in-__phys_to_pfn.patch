@@ -1,9 +1,11 @@
 From: Chen Gang <xili_gchen_5257@hotmail.com>
 Date: Thu, 14 Jan 2016 15:18:33 -0800
-Subject: mm: add PHYS_PFN, use it in __phys_to_pfn()
+Subject: [PATCH] mm: add PHYS_PFN, use it in __phys_to_pfn()
+Patch-mainline: 4.4.100
+References: FATE#319858 bnc#1012382
 Git-commit: 8f235d1a3eb7198affe7cadf676a10afb8a46a1a
-Patch-mainline: v4.5-rc1
-References: FATE#319858
+
+commit 8f235d1a3eb7198affe7cadf676a10afb8a46a1a upstream.
 
 __phys_to_pfn and __pfn_to_phys are symmetric, PHYS_PFN and PFN_PHYS are
 semmetric:
@@ -21,14 +23,16 @@ Cc: Oleg Nesterov <oleg@redhat.com>
 Signed-off-by: Arnd Bergmann <arnd@arndb.de>
 Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
 Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
-Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
+Cc: Marcin Nowakowski <marcin.nowakowski@mips.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  include/asm-generic/memory_model.h | 4 +++-
  include/linux/pfn.h                | 1 +
  2 files changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/include/asm-generic/memory_model.h b/include/asm-generic/memory_model.h
-index 4b4b056..5148150 100644
+index 4b4b056a6eb0..5148150cc80b 100644
 --- a/include/asm-generic/memory_model.h
 +++ b/include/asm-generic/memory_model.h
 @@ -1,6 +1,8 @@
@@ -50,7 +54,7 @@ index 4b4b056..5148150 100644
  
  #define page_to_pfn __page_to_pfn
 diff --git a/include/linux/pfn.h b/include/linux/pfn.h
-index 7646637..97f3e88 100644
+index 7646637221f3..97f3e88aead4 100644
 --- a/include/linux/pfn.h
 +++ b/include/linux/pfn.h
 @@ -9,5 +9,6 @@
@@ -60,4 +64,6 @@ index 7646637..97f3e88 100644
 +#define PHYS_PFN(x)	((unsigned long)((x) >> PAGE_SHIFT))
  
  #endif
+-- 
+2.15.0
 
