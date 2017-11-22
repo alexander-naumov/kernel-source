@@ -1,0 +1,51 @@
+From 517a6e43c4872c89794af5b377fa085e47345952 Mon Sep 17 00:00:00 2001
+From: Christophe Jaillet <christophe.jaillet@wanadoo.fr>
+Date: Sun, 11 Jun 2017 09:12:47 +0200
+Subject: [PATCH] CIFS: Fix some return values in case of error in 'crypt_message'
+Git-commit: 517a6e43c4872c89794af5b377fa085e47345952
+Patch-mainline: 4.12
+References: fate#324404, fate#322075
+ 'crypt_message'
+
+'rc' is known to be 0 at this point. So if 'init_sg' or 'kzalloc' fails, we
+should return -ENOMEM instead.
+
+Also remove a useless 'rc' in a debug message as it is meaningless here.
+
+Fixes: 026e93dc0a3ee ("CIFS: Encrypt SMB3 requests before sending")
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
+Reviewed-by: Aurelien Aptel <aaptel@suse.com>
+Signed-off-by: Steve French <smfrench@gmail.com>
+Cc: Stable <stable@vger.kernel.org>
+Acked-by: Aurelien Aptel <aaptel@suse.com>
+
+---
+ fs/cifs/smb2ops.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
+index 59726013375b..7e48561abd29 100644
+--- a/fs/cifs/smb2ops.c
++++ b/fs/cifs/smb2ops.c
+@@ -1809,7 +1809,8 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 
+ 	sg = init_sg(rqst, sign);
+ 	if (!sg) {
+-		cifs_dbg(VFS, "%s: Failed to init sg %d", __func__, rc);
++		cifs_dbg(VFS, "%s: Failed to init sg", __func__);
++		rc = -ENOMEM;
+ 		goto free_req;
+ 	}
+ 
+@@ -1817,6 +1818,7 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	iv = kzalloc(iv_len, GFP_KERNEL);
+ 	if (!iv) {
+ 		cifs_dbg(VFS, "%s: Failed to alloc IV", __func__);
++		rc = -ENOMEM;
+ 		goto free_sg;
+ 	}
+ 	iv[0] = 3;
+-- 
+2.12.3
+
