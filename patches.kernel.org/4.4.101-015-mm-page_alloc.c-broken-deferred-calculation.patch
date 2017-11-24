@@ -1,10 +1,11 @@
-From d135e5750205a21a212a19dbb05aeb339e2cbea7 Mon Sep 17 00:00:00 2001
 From: Pavel Tatashin <pasha.tatashin@oracle.com>
 Date: Wed, 15 Nov 2017 17:38:41 -0800
 Subject: [PATCH] mm/page_alloc.c: broken deferred calculation
+Patch-mainline: 4.4.101
+References: bnc#1012382 bnc#1068980
 Git-commit: d135e5750205a21a212a19dbb05aeb339e2cbea7
-Patch-mainline: 4.15-rc1
-References: bnc#1068980
+
+commit d135e5750205a21a212a19dbb05aeb339e2cbea7 upstream.
 
 In reset_deferred_meminit() we determine number of pages that must not
 be deferred.  We initialize pages for at least 2G of memory, but also
@@ -25,30 +26,34 @@ Fixes: 864b9a393dcb ("mm: consider memblock reservations for deferred memory ini
 Signed-off-by: Pavel Tatashin <pasha.tatashin@oracle.com>
 Acked-by: Michal Hocko <mhocko@suse.com>
 Cc: Mel Gorman <mgorman@techsingularity.net>
-Cc: <stable@vger.kernel.org>
 Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
 Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- include/linux/mmzone.h |    3 ++-
- mm/page_alloc.c        |   27 ++++++++++++++++++---------
+ include/linux/mmzone.h |  3 ++-
+ mm/page_alloc.c        | 27 ++++++++++++++++++---------
  2 files changed, 20 insertions(+), 10 deletions(-)
 
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index 5b609a3ce3d7..ff88d6189411 100644
 --- a/include/linux/mmzone.h
 +++ b/include/linux/mmzone.h
-@@ -704,7 +704,8 @@ typedef struct pglist_data {
- #ifdef __GENKSYMS__
- 	void *suse_kabi_padding;
- #else
+@@ -688,7 +688,8 @@ typedef struct pglist_data {
+ 	 * is the first PFN that needs to be initialised.
+ 	 */
+ 	unsigned long first_deferred_pfn;
 -	unsigned long static_init_size;
 +	/* Number of non-deferred pages */
 +	unsigned long static_init_pgcnt;
- #endif
- #else /* CONFIG_DEFERRED_STRUCT_PAGE_INIT */
- 	void *suse_kabi_padding;
+ #endif /* CONFIG_DEFERRED_STRUCT_PAGE_INIT */
+ } pg_data_t;
+ 
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 6b5421ae86c6..35ce37b187f9 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -275,28 +275,37 @@ EXPORT_SYMBOL(nr_online_nodes);
+@@ -267,28 +267,37 @@ EXPORT_SYMBOL(nr_online_nodes);
  int page_group_by_mobility_disabled __read_mostly;
  
  #ifdef CONFIG_DEFERRED_STRUCT_PAGE_INIT
@@ -94,7 +99,7 @@ Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
  	pgdat->first_deferred_pfn = ULONG_MAX;
  }
  
-@@ -332,7 +341,7 @@ static inline bool update_defer_init(pg_
+@@ -324,7 +333,7 @@ static inline bool update_defer_init(pg_data_t *pgdat,
  		return true;
  	/* Initialise at least 2G of the highest zone */
  	(*nr_initialised)++;
@@ -103,3 +108,6 @@ Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
  	    (pfn & (PAGES_PER_SECTION - 1)) == 0) {
  		pgdat->first_deferred_pfn = pfn;
  		return false;
+-- 
+2.15.0
+

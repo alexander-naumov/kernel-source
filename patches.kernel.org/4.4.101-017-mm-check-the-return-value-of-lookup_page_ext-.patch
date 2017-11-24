@@ -1,11 +1,12 @@
-From f86e4271978bd93db466d6a95dad4b0fdcdb04f6 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@linaro.org>
 Date: Fri, 3 Jun 2016 14:55:38 -0700
 Subject: [PATCH] mm: check the return value of lookup_page_ext for all call
  sites
+Patch-mainline: 4.4.101
+References: bnc#1012382 bnc#1068982
 Git-commit: f86e4271978bd93db466d6a95dad4b0fdcdb04f6
-Patch-mainline: 4.7-rc2
-References: bnc#1068982
+
+commit f86e4271978bd93db466d6a95dad4b0fdcdb04f6 upstream.
 
 Per the discussion with Joonsoo Kim [1], we need check the return value
 of lookup_page_ext() for all call sites since it might return NULL in
@@ -26,18 +27,21 @@ Cc: Joonsoo Kim <iamjoonsoo.kim@lge.com>
 Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
 Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Michal Hocko <mhocko@suse.com>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- include/linux/page_idle.h |   43 ++++++++++++++++++++++++++++++++++++-------
- mm/debug-pagealloc.c      |    6 ++++++
- mm/page_alloc.c           |    6 ++++++
- mm/page_owner.c           |   26 ++++++++++++++++++++++++++
- mm/vmstat.c               |    2 ++
- 5 files changed, 76 insertions(+), 7 deletions(-)
+ include/linux/page_idle.h | 43 ++++++++++++++++++++++++++++++++++++-------
+ mm/debug-pagealloc.c      |  6 ++++++
+ mm/page_alloc.c           |  6 ++++++
+ mm/page_owner.c           | 16 ++++++++++++++++
+ mm/vmstat.c               |  2 ++
+ 5 files changed, 66 insertions(+), 7 deletions(-)
 
+diff --git a/include/linux/page_idle.h b/include/linux/page_idle.h
+index bf268fa92c5b..fec40271339f 100644
 --- a/include/linux/page_idle.h
 +++ b/include/linux/page_idle.h
-@@ -46,33 +46,62 @@ extern struct page_ext_operations page_i
+@@ -46,33 +46,62 @@ extern struct page_ext_operations page_idle_ops;
  
  static inline bool page_is_young(struct page *page)
  {
@@ -107,38 +111,42 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  }
  #endif /* CONFIG_64BIT */
  
+diff --git a/mm/debug-pagealloc.c b/mm/debug-pagealloc.c
+index 5bf5906ce13b..fe1c61f7cf26 100644
 --- a/mm/debug-pagealloc.c
 +++ b/mm/debug-pagealloc.c
-@@ -34,6 +34,8 @@ static inline void set_page_poison(struc
+@@ -34,6 +34,8 @@ static inline void set_page_poison(struct page *page)
  	struct page_ext *page_ext;
  
  	page_ext = lookup_page_ext(page);
-+	if (!page_ext)
++	if (page_ext)
 +		return;
  	__set_bit(PAGE_EXT_DEBUG_POISON, &page_ext->flags);
  }
  
-@@ -42,6 +44,8 @@ static inline void clear_page_poison(str
+@@ -42,6 +44,8 @@ static inline void clear_page_poison(struct page *page)
  	struct page_ext *page_ext;
  
  	page_ext = lookup_page_ext(page);
-+	if (!page_ext)
++	if (page_ext)
 +		return;
  	__clear_bit(PAGE_EXT_DEBUG_POISON, &page_ext->flags);
  }
  
-@@ -50,6 +54,8 @@ static inline bool page_poison(struct pa
+@@ -50,6 +54,8 @@ static inline bool page_poison(struct page *page)
  	struct page_ext *page_ext;
  
  	page_ext = lookup_page_ext(page);
-+	if (!page_ext)
++	if (page_ext)
 +		return false;
  	return test_bit(PAGE_EXT_DEBUG_POISON, &page_ext->flags);
  }
  
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 35ce37b187f9..3c70f03d91ec 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -673,6 +673,9 @@ static inline void set_page_guard(struct
+@@ -569,6 +569,9 @@ static inline void set_page_guard(struct zone *zone, struct page *page,
  		return;
  
  	page_ext = lookup_page_ext(page);
@@ -148,7 +156,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  	__set_bit(PAGE_EXT_DEBUG_GUARD, &page_ext->flags);
  
  	INIT_LIST_HEAD(&page->lru);
-@@ -690,6 +693,9 @@ static inline void clear_page_guard(stru
+@@ -586,6 +589,9 @@ static inline void clear_page_guard(struct zone *zone, struct page *page,
  		return;
  
  	page_ext = lookup_page_ext(page);
@@ -158,9 +166,11 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  	__clear_bit(PAGE_EXT_DEBUG_GUARD, &page_ext->flags);
  
  	set_page_private(page, 0);
+diff --git a/mm/page_owner.c b/mm/page_owner.c
+index 983c3a10fa07..dd6b9cebf981 100644
 --- a/mm/page_owner.c
 +++ b/mm/page_owner.c
-@@ -55,6 +55,8 @@ void __reset_page_owner(struct page *pag
+@@ -53,6 +53,8 @@ void __reset_page_owner(struct page *page, unsigned int order)
  
  	for (i = 0; i < (1 << order); i++) {
  		page_ext = lookup_page_ext(page + i);
@@ -169,7 +179,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  		__clear_bit(PAGE_EXT_OWNER, &page_ext->flags);
  	}
  }
-@@ -62,6 +64,7 @@ void __reset_page_owner(struct page *pag
+@@ -60,6 +62,7 @@ void __reset_page_owner(struct page *page, unsigned int order)
  void __set_page_owner(struct page *page, unsigned int order, gfp_t gfp_mask)
  {
  	struct page_ext *page_ext = lookup_page_ext(page);
@@ -177,7 +187,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  	struct stack_trace trace = {
  		.nr_entries = 0,
  		.max_entries = ARRAY_SIZE(page_ext->trace_entries),
-@@ -69,6 +72,9 @@ void __set_page_owner(struct page *page,
+@@ -67,6 +70,9 @@ void __set_page_owner(struct page *page, unsigned int order, gfp_t gfp_mask)
  		.skip = 3,
  	};
  
@@ -187,16 +197,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  	save_stack_trace(&trace);
  
  	page_ext->order = order;
-@@ -82,6 +88,8 @@ void __set_page_owner(struct page *page,
- void __set_page_owner_migrate_reason(struct page *page, int reason)
- {
- 	struct page_ext *page_ext = lookup_page_ext(page);
-+	if (unlikely(!page_ext))
-+		return;
- 
- 	page_ext->last_migrate_reason = reason;
- }
-@@ -89,6 +97,12 @@ void __set_page_owner_migrate_reason(str
+@@ -79,6 +85,12 @@ void __set_page_owner(struct page *page, unsigned int order, gfp_t gfp_mask)
  gfp_t __get_page_owner_gfp(struct page *page)
  {
  	struct page_ext *page_ext = lookup_page_ext(page);
@@ -209,29 +210,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  
  	return page_ext->gfp_mask;
  }
-@@ -99,6 +113,9 @@ void __copy_page_owner(struct page *oldp
- 	struct page_ext *new_ext = lookup_page_ext(newpage);
- 	int i;
- 
-+	if (unlikely(!old_ext || !new_ext))
-+		return;
-+
- 	new_ext->order = old_ext->order;
- 	new_ext->gfp_mask = old_ext->gfp_mask;
- 	new_ext->nr_entries = old_ext->nr_entries;
-@@ -193,6 +210,11 @@ void __dump_page_owner(struct page *page
- 	gfp_t gfp_mask = page_ext->gfp_mask;
- 	int mt = gfpflags_to_migratetype(gfp_mask);
- 
-+	if (unlikely(!page_ext)) {
-+		pr_alert("There is not page extension available.\n");
-+		return;
-+	}
-+
- 	if (!test_bit(PAGE_EXT_OWNER, &page_ext->flags)) {
- 		pr_alert("page_owner info is not active (free page?)\n");
- 		return;
-@@ -252,6 +274,8 @@ read_page_owner(struct file *file, char
+@@ -194,6 +206,8 @@ read_page_owner(struct file *file, char __user *buf, size_t count, loff_t *ppos)
  		}
  
  		page_ext = lookup_page_ext(page);
@@ -240,7 +219,7 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  
  		/*
  		 * Some pages could be missed by concurrent allocation or free,
-@@ -315,6 +339,8 @@ static void init_pages_in_zone(pg_data_t
+@@ -257,6 +271,8 @@ static void init_pages_in_zone(pg_data_t *pgdat, struct zone *zone)
  				continue;
  
  			page_ext = lookup_page_ext(page);
@@ -249,9 +228,11 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  
  			/* Maybe overraping zone */
  			if (test_bit(PAGE_EXT_OWNER, &page_ext->flags))
+diff --git a/mm/vmstat.c b/mm/vmstat.c
+index c54fd2924f25..c344e3609c53 100644
 --- a/mm/vmstat.c
 +++ b/mm/vmstat.c
-@@ -1056,6 +1056,8 @@ static void pagetypeinfo_showmixedcount_
+@@ -1091,6 +1091,8 @@ static void pagetypeinfo_showmixedcount_print(struct seq_file *m,
  				continue;
  
  			page_ext = lookup_page_ext(page);
@@ -260,3 +241,6 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  
  			if (!test_bit(PAGE_EXT_OWNER, &page_ext->flags))
  				continue;
+-- 
+2.15.0
+

@@ -20,14 +20,15 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 
 --- a/include/linux/mmzone.h
 +++ b/include/linux/mmzone.h
-@@ -701,9 +701,14 @@ typedef struct pglist_data {
+@@ -689,10 +689,15 @@ typedef struct pglist_data {
  	 * is the first PFN that needs to be initialised.
  	 */
  	unsigned long first_deferred_pfn;
 +#ifdef __GENKSYMS__
 +	void *suse_kabi_padding;
 +#else
- 	unsigned long static_init_size;
+ 	/* Number of non-deferred pages */
+ 	unsigned long static_init_pgcnt;
 -#endif /* CONFIG_DEFERRED_STRUCT_PAGE_INIT */
 +#endif
 +#else /* CONFIG_DEFERRED_STRUCT_PAGE_INIT */
