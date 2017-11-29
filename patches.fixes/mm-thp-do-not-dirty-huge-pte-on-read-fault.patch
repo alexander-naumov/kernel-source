@@ -1,0 +1,103 @@
+Date: Fri, 24 Nov 2017 13:22:27 +0300
+From: "Kirill A. Shutemov" <kirill@shutemov.name>
+Subject: mm, thp: do not dirty huge pages on read fault
+Patch-mainline: not yet (discussed on security@kernel.org)
+References: bnc#1069496, CVE-2017-1000405
+
+touch_p[mu]d dirty p[mu]d even for the read fault. This breaks CoW bail
+out logic which realies on the dirty bit. As a result, a read only
+mapping can be overrwriten with all due security consequences. Fix this
+by checking FOLL_WRITE when dirtying page tables in g-u-p path and also
+never dirty page tables when the underlying vma is read only.
+
+Fixes: 8310d48b125d ("mm/huge_memory.c: respect FOLL_FORCE/FOLL_COW for thp")
+Reported-by: Bindecy <contact@bindecy.com>.
+Signed-off-by: "Kirill A. Shutemov" <kirill@shutemov.name>
+Signed-off-by: Michal Hocko <mhocko@suse.com>
+
+---
+ mm/huge_memory.c |   25 ++++++++++---------------
+ mm/migrate.c     |    2 +-
+ 2 files changed, 11 insertions(+), 16 deletions(-)
+
+--- a/mm/huge_memory.c
++++ b/mm/huge_memory.c
+@@ -709,7 +709,7 @@ __setup("transparent_hugepage=", setup_t
+ pmd_t maybe_pmd_mkwrite(pmd_t pmd, struct vm_area_struct *vma)
+ {
+ 	if (likely(vma->vm_flags & VM_WRITE))
+-		pmd = pmd_mkwrite(pmd);
++		pmd = pmd_mkwrite(pmd_mkdirty(pmd));
+ 	return pmd;
+ }
+ 
+@@ -779,7 +779,7 @@ static int __do_huge_pmd_anonymous_page(
+ 		}
+ 
+ 		entry = mk_huge_pmd(page, vma->vm_page_prot);
+-		entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
++		entry = maybe_pmd_mkwrite(entry, vma);
+ 		page_add_new_anon_rmap(page, vma, haddr);
+ 		mem_cgroup_commit_charge(page, memcg, false);
+ 		lru_cache_add_active_or_unevictable(page, vma);
+@@ -1205,7 +1205,7 @@ int do_huge_pmd_wp_page(struct mm_struct
+ 	if (page_mapcount(page) == 1) {
+ 		pmd_t entry;
+ 		entry = pmd_mkyoung(orig_pmd);
+-		entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
++		entry = maybe_pmd_mkwrite(entry, vma);
+ 		if (pmdp_set_access_flags(vma, haddr, pmd, entry,  1))
+ 			update_mmu_cache_pmd(vma, address, pmd);
+ 		ret |= VM_FAULT_WRITE;
+@@ -1273,7 +1273,7 @@ alloc:
+ 	} else {
+ 		pmd_t entry;
+ 		entry = mk_huge_pmd(new_page, vma->vm_page_prot);
+-		entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
++		entry = maybe_pmd_mkwrite(entry, vma);
+ 		pmdp_huge_clear_flush_notify(vma, haddr, pmd);
+ 		page_add_new_anon_rmap(new_page, vma, haddr);
+ 		mem_cgroup_commit_charge(new_page, memcg, false);
+@@ -1335,17 +1335,12 @@ struct page *follow_trans_huge_pmd(struc
+ 	VM_BUG_ON_PAGE(!PageHead(page), page);
+ 	if (flags & FOLL_TOUCH) {
+ 		pmd_t _pmd;
+-		/*
+-		 * We should set the dirty bit only for FOLL_WRITE but
+-		 * for now the dirty bit in the pmd is meaningless.
+-		 * And if the dirty bit will become meaningful and
+-		 * we'll only set it with FOLL_WRITE, an atomic
+-		 * set_bit will be required on the pmd to set the
+-		 * young bit, instead of the current set_pmd_at.
+-		 */
+-		_pmd = pmd_mkyoung(pmd_mkdirty(*pmd));
++		_pmd = pmd_mkyoung(*pmd);
++		if (flags & FOLL_WRITE)
++			_pmd = pmd_mkdirty(_pmd);
++
+ 		if (pmdp_set_access_flags(vma, addr & HPAGE_PMD_MASK,
+-					  pmd, _pmd,  1))
++					  pmd, _pmd,  flags & FOLL_WRITE))
+ 			update_mmu_cache_pmd(vma, addr, pmd);
+ 	}
+ 	if ((flags & FOLL_MLOCK) && (vma->vm_flags & VM_LOCKED)) {
+@@ -2686,7 +2681,7 @@ static void collapse_huge_page(struct mm
+ 	pgtable = pmd_pgtable(_pmd);
+ 
+ 	_pmd = mk_huge_pmd(new_page, vma->vm_page_prot);
+-	_pmd = maybe_pmd_mkwrite(pmd_mkdirty(_pmd), vma);
++	_pmd = maybe_pmd_mkwrite(_pmd, vma);
+ 
+ 	/*
+ 	 * spin_lock() below is not the equivalent of smp_wmb(), so
+--- a/mm/migrate.c
++++ b/mm/migrate.c
+@@ -1814,7 +1814,7 @@ fail_putback:
+ 	orig_entry = *pmd;
+ 	entry = mk_pmd(new_page, vma->vm_page_prot);
+ 	entry = pmd_mkhuge(entry);
+-	entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
++	entry = maybe_pmd_mkwrite(entry, vma);
+ 
+ 	/*
+ 	 * Clear the old entry under pagetable lock and establish the new PTE.
