@@ -16,9 +16,9 @@ Signed-off-by: "Kirill A. Shutemov" <kirill@shutemov.name>
 Signed-off-by: Michal Hocko <mhocko@suse.com>
 
 ---
- mm/huge_memory.c |   25 ++++++++++---------------
+ mm/huge_memory.c |   21 ++++++++-------------
  mm/migrate.c     |    2 +-
- 2 files changed, 11 insertions(+), 16 deletions(-)
+ 2 files changed, 9 insertions(+), 14 deletions(-)
 
 --- a/mm/huge_memory.c
 +++ b/mm/huge_memory.c
@@ -40,24 +40,6 @@ Signed-off-by: Michal Hocko <mhocko@suse.com>
  		page_add_new_anon_rmap(page, vma, haddr);
  		mem_cgroup_commit_charge(page, memcg, false);
  		lru_cache_add_active_or_unevictable(page, vma);
-@@ -1205,7 +1205,7 @@ int do_huge_pmd_wp_page(struct mm_struct
- 	if (page_mapcount(page) == 1) {
- 		pmd_t entry;
- 		entry = pmd_mkyoung(orig_pmd);
--		entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
-+		entry = maybe_pmd_mkwrite(entry, vma);
- 		if (pmdp_set_access_flags(vma, haddr, pmd, entry,  1))
- 			update_mmu_cache_pmd(vma, address, pmd);
- 		ret |= VM_FAULT_WRITE;
-@@ -1273,7 +1273,7 @@ alloc:
- 	} else {
- 		pmd_t entry;
- 		entry = mk_huge_pmd(new_page, vma->vm_page_prot);
--		entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
-+		entry = maybe_pmd_mkwrite(entry, vma);
- 		pmdp_huge_clear_flush_notify(vma, haddr, pmd);
- 		page_add_new_anon_rmap(new_page, vma, haddr);
- 		mem_cgroup_commit_charge(new_page, memcg, false);
 @@ -1335,17 +1335,12 @@ struct page *follow_trans_huge_pmd(struc
  	VM_BUG_ON_PAGE(!PageHead(page), page);
  	if (flags & FOLL_TOUCH) {
