@@ -33,4 +33,4 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
 +		offset = offset_in_page(uaddr);
  		for (j = cur_page; j < page_limit; j++) {
  			unsigned int bytes = PAGE_SIZE - offset;
- 			unsigned short prev_bi_vcnt = bio->bi_vcnt;
+ 
