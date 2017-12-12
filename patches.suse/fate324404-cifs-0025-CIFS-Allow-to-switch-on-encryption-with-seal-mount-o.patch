@@ -1,28 +1,26 @@
-From 46772ad63ccdfaaf7624e38330082dd6cb276e83 Mon Sep 17 00:00:00 2001
+From ae6f8dd4d0c87bfb72da9d9b56342adf53e69c31 Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:41:18 +0100
-Subject: [PATCH 23/23] CIFS: Allow to switch on encryption with seal mount
- option  (FATE#324404).
+Date: Thu, 17 Nov 2016 13:59:23 -0800
+Subject: [PATCH] CIFS: Allow to switch on encryption with seal mount option
 Patch-mainline: v4.11
 Git-commit: ae6f8dd4d0c87bfb72da9d9b56342adf53e69c31
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 This allows users to inforce encryption for SMB3 shares if a server
 supports it.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/connect.c | 41 ++++++++++++++++++++++++++++-------------
- fs/cifs/smb2pdu.c | 29 +++++++++++++++--------------
+ fs/cifs/connect.c |   41 ++++++++++++++++++++++++++++-------------
+ fs/cifs/smb2pdu.c |   29 +++++++++++++++--------------
  2 files changed, 43 insertions(+), 27 deletions(-)
 
-diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index 9760e4320da7..9a931b726392 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -2600,12 +2600,18 @@ get_ses_fail:
+@@ -2571,12 +2571,18 @@ get_ses_fail:
  	return ERR_PTR(rc);
  }
  
@@ -43,7 +41,7 @@ index 9760e4320da7..9a931b726392 100644
  	return 1;
  }
  
-@@ -2618,14 +2624,8 @@ cifs_find_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2589,14 +2595,8 @@ cifs_find_tcon(struct cifs_ses *ses, str
  	spin_lock(&cifs_tcp_ses_lock);
  	list_for_each(tmp, &ses->tcon_list) {
  		tcon = list_entry(tmp, struct cifs_tcon, tcon_list);
@@ -59,7 +57,7 @@ index 9760e4320da7..9a931b726392 100644
  		++tcon->tc_count;
  		spin_unlock(&cifs_tcp_ses_lock);
  		return tcon;
-@@ -2671,8 +2671,6 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2642,8 +2642,6 @@ cifs_get_tcon(struct cifs_ses *ses, stru
  		cifs_dbg(FYI, "Found match on UNC path\n");
  		/* existing tcon already has a reference */
  		cifs_put_smb_ses(ses);
@@ -68,7 +66,7 @@ index 9760e4320da7..9a931b726392 100644
  		return tcon;
  	}
  
-@@ -2728,7 +2726,6 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2699,7 +2697,6 @@ cifs_get_tcon(struct cifs_ses *ses, stru
  		tcon->Flags &= ~SMB_SHARE_IS_IN_DFS;
  		cifs_dbg(FYI, "DFS disabled (%d)\n", tcon->Flags);
  	}
@@ -76,7 +74,7 @@ index 9760e4320da7..9a931b726392 100644
  	tcon->use_persistent = false;
  	/* check if SMB2 or later, CIFS does not support persistent handles */
  	if (volume_info->persistent) {
-@@ -2765,6 +2762,24 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2736,6 +2733,24 @@ cifs_get_tcon(struct cifs_ses *ses, stru
  		tcon->use_resilient = true;
  	}
  
@@ -101,7 +99,7 @@ index 9760e4320da7..9a931b726392 100644
  	/*
  	 * We can have only one retry value for a connection to a share so for
  	 * resources mounted more than once to the same server share the last
-@@ -2894,7 +2909,7 @@ cifs_match_super(struct super_block *sb, void *data)
+@@ -2867,7 +2882,7 @@ cifs_match_super(struct super_block *sb,
  
  	if (!match_server(tcp_srv, volume_info) ||
  	    !match_session(ses, volume_info) ||
@@ -110,11 +108,9 @@ index 9760e4320da7..9a931b726392 100644
  	    !match_prepath(sb, mnt_data)) {
  		rc = 0;
  		goto out;
-diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
-index 35e71bdb7b30..637e4b02333d 100644
 --- a/fs/cifs/smb2pdu.c
 +++ b/fs/cifs/smb2pdu.c
-@@ -79,9 +79,14 @@ static const int smb2_req_struct_sizes[NUMBER_OF_SMB2_COMMANDS] = {
+@@ -79,9 +79,14 @@ static const int smb2_req_struct_sizes[N
  
  static int encryption_required(const struct cifs_tcon *tcon)
  {
@@ -129,7 +125,7 @@ index 35e71bdb7b30..637e4b02333d 100644
  	return 0;
  }
  
-@@ -878,8 +883,6 @@ ssetup_ntlmssp_authenticate:
+@@ -867,8 +872,6 @@ ssetup_ntlmssp_authenticate:
  		goto ssetup_exit;
  
  	ses->session_flags = le16_to_cpu(rsp->SessionFlags);
@@ -138,7 +134,7 @@ index 35e71bdb7b30..637e4b02333d 100644
  ssetup_exit:
  	free_rsp_buf(resp_buftype, rsp);
  
-@@ -999,12 +1002,6 @@ SMB2_tcon(const unsigned int xid, struct cifs_ses *ses, const char *tree,
+@@ -988,12 +991,6 @@ SMB2_tcon(const unsigned int xid, struct
  	else
  		return -EIO;
  
@@ -151,7 +147,7 @@ index 35e71bdb7b30..637e4b02333d 100644
  	unc_path = kmalloc(MAX_SHARENAME_LENGTH * 2, GFP_KERNEL);
  	if (unc_path == NULL)
  		return -ENOMEM;
-@@ -1026,15 +1023,16 @@ SMB2_tcon(const unsigned int xid, struct cifs_ses *ses, const char *tree,
+@@ -1015,15 +1012,16 @@ SMB2_tcon(const unsigned int xid, struct
  		return rc;
  	}
  
@@ -172,7 +168,7 @@ index 35e71bdb7b30..637e4b02333d 100644
  
  	iov[0].iov_base = (char *)req;
  	/* 4 for rfc1002 length field and 1 for pad */
-@@ -1091,9 +1089,12 @@ SMB2_tcon(const unsigned int xid, struct cifs_ses *ses, const char *tree,
+@@ -1080,9 +1078,12 @@ SMB2_tcon(const unsigned int xid, struct
  	if ((rsp->Capabilities & SMB2_SHARE_CAP_DFS) &&
  	    ((tcon->share_flags & SHI1005_FLAGS_DFS) == 0))
  		cifs_dbg(VFS, "DFS capability contradicts DFS flag\n");
@@ -187,6 +183,3 @@ index 35e71bdb7b30..637e4b02333d 100644
  	if (tcon->ses->server->ops->validate_negotiate)
  		rc = tcon->ses->server->ops->validate_negotiate(xid, tcon);
  tcon_exit:
--- 
-2.12.3
-

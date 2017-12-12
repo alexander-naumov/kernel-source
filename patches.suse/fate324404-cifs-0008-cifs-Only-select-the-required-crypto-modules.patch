@@ -1,11 +1,10 @@
-From 4d186661c7f6b1f18df6f78260906cec292556c0 Mon Sep 17 00:00:00 2001
+From 3692304bba6164be3810afd41b84ecb0e1e41db1 Mon Sep 17 00:00:00 2001
 From: Jean Delvare <jdelvare@suse.de>
-Date: Mon, 20 Nov 2017 16:49:46 +0100
-Subject: [PATCH 03/23] cifs: Only select the required crypto modules
- (FATE#324404).
+Date: Wed, 25 Jan 2017 16:08:17 +0100
+Subject: [PATCH] cifs: Only select the required crypto modules
 Patch-mainline: v4.11
 Git-commit: 3692304bba6164be3810afd41b84ecb0e1e41db1
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 The sha256 and cmac crypto modules are only needed for SMB2+, so move
 the select statements to config CIFS_SMB2. Also select CRYPTO_AES
@@ -15,13 +14,13 @@ Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
 Signed-off-by: Jean Delvare <jdelvare@suse.de>
 Cc: Steve French <sfrench@samba.org>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/Kconfig | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/fs/cifs/Kconfig b/fs/cifs/Kconfig
-index a439c17c85c4..ff0d1fe542f7 100644
 --- a/fs/cifs/Kconfig
 +++ b/fs/cifs/Kconfig
 @@ -9,8 +9,6 @@ config CIFS
@@ -44,5 +43,5 @@ index a439c17c85c4..ff0d1fe542f7 100644
  	help
  	  This enables support for the Server Message Block version 2
 -- 
-2.12.3
+2.10.2
 

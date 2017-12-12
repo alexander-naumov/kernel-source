@@ -1,33 +1,31 @@
-From 31ef9f0ea338a9c95a9d0f759fd19fad051fb72a Mon Sep 17 00:00:00 2001
+From 026e93dc0a3eefb0be060bcb9ecd8d7a7fd5c398 Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:26:52 +0100
-Subject: [PATCH 14/23] CIFS: Encrypt SMB3 requests before sending
- (FATE#324404).
+Date: Thu, 3 Nov 2016 16:47:37 -0700
+Subject: [PATCH] CIFS: Encrypt SMB3 requests before sending
 Patch-mainline: v4.11
 Git-commit: 026e93dc0a3eefb0be060bcb9ecd8d7a7fd5c398
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 This change allows to encrypt packets if it is required by a server
 for SMB sessions or tree connections.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/Kconfig         |   2 +
- fs/cifs/cifsencrypt.c   |  13 ++-
- fs/cifs/cifsfs.c        |   2 +
- fs/cifs/cifsglob.h      |   2 +
- fs/cifs/cifsproto.h     |   2 +-
- fs/cifs/connect.c       |   4 +-
- fs/cifs/smb2ops.c       | 256 ++++++++++++++++++++++++++++++++++++++++++++++++
- fs/cifs/smb2pdu.h       |   5 +-
- fs/cifs/smb2proto.h     |   3 +
- fs/cifs/smb2transport.c |  31 ++++++
+ fs/cifs/Kconfig         |    2 
+ fs/cifs/cifsencrypt.c   |   13 ++
+ fs/cifs/cifsfs.c        |    2 
+ fs/cifs/cifsglob.h      |    2 
+ fs/cifs/cifsproto.h     |    2 
+ fs/cifs/connect.c       |    4 
+ fs/cifs/smb2ops.c       |  256 ++++++++++++++++++++++++++++++++++++++++++++++++
+ fs/cifs/smb2pdu.h       |    5 
+ fs/cifs/smb2proto.h     |    3 
+ fs/cifs/smb2transport.c |   31 +++++
  10 files changed, 315 insertions(+), 5 deletions(-)
 
-diff --git a/fs/cifs/Kconfig b/fs/cifs/Kconfig
-index ff0d1fe542f7..034f00f21390 100644
 --- a/fs/cifs/Kconfig
 +++ b/fs/cifs/Kconfig
 @@ -174,6 +174,8 @@ config CIFS_SMB2
@@ -39,8 +37,6 @@ index ff0d1fe542f7..034f00f21390 100644
  
  	help
  	  This enables support for the Server Message Block version 2
-diff --git a/fs/cifs/cifsencrypt.c b/fs/cifs/cifsencrypt.c
-index c948886d30b1..ce2a008290a2 100644
 --- a/fs/cifs/cifsencrypt.c
 +++ b/fs/cifs/cifsencrypt.c
 @@ -33,6 +33,7 @@
@@ -51,7 +47,7 @@ index c948886d30b1..ce2a008290a2 100644
  
  static int
  cifs_crypto_shash_md5_allocate(struct TCP_Server_Info *server)
-@@ -843,7 +844,7 @@ calc_seckey(struct cifs_ses *ses)
+@@ -855,7 +856,7 @@ calc_seckey(struct cifs_ses *ses)
  }
  
  void
@@ -60,7 +56,7 @@ index c948886d30b1..ce2a008290a2 100644
  {
  	if (server->secmech.cmacaes) {
  		crypto_free_shash(server->secmech.cmacaes);
-@@ -865,6 +866,16 @@ cifs_crypto_shash_release(struct TCP_Server_Info *server)
+@@ -877,6 +878,16 @@ cifs_crypto_shash_release(struct TCP_Ser
  		server->secmech.hmacmd5 = NULL;
  	}
  
@@ -77,8 +73,6 @@ index c948886d30b1..ce2a008290a2 100644
  	kfree(server->secmech.sdesccmacaes);
  	server->secmech.sdesccmacaes = NULL;
  	kfree(server->secmech.sdeschmacsha256);
-diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
-index ab1761bf52be..839ff0f85745 100644
 --- a/fs/cifs/cifsfs.c
 +++ b/fs/cifs/cifsfs.c
 @@ -1316,6 +1316,8 @@ MODULE_SOFTDEP("pre: nls");
@@ -90,8 +84,6 @@ index ab1761bf52be..839ff0f85745 100644
  #endif /* CONFIG_CIFS_SMB2 */
  module_init(init_cifs)
  module_exit(exit_cifs)
-diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index 3e8ec995ec65..f37a617352ee 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
 @@ -122,6 +122,8 @@ struct cifs_secmech {
@@ -103,11 +95,9 @@ index 3e8ec995ec65..f37a617352ee 100644
  };
  
  /* per smb session structure/fields */
-diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
-index 27b1e33ee7e6..38751c0523f1 100644
 --- a/fs/cifs/cifsproto.h
 +++ b/fs/cifs/cifsproto.h
-@@ -445,7 +445,7 @@ extern int SMBNTencrypt(unsigned char *, unsigned char *, unsigned char *,
+@@ -442,7 +442,7 @@ extern int SMBNTencrypt(unsigned char *,
  			const struct nls_table *);
  extern int setup_ntlm_response(struct cifs_ses *, const struct nls_table *);
  extern int setup_ntlmv2_rsp(struct cifs_ses *, const struct nls_table *);
@@ -116,11 +106,9 @@ index 27b1e33ee7e6..38751c0523f1 100644
  extern int calc_seckey(struct cifs_ses *);
  extern int generate_smb30signingkey(struct cifs_ses *);
  extern int generate_smb311signingkey(struct cifs_ses *);
-diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index d2f383d90827..862fa69e954b 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -2180,7 +2180,7 @@ cifs_put_tcp_session(struct TCP_Server_Info *server, int from_reconnect)
+@@ -2102,7 +2102,7 @@ cifs_put_tcp_session(struct TCP_Server_I
  	server->tcpStatus = CifsExiting;
  	spin_unlock(&GlobalMid_Lock);
  
@@ -129,7 +117,7 @@ index d2f383d90827..862fa69e954b 100644
  	cifs_fscache_release_client_cookie(server);
  
  	kfree(server->session_key.response);
-@@ -2293,7 +2293,7 @@ cifs_get_tcp_session(struct smb_vol *volume_info)
+@@ -2215,7 +2215,7 @@ cifs_get_tcp_session(struct smb_vol *vol
  	return tcp_ses;
  
  out_err_crypto_release:
@@ -138,8 +126,6 @@ index d2f383d90827..862fa69e954b 100644
  
  	put_net(cifs_net_ns(tcp_ses));
  
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index 7d9fa4e6e25b..d39ab84e147e 100644
 --- a/fs/cifs/smb2ops.c
 +++ b/fs/cifs/smb2ops.c
 @@ -20,6 +20,8 @@
@@ -151,7 +137,7 @@ index 7d9fa4e6e25b..d39ab84e147e 100644
  #include "cifsglob.h"
  #include "smb2pdu.h"
  #include "smb2proto.h"
-@@ -1510,6 +1512,256 @@ smb2_dir_needs_close(struct cifsFileInfo *cfile)
+@@ -1498,6 +1500,256 @@ smb2_dir_needs_close(struct cifsFileInfo
  	return !cfile->invalidHandle;
  }
  
@@ -408,7 +394,7 @@ index 7d9fa4e6e25b..d39ab84e147e 100644
  struct smb_version_operations smb20_operations = {
  	.compare_fids = smb2_compare_fids,
  	.setup_request = smb2_setup_request,
-@@ -1758,6 +2010,8 @@ struct smb_version_operations smb30_operations = {
+@@ -1743,6 +1995,8 @@ struct smb_version_operations smb30_oper
  	.wp_retry_size = smb2_wp_retry_size,
  	.dir_needs_close = smb2_dir_needs_close,
  	.fallocate = smb3_fallocate,
@@ -417,7 +403,7 @@ index 7d9fa4e6e25b..d39ab84e147e 100644
  };
  
  #ifdef CONFIG_CIFS_SMB311
-@@ -1847,6 +2101,8 @@ struct smb_version_operations smb311_operations = {
+@@ -1831,6 +2085,8 @@ struct smb_version_operations smb311_ope
  	.wp_retry_size = smb2_wp_retry_size,
  	.dir_needs_close = smb2_dir_needs_close,
  	.fallocate = smb3_fallocate,
@@ -426,8 +412,6 @@ index 7d9fa4e6e25b..d39ab84e147e 100644
  };
  #endif /* CIFS_SMB311 */
  
-diff --git a/fs/cifs/smb2pdu.h b/fs/cifs/smb2pdu.h
-index 1f0d061b4e65..564bcbda53c4 100644
 --- a/fs/cifs/smb2pdu.h
 +++ b/fs/cifs/smb2pdu.h
 @@ -132,11 +132,14 @@ struct smb2_pdu {
@@ -446,11 +430,9 @@ index 1f0d061b4e65..564bcbda53c4 100644
  	__u8   Signature[16];
  	__u8   Nonce[16];
  	__le32 OriginalMessageSize;
-diff --git a/fs/cifs/smb2proto.h b/fs/cifs/smb2proto.h
-index 04ef6e914597..06bfe98d3c9f 100644
 --- a/fs/cifs/smb2proto.h
 +++ b/fs/cifs/smb2proto.h
-@@ -60,6 +60,8 @@ extern void smb2_echo_request(struct work_struct *work);
+@@ -60,6 +60,8 @@ extern void smb2_echo_request(struct wor
  extern __le32 smb2_get_lease_state(struct cifsInodeInfo *cinode);
  extern bool smb2_is_valid_oplock_break(char *buffer,
  				       struct TCP_Server_Info *srv);
@@ -459,7 +441,7 @@ index 04ef6e914597..06bfe98d3c9f 100644
  
  extern void move_smb2_info_to_cifs(FILE_ALL_INFO *dst,
  				   struct smb2_file_all_info *src);
-@@ -101,6 +103,7 @@ extern int smb2_unlock_range(struct cifsFileInfo *cfile,
+@@ -101,6 +103,7 @@ extern int smb2_unlock_range(struct cifs
  			     struct file_lock *flock, const unsigned int xid);
  extern int smb2_push_mandatory_locks(struct cifsFileInfo *cfile);
  extern void smb2_reconnect_server(struct work_struct *work);
@@ -467,8 +449,6 @@ index 04ef6e914597..06bfe98d3c9f 100644
  
  /*
   * SMB2 Worker functions - most of protocol specific implementation details
-diff --git a/fs/cifs/smb2transport.c b/fs/cifs/smb2transport.c
-index db83cef7b865..d46bf58bed77 100644
 --- a/fs/cifs/smb2transport.c
 +++ b/fs/cifs/smb2transport.c
 @@ -31,6 +31,7 @@
@@ -479,10 +459,11 @@ index db83cef7b865..d46bf58bed77 100644
  #include "smb2pdu.h"
  #include "cifsglob.h"
  #include "cifsproto.h"
-@@ -730,6 +731,36 @@ smb2_setup_request(struct cifs_ses *ses, struct smb_rqst *rqst)
+@@ -665,3 +666,33 @@ smb2_setup_async_request(struct TCP_Serv
+ 
  	return mid;
  }
- 
++
 +int
 +smb3_crypto_aead_allocate(struct TCP_Server_Info *server)
 +{
@@ -512,10 +493,3 @@ index db83cef7b865..d46bf58bed77 100644
 +
 +	return 0;
 +}
-+
- struct mid_q_entry *
- smb2_setup_async_request(struct TCP_Server_Info *server, struct smb_rqst *rqst)
- {
--- 
-2.12.3
-

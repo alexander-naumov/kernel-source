@@ -1,28 +1,27 @@
-From 730cd4266df1ea1ae23507d75396045be89899c0 Mon Sep 17 00:00:00 2001
+From 71335664c38f03de10d7cf1d82705fe55a130b33 Mon Sep 17 00:00:00 2001
 From: Al Viro <viro@zeniv.linux.org.uk>
-Date: Mon, 20 Nov 2017 17:33:38 +0100
-Subject: [PATCH 18/23] cifs: don't bother with kmap on read_pages side 
- (FATE#324404).
+Date: Sat, 9 Jan 2016 19:54:50 -0500
+Subject: cifs: don't bother with kmap on read_pages side
 Patch-mainline: v4.7-rc1
 Git-commit: 71335664c38f03de10d7cf1d82705fe55a130b33
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 just do ITER_BVEC recvmsg
 
 Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/cifsproto.h |  5 ++--
- fs/cifs/connect.c   | 66 ++++++++++++++++++++++++++++-------------------------
- fs/cifs/file.c      | 53 ++++++++++++++----------------------------
- 3 files changed, 54 insertions(+), 70 deletions(-)
+ fs/cifs/cifsproto.h |  7 +++---
+ fs/cifs/connect.c   | 65 ++++++++++++++++++++++++++++-------------------------
+ fs/cifs/file.c      | 53 ++++++++++++++-----------------------------
+ 3 files changed, 55 insertions(+), 70 deletions(-)
 
 diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
-index 90dc5385061b..e408c98aa8fd 100644
 --- a/fs/cifs/cifsproto.h
 +++ b/fs/cifs/cifsproto.h
-@@ -187,9 +187,8 @@ extern int set_cifs_acl(struct cifs_ntsd *, __u32, struct inode *,
+@@ -187,9 +187,8 @@ extern int set_cifs_acl(struct cifs_ntsd
  extern void dequeue_mid(struct mid_q_entry *mid, bool malformed);
  extern int cifs_read_from_socket(struct TCP_Server_Info *server, char *buf,
  		     unsigned int to_read);
@@ -35,10 +34,9 @@ index 90dc5385061b..e408c98aa8fd 100644
  			       struct cifs_sb_info *cifs_sb);
  extern int cifs_match_super(struct super_block *, void *);
 diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index e212d9f09414..359e0ffe64ce 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -515,39 +515,33 @@ server_unresponsive(struct TCP_Server_Info *server)
+@@ -503,39 +503,33 @@ server_unresponsive(struct TCP_Server_In
  	return false;
  }
  
@@ -96,7 +94,7 @@ index e212d9f09414..359e0ffe64ce 100644
  			/*
  			 * Minimum sleep to prevent looping, allowing socket
  			 * to clear and app threads to set tcpStatus
-@@ -556,11 +550,12 @@ cifs_readv_from_socket(struct TCP_Server_Info *server, struct kvec *iov_orig,
+@@ -544,11 +538,12 @@ cifs_readv_from_socket(struct TCP_Server
  			usleep_range(1000, 2000);
  			length = 0;
  			continue;
@@ -112,7 +110,7 @@ index e212d9f09414..359e0ffe64ce 100644
  		}
  	}
  	return total_read;
-@@ -570,12 +565,21 @@ int
+@@ -558,12 +553,21 @@ int
  cifs_read_from_socket(struct TCP_Server_Info *server, char *buf,
  		      unsigned int to_read)
  {
@@ -139,10 +137,9 @@ index e212d9f09414..359e0ffe64ce 100644
  
  static bool
 diff --git a/fs/cifs/file.c b/fs/cifs/file.c
-index 4d61fc3d7970..ef6901595924 100644
 --- a/fs/cifs/file.c
 +++ b/fs/cifs/file.c
-@@ -2872,39 +2872,31 @@ cifs_uncached_read_into_pages(struct TCP_Server_Info *server,
+@@ -2873,39 +2873,31 @@ cifs_uncached_read_into_pages(struct TCP
  	int result = 0;
  	unsigned int i;
  	unsigned int nr_pages = rdata->nr_pages;
@@ -195,7 +192,7 @@ index 4d61fc3d7970..ef6901595924 100644
  		if (result < 0)
  			break;
  
-@@ -3320,7 +3312,6 @@ cifs_readpages_read_into_pages(struct TCP_Server_Info *server,
+@@ -3321,7 +3313,6 @@ cifs_readpages_read_into_pages(struct TC
  	u64 eof;
  	pgoff_t eof_index;
  	unsigned int nr_pages = rdata->nr_pages;
@@ -203,7 +200,7 @@ index 4d61fc3d7970..ef6901595924 100644
  
  	/* determine the eof that the server (probably) has */
  	eof = CIFS_I(rdata->mapping->host)->server_eof;
-@@ -3331,23 +3322,14 @@ cifs_readpages_read_into_pages(struct TCP_Server_Info *server,
+@@ -3332,23 +3323,14 @@ cifs_readpages_read_into_pages(struct TC
  	rdata->tailsz = PAGE_CACHE_SIZE;
  	for (i = 0; i < nr_pages; i++) {
  		struct page *page = rdata->pages[i];
@@ -230,7 +227,7 @@ index 4d61fc3d7970..ef6901595924 100644
  			len = 0;
  		} else if (page->index > eof_index) {
  			/*
-@@ -3377,8 +3359,7 @@ cifs_readpages_read_into_pages(struct TCP_Server_Info *server,
+@@ -3378,8 +3360,7 @@ cifs_readpages_read_into_pages(struct TC
  			continue;
  		}
  
@@ -240,6 +237,3 @@ index 4d61fc3d7970..ef6901595924 100644
  		if (result < 0)
  			break;
  
--- 
-2.12.3
-

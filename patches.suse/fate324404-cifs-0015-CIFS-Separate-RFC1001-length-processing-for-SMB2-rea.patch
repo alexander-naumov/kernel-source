@@ -1,11 +1,10 @@
-From 331c0f6d126e6a7e7d55267273f5900d92b78028 Mon Sep 17 00:00:00 2001
+From b8f57ee8aad414a3122bff72d7968a94baacb9b6 Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:20:50 +0100
-Subject: [PATCH 11/23] CIFS: Separate RFC1001 length processing for SMB2 read 
- (FATE#324404).
+Date: Wed, 23 Nov 2016 15:31:54 -0800
+Subject: [PATCH] CIFS: Separate RFC1001 length processing for SMB2 read
 Patch-mainline: v4.11
 Git-commit: b8f57ee8aad414a3122bff72d7968a94baacb9b6
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Allocate and initialize SMB2 read request without RFC1001 length
 field to directly call cifs_send_recv() rather than SendReceive2()
@@ -13,6 +12,7 @@ in a read codepath.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/cifsproto.h |  3 ++
@@ -22,10 +22,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  4 files changed, 74 insertions(+), 25 deletions(-)
 
 diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
-index 42b058d9c557..27b1e33ee7e6 100644
 --- a/fs/cifs/cifsproto.h
 +++ b/fs/cifs/cifsproto.h
-@@ -79,6 +79,9 @@ extern int cifs_call_async(struct TCP_Server_Info *server,
+@@ -79,6 +79,9 @@ extern int cifs_call_async(struct TCP_Se
  			struct smb_rqst *rqst,
  			mid_receive_t *receive, mid_callback_t *callback,
  			void *cbdata, const int flags);
@@ -36,10 +35,9 @@ index 42b058d9c557..27b1e33ee7e6 100644
  			struct smb_hdr * /* input */ ,
  			struct smb_hdr * /* out */ ,
 diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
-index ee935e1619ba..5cc5f25e10b4 100644
 --- a/fs/cifs/smb2pdu.c
 +++ b/fs/cifs/smb2pdu.c
-@@ -285,10 +285,46 @@ fill_small_buf(__le16 smb2_command, struct cifs_tcon *tcon, void *buf,
+@@ -285,10 +285,46 @@ fill_small_buf(__le16 smb2_command, stru
  	*total_len = parmsize + sizeof(struct smb2_sync_hdr);
  }
  
@@ -87,7 +85,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
   */
  static int
  small_smb2_init(__le16 smb2_command, struct cifs_tcon *tcon,
-@@ -1998,16 +2034,17 @@ smb2_new_read_req(void **buf, unsigned int *total_len,
+@@ -1984,16 +2020,17 @@ smb2_new_read_req(void **buf, unsigned i
  		  int request_type)
  {
  	int rc = -EACCES;
@@ -108,7 +106,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
  	shdr->ProcessId = cpu_to_le32(io_parms->pid);
  
  	req->PersistentFileId = io_parms->persistent_fid;
-@@ -2021,9 +2058,9 @@ smb2_new_read_req(void **buf, unsigned int *total_len,
+@@ -2007,9 +2044,9 @@ smb2_new_read_req(void **buf, unsigned i
  
  	if (request_type & CHAINED_REQUEST) {
  		if (!(request_type & END_OF_CHAIN)) {
@@ -121,7 +119,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
  		} else /* END_OF_CHAIN */
  			shdr->NextCommand = 0;
  		if (request_type & RELATED_REQUEST) {
-@@ -2044,8 +2081,6 @@ smb2_new_read_req(void **buf, unsigned int *total_len,
+@@ -2030,8 +2067,6 @@ smb2_new_read_req(void **buf, unsigned i
  		req->RemainingBytes = 0;
  
  	*buf = req;
@@ -130,7 +128,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
  	return rc;
  }
  
-@@ -2122,6 +2157,7 @@ smb2_async_readv(struct cifs_readdata *rdata)
+@@ -2108,6 +2143,7 @@ smb2_async_readv(struct cifs_readdata *r
  				 .rq_nvec = 2 };
  	struct TCP_Server_Info *server;
  	unsigned int total_len;
@@ -138,7 +136,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
  
  	cifs_dbg(FYI, "%s: offset=%llu bytes=%u\n",
  		 __func__, rdata->offset, rdata->bytes);
-@@ -2148,12 +2184,14 @@ smb2_async_readv(struct cifs_readdata *rdata)
+@@ -2134,12 +2170,14 @@ smb2_async_readv(struct cifs_readdata *r
  		return rc;
  	}
  
@@ -159,7 +157,7 @@ index ee935e1619ba..5cc5f25e10b4 100644
  
  	if (rdata->credits) {
  		shdr->CreditCharge = cpu_to_le16(DIV_ROUND_UP(rdata->bytes,
-@@ -2185,24 +2223,31 @@ SMB2_read(const unsigned int xid, struct cifs_io_parms *io_parms,
+@@ -2171,24 +2209,31 @@ SMB2_read(const unsigned int xid, struct
  	  unsigned int *nbytes, char **buf, int *buf_type)
  {
  	int resp_buftype, rc = -EACCES;
@@ -199,7 +197,6 @@ index ee935e1619ba..5cc5f25e10b4 100644
  	rsp = (struct smb2_read_rsp *)rsp_iov.iov_base;
  	shdr = get_sync_hdr(rsp);
 diff --git a/fs/cifs/smb2pdu.h b/fs/cifs/smb2pdu.h
-index bf9ba23970f4..1f0d061b4e65 100644
 --- a/fs/cifs/smb2pdu.h
 +++ b/fs/cifs/smb2pdu.h
 @@ -821,8 +821,9 @@ struct smb2_flush_rsp {
@@ -215,10 +212,9 @@ index bf9ba23970f4..1f0d061b4e65 100644
  	__u8   Padding; /* offset from start of SMB2 header to place read */
  	__u8   Flags; /* MBZ unless SMB3.02 or later */
 diff --git a/fs/cifs/transport.c b/fs/cifs/transport.c
-index 64a6d505cd81..bc5ebd2f4098 100644
 --- a/fs/cifs/transport.c
 +++ b/fs/cifs/transport.c
-@@ -725,7 +725,7 @@ cifs_setup_request(struct cifs_ses *ses, struct smb_rqst *rqst)
+@@ -724,7 +724,7 @@ cifs_setup_request(struct cifs_ses *ses,
  	return mid;
  }
  
@@ -227,6 +223,3 @@ index 64a6d505cd81..bc5ebd2f4098 100644
  cifs_send_recv(const unsigned int xid, struct cifs_ses *ses,
  	       struct smb_rqst *rqst, int *resp_buf_type, const int flags,
  	       struct kvec *resp_iov)
--- 
-2.12.3
-

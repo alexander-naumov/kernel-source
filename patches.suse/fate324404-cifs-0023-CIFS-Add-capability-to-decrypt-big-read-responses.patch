@@ -1,11 +1,10 @@
-From 8677765ec983a2abc5add557b271ef61f44e61a4 Mon Sep 17 00:00:00 2001
+From c42a6abe3012832a68a371dabe17c2ced97e62ad Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:38:56 +0100
-Subject: [PATCH 21/23] CIFS: Add capability to decrypt big read responses 
- (FATE#324404).
+Date: Thu, 17 Nov 2016 16:20:23 -0800
+Subject: [PATCH] CIFS: Add capability to decrypt big read responses
 Patch-mainline: v4.11
 Git-commit: c42a6abe3012832a68a371dabe17c2ced97e62ad
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Allow to decrypt transformed packets that are bigger than the big
 buffer size. In particular it is used for read responses that can
@@ -13,18 +12,17 @@ only exceed the big buffer size.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/cifsproto.h |   1 +
- fs/cifs/cifssmb.c   |   8 +--
- fs/cifs/smb2ops.c   | 173 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ fs/cifs/cifsproto.h |    1 
+ fs/cifs/cifssmb.c   |    8 +-
+ fs/cifs/smb2ops.c   |  173 +++++++++++++++++++++++++++++++++++++++++++++++++---
  3 files changed, 169 insertions(+), 13 deletions(-)
 
-diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
-index a616cc8b3053..ef3d3a31dff9 100644
 --- a/fs/cifs/cifsproto.h
 +++ b/fs/cifs/cifsproto.h
-@@ -77,6 +77,7 @@ extern void cifs_delete_mid(struct mid_q_entry *mid);
+@@ -75,6 +75,7 @@ extern void cifs_delete_mid(struct mid_q
  extern void cifs_wake_up_task(struct mid_q_entry *mid);
  extern int cifs_handle_standard(struct TCP_Server_Info *server,
  				struct mid_q_entry *mid);
@@ -32,11 +30,9 @@ index a616cc8b3053..ef3d3a31dff9 100644
  extern int cifs_call_async(struct TCP_Server_Info *server,
  			struct smb_rqst *rqst,
  			mid_receive_t *receive, mid_callback_t *callback,
-diff --git a/fs/cifs/cifssmb.c b/fs/cifs/cifssmb.c
-index 259b57c5011f..055c8d3dc4d4 100644
 --- a/fs/cifs/cifssmb.c
 +++ b/fs/cifs/cifssmb.c
-@@ -1403,8 +1403,8 @@ openRetry:
+@@ -1400,8 +1400,8 @@ openRetry:
   * Discard any remaining data in the current SMB. To do this, we borrow the
   * current bigbuf.
   */
@@ -47,7 +43,7 @@ index 259b57c5011f..055c8d3dc4d4 100644
  {
  	unsigned int rfclen = get_rfc1002_length(server->smallbuf);
  	int remaining = rfclen + 4 - server->total_read;
-@@ -1430,7 +1430,7 @@ cifs_readv_discard(struct TCP_Server_Info *server, struct mid_q_entry *mid)
+@@ -1427,7 +1427,7 @@ cifs_readv_discard(struct TCP_Server_Inf
  	int length;
  	struct cifs_readdata *rdata = mid->callback_data;
  
@@ -56,7 +52,7 @@ index 259b57c5011f..055c8d3dc4d4 100644
  	dequeue_mid(mid, rdata->result);
  	mid->resp_buf = server->smallbuf;
  	server->smallbuf = NULL;
-@@ -1472,7 +1472,7 @@ cifs_readv_receive(struct TCP_Server_Info *server, struct mid_q_entry *mid)
+@@ -1462,7 +1462,7 @@ cifs_readv_receive(struct TCP_Server_Inf
  
  	if (server->ops->is_status_pending &&
  	    server->ops->is_status_pending(buf, server, 0)) {
@@ -65,11 +61,9 @@ index 259b57c5011f..055c8d3dc4d4 100644
  		return -1;
  	}
  
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index db856522eb98..13df11339778 100644
 --- a/fs/cifs/smb2ops.c
 +++ b/fs/cifs/smb2ops.c
-@@ -1807,12 +1807,72 @@ decrypt_raw_data(struct TCP_Server_Info *server, char *buf,
+@@ -1795,12 +1795,72 @@ decrypt_raw_data(struct TCP_Server_Info
  }
  
  static int
@@ -142,7 +136,7 @@ index db856522eb98..13df11339778 100644
  	struct cifs_readdata *rdata = mid->callback_data;
  	struct smb2_sync_hdr *shdr = get_sync_hdr(buf);
  	struct bio_vec *bvec = NULL;
-@@ -1858,9 +1918,37 @@ handle_read_data(struct TCP_Server_Info *server, struct mid_q_entry *mid,
+@@ -1846,9 +1906,37 @@ handle_read_data(struct TCP_Server_Info
  		return 0;
  	}
  
@@ -181,7 +175,7 @@ index db856522eb98..13df11339778 100644
  	} else if (buf_len >= data_offset + data_len) {
  		/* read response payload is in buf */
  		WARN_ONCE(npages > 0, "read data can be either in buf or in pages");
-@@ -1895,6 +1983,79 @@ handle_read_data(struct TCP_Server_Info *server, struct mid_q_entry *mid,
+@@ -1883,6 +1971,79 @@ handle_read_data(struct TCP_Server_Info
  }
  
  static int
@@ -261,7 +255,7 @@ index db856522eb98..13df11339778 100644
  receive_encrypted_standard(struct TCP_Server_Info *server,
  			   struct mid_q_entry **mid)
  {
-@@ -1963,14 +2124,8 @@ smb3_receive_transform(struct TCP_Server_Info *server, struct mid_q_entry **mid)
+@@ -1951,14 +2112,8 @@ smb3_receive_transform(struct TCP_Server
  		return -ECONNABORTED;
  	}
  
@@ -278,6 +272,3 @@ index db856522eb98..13df11339778 100644
  
  	return receive_encrypted_standard(server, mid);
  }
--- 
-2.12.3
-

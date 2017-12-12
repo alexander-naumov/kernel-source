@@ -1,11 +1,10 @@
-From 90fc8ff8b3b8c4c4b59493c55f3395c3c7fa277a Mon Sep 17 00:00:00 2001
+From 8b217fe7fcadd162944a88b14990b9723c27419f Mon Sep 17 00:00:00 2001
 From: Steve French <smfrench@gmail.com>
-Date: Mon, 20 Nov 2017 17:40:01 +0100
-Subject: [PATCH 22/23] SMB3: parsing for new snapshot timestamp mount parm 
- (FATE#324404).
+Date: Fri, 11 Nov 2016 22:36:20 -0600
+Subject: [PATCH] SMB3: parsing for new snapshot timestamp mount parm
 Patch-mainline: v4.10-rc1
 Git-commit: 8b217fe7fcadd162944a88b14990b9723c27419f
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 New mount option "snapshot=<time>" to allow mounting an earlier
 version of the remote volume (if such a snapshot exists on
@@ -23,6 +22,7 @@ but with different snaphshot times
 Signed-off-by: Steve French <smfrench@gmail.com>
 Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/cifsglob.h |  2 ++
@@ -30,10 +30,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  2 files changed, 37 insertions(+), 3 deletions(-)
 
 diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index f452e3bce5d8..dd3f99ee1bb4 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
-@@ -520,6 +520,7 @@ struct smb_vol {
+@@ -517,6 +517,7 @@ struct smb_vol {
  	struct sockaddr_storage dstaddr; /* destination address */
  	struct sockaddr_storage srcaddr; /* allow binding to a local IP */
  	struct nls_table *local_nls;
@@ -41,7 +40,7 @@ index f452e3bce5d8..dd3f99ee1bb4 100644
  };
  
  #define CIFS_MOUNT_MASK (CIFS_MOUNT_NO_PERM | CIFS_MOUNT_SET_UID | \
-@@ -926,6 +927,7 @@ struct cifs_tcon {
+@@ -924,6 +925,7 @@ struct cifs_tcon {
  	__u32 maximal_access;
  	__u32 vol_serial_number;
  	__le64 vol_create_time;
@@ -50,7 +49,6 @@ index f452e3bce5d8..dd3f99ee1bb4 100644
  	__u32 perf_sector_size; /* best sector size for perf */
  	__u32 max_chunks;
 diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index aa8e18510a5a..9760e4320da7 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
 @@ -98,6 +98,7 @@ enum {
@@ -61,7 +59,7 @@ index aa8e18510a5a..9760e4320da7 100644
  
  	/* Mount options which take string value */
  	Opt_user, Opt_pass, Opt_ip,
-@@ -191,6 +192,7 @@ static const match_table_t cifs_mount_option_tokens = {
+@@ -191,6 +192,7 @@ static const match_table_t cifs_mount_op
  	{ Opt_rsize, "rsize=%s" },
  	{ Opt_wsize, "wsize=%s" },
  	{ Opt_actimeo, "actimeo=%s" },
@@ -69,7 +67,7 @@ index aa8e18510a5a..9760e4320da7 100644
  
  	{ Opt_blank_user, "user=" },
  	{ Opt_blank_user, "username=" },
-@@ -1616,6 +1618,14 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
+@@ -1587,6 +1589,14 @@ cifs_parse_mount_options(const char *mou
  				goto cifs_parse_mount_err;
  			}
  			break;
@@ -84,7 +82,7 @@ index aa8e18510a5a..9760e4320da7 100644
  
  		/* String Arguments */
  
-@@ -2600,7 +2610,7 @@ static int match_tcon(struct cifs_tcon *tcon, const char *unc)
+@@ -2571,7 +2581,7 @@ static int match_tcon(struct cifs_tcon *
  }
  
  static struct cifs_tcon *
@@ -93,7 +91,7 @@ index aa8e18510a5a..9760e4320da7 100644
  {
  	struct list_head *tmp;
  	struct cifs_tcon *tcon;
-@@ -2608,8 +2618,14 @@ cifs_find_tcon(struct cifs_ses *ses, const char *unc)
+@@ -2579,8 +2589,14 @@ cifs_find_tcon(struct cifs_ses *ses, con
  	spin_lock(&cifs_tcp_ses_lock);
  	list_for_each(tmp, &ses->tcon_list) {
  		tcon = list_entry(tmp, struct cifs_tcon, tcon_list);
@@ -109,7 +107,7 @@ index aa8e18510a5a..9760e4320da7 100644
  		++tcon->tc_count;
  		spin_unlock(&cifs_tcp_ses_lock);
  		return tcon;
-@@ -2650,7 +2666,7 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2621,7 +2637,7 @@ cifs_get_tcon(struct cifs_ses *ses, stru
  	int rc, xid;
  	struct cifs_tcon *tcon;
  
@@ -118,7 +116,7 @@ index aa8e18510a5a..9760e4320da7 100644
  	if (tcon) {
  		cifs_dbg(FYI, "Found match on UNC path\n");
  		/* existing tcon already has a reference */
-@@ -2671,6 +2687,22 @@ cifs_get_tcon(struct cifs_ses *ses, struct smb_vol *volume_info)
+@@ -2642,6 +2658,22 @@ cifs_get_tcon(struct cifs_ses *ses, stru
  		goto out_fail;
  	}
  
@@ -141,6 +139,3 @@ index aa8e18510a5a..9760e4320da7 100644
  	tcon->ses = ses;
  	if (volume_info->password) {
  		tcon->password = kstrdup(volume_info->password, GFP_KERNEL);
--- 
-2.12.3
-

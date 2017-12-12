@@ -1,11 +1,10 @@
-From f1dace012f6c3dec1c76dd2062bf28cc5941bbd3 Mon Sep 17 00:00:00 2001
+From d70b9104b1ca586f73aaf59426756cec3325a40e Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:34:59 +0100
-Subject: [PATCH 19/23] CIFS: Add copy into pages callback for a read operation
-  (FATE#324404).
+Date: Thu, 17 Nov 2016 16:20:18 -0800
+Subject: [PATCH] CIFS: Add copy into pages callback for a read operation
 Patch-mainline: v4.11
 Git-commit: d70b9104b1ca586f73aaf59426756cec3325a40e
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Since we have two different types of reads (pagecache and direct)
 we need to process such responses differently after decryption of
@@ -14,6 +13,7 @@ payload data into preallocated pages.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/cifsglob.h |  3 +++
@@ -21,10 +21,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  2 files changed, 49 insertions(+), 6 deletions(-)
 
 diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index a2d3b69323c8..1b9f313c66cb 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
-@@ -1104,6 +1104,9 @@ struct cifs_readdata {
+@@ -1102,6 +1102,9 @@ struct cifs_readdata {
  	int (*read_into_pages)(struct TCP_Server_Info *server,
  				struct cifs_readdata *rdata,
  				unsigned int len);
@@ -35,10 +34,9 @@ index a2d3b69323c8..1b9f313c66cb 100644
  	unsigned int			pagesz;
  	unsigned int			tailsz;
 diff --git a/fs/cifs/file.c b/fs/cifs/file.c
-index ef6901595924..e8226ff165ed 100644
 --- a/fs/cifs/file.c
 +++ b/fs/cifs/file.c
-@@ -2866,8 +2866,9 @@ cifs_uncached_readv_complete(struct work_struct *work)
+@@ -2867,8 +2867,9 @@ cifs_uncached_readv_complete(struct work
  }
  
  static int
@@ -50,7 +48,7 @@ index ef6901595924..e8226ff165ed 100644
  {
  	int result = 0;
  	unsigned int i;
-@@ -2896,7 +2897,10 @@ cifs_uncached_read_into_pages(struct TCP_Server_Info *server,
+@@ -2897,7 +2898,10 @@ cifs_uncached_read_into_pages(struct TCP
  			rdata->tailsz = len;
  			len = 0;
  		}
@@ -62,7 +60,7 @@ index ef6901595924..e8226ff165ed 100644
  		if (result < 0)
  			break;
  
-@@ -2908,6 +2912,21 @@ cifs_uncached_read_into_pages(struct TCP_Server_Info *server,
+@@ -2909,6 +2913,21 @@ cifs_uncached_read_into_pages(struct TCP
  }
  
  static int
@@ -84,7 +82,7 @@ index ef6901595924..e8226ff165ed 100644
  cifs_send_async_read(loff_t offset, size_t len, struct cifsFileInfo *open_file,
  		     struct cifs_sb_info *cifs_sb, struct list_head *rdata_list)
  {
-@@ -2954,6 +2973,7 @@ cifs_send_async_read(loff_t offset, size_t len, struct cifsFileInfo *open_file,
+@@ -2955,6 +2974,7 @@ cifs_send_async_read(loff_t offset, size
  		rdata->pid = pid;
  		rdata->pagesz = PAGE_SIZE;
  		rdata->read_into_pages = cifs_uncached_read_into_pages;
@@ -92,7 +90,7 @@ index ef6901595924..e8226ff165ed 100644
  		rdata->credits = credits;
  
  		if (!rdata->cfile->invalidHandle ||
-@@ -3304,8 +3324,9 @@ cifs_readv_complete(struct work_struct *work)
+@@ -3305,8 +3325,9 @@ cifs_readv_complete(struct work_struct *
  }
  
  static int
@@ -104,7 +102,7 @@ index ef6901595924..e8226ff165ed 100644
  {
  	int result = 0;
  	unsigned int i;
-@@ -3359,7 +3380,10 @@ cifs_readpages_read_into_pages(struct TCP_Server_Info *server,
+@@ -3360,7 +3381,10 @@ cifs_readpages_read_into_pages(struct TC
  			continue;
  		}
  
@@ -116,7 +114,7 @@ index ef6901595924..e8226ff165ed 100644
  		if (result < 0)
  			break;
  
-@@ -3371,6 +3395,21 @@ cifs_readpages_read_into_pages(struct TCP_Server_Info *server,
+@@ -3372,6 +3396,21 @@ cifs_readpages_read_into_pages(struct TC
  }
  
  static int
@@ -138,7 +136,7 @@ index ef6901595924..e8226ff165ed 100644
  readpages_get_pages(struct address_space *mapping, struct list_head *page_list,
  		    unsigned int rsize, struct list_head *tmplist,
  		    unsigned int *nr_pages, loff_t *offset, unsigned int *bytes)
-@@ -3524,6 +3563,7 @@ static int cifs_readpages(struct file *file, struct address_space *mapping,
+@@ -3525,6 +3564,7 @@ static int cifs_readpages(struct file *f
  		rdata->pid = pid;
  		rdata->pagesz = PAGE_CACHE_SIZE;
  		rdata->read_into_pages = cifs_readpages_read_into_pages;
@@ -146,6 +144,3 @@ index ef6901595924..e8226ff165ed 100644
  		rdata->credits = credits;
  
  		list_for_each_entry_safe(page, tpage, &tmplist, lru) {
--- 
-2.12.3
-

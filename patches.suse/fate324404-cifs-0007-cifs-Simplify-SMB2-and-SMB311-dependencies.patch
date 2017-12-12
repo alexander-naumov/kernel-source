@@ -1,11 +1,10 @@
-From 4c80d2e427100d9c3411c7c25583a0345efe0b87 Mon Sep 17 00:00:00 2001
+From c1ecea87471bbb614f8121e00e5787f363140365 Mon Sep 17 00:00:00 2001
 From: Jean Delvare <jdelvare@suse.de>
-Date: Mon, 20 Nov 2017 16:47:45 +0100
-Subject: [PATCH 02/23] cifs: Simplify SMB2 and SMB311 dependencies
- (FATE#324404).
+Date: Wed, 25 Jan 2017 16:07:29 +0100
+Subject: [PATCH] cifs: Simplify SMB2 and SMB311 dependencies
 Patch-mainline: v4.11
 Git-commit: c1ecea87471bbb614f8121e00e5787f363140365
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 * CIFS_SMB2 depends on CIFS, which depends on INET and selects NLS. So
   these dependencies do not need to be repeated for CIFS_SMB2.
@@ -16,13 +15,13 @@ Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
 Signed-off-by: Jean Delvare <jdelvare@suse.de>
 Cc: Steve French <sfrench@samba.org>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/Kconfig | 5 ++---
  1 file changed, 2 insertions(+), 3 deletions(-)
 
 diff --git a/fs/cifs/Kconfig b/fs/cifs/Kconfig
-index e7b478b49985..a439c17c85c4 100644
 --- a/fs/cifs/Kconfig
 +++ b/fs/cifs/Kconfig
 @@ -169,8 +169,7 @@ config CIFS_NFSD_EXPORT
@@ -45,5 +44,5 @@ index e7b478b49985..a439c17c85c4 100644
  	help
  	  This enables experimental support for the newest, SMB3.1.1, dialect.
 -- 
-2.12.3
+2.10.2
 

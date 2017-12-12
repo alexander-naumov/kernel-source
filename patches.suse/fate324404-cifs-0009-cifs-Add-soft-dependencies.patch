@@ -1,10 +1,10 @@
-From e1bae9cd965f15524802921cf4e1805f56316787 Mon Sep 17 00:00:00 2001
+From b9be76d585d48cb25af8db0d35e1ef9030fbe13a Mon Sep 17 00:00:00 2001
 From: Jean Delvare <jdelvare@suse.de>
-Date: Mon, 20 Nov 2017 16:50:33 +0100
-Subject: [PATCH 04/23] cifs: Add soft dependencies (FATE#324404).
+Date: Wed, 25 Jan 2017 16:09:10 +0100
+Subject: [PATCH] cifs: Add soft dependencies
 Patch-mainline: v4.11
 Git-commit: b9be76d585d48cb25af8db0d35e1ef9030fbe13a
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 List soft dependencies of cifs so that mkinitrd and dracut can include
 the required helper modules.
@@ -13,13 +13,13 @@ Reviewed-by: Pavel Shilovsky <pshilov@microsoft.com>
 Signed-off-by: Jean Delvare <jdelvare@suse.de>
 Cc: Steve French <sfrench@samba.org>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/cifsfs.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
 diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
-index 72f418ccf6a4..ab1761bf52be 100644
 --- a/fs/cifs/cifsfs.c
 +++ b/fs/cifs/cifsfs.c
 @@ -1305,5 +1305,17 @@ MODULE_DESCRIPTION
@@ -40,6 +40,3 @@ index 72f418ccf6a4..ab1761bf52be 100644
 +#endif /* CONFIG_CIFS_SMB2 */
  module_init(init_cifs)
  module_exit(exit_cifs)
--- 
-2.12.3
-

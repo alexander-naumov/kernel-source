@@ -1,17 +1,17 @@
-From 1f979e4953ea86f941db654aca1197bc1ba5b2f7 Mon Sep 17 00:00:00 2001
+From 9bb17e0916a03ab901fb684e874d77a1e96b3d1e Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:29:24 +0100
-Subject: [PATCH 15/23] CIFS: Add transform header handling callbacks
- (FATE#324404).
+Date: Thu, 17 Nov 2016 15:24:34 -0800
+Subject: [PATCH] CIFS: Add transform header handling callbacks
 Patch-mainline: v4.11
 Git-commit: 9bb17e0916a03ab901fb684e874d77a1e96b3d1e
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 We need to recognize and parse transformed packets in demultiplex
 thread to find a corresponsing mid and process it further.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/cifsglob.h |  3 +++
@@ -19,10 +19,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  2 files changed, 15 insertions(+), 5 deletions(-)
 
 diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index f37a617352ee..727f1469e119 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
-@@ -427,6 +427,9 @@ struct smb_version_operations {
+@@ -424,6 +424,9 @@ struct smb_version_operations {
  				 struct smb_rqst *);
  	/* free transform request */
  	void (*free_transform_rq)(struct smb_rqst *);
@@ -33,10 +32,9 @@ index f37a617352ee..727f1469e119 100644
  
  struct smb_version_values {
 diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index 862fa69e954b..d563b8b712b6 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -928,12 +928,19 @@ cifs_demultiplex_thread(void *p)
+@@ -909,12 +909,19 @@ cifs_demultiplex_thread(void *p)
  			continue;
  		server->total_read += length;
  
@@ -61,6 +59,3 @@ index 862fa69e954b..d563b8b712b6 100644
  
  		if (length < 0)
  			continue;
--- 
-2.12.3
-

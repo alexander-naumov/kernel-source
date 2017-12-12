@@ -1,45 +1,41 @@
-From f122f5e8213938d1c23239116842449eadb0d661 Mon Sep 17 00:00:00 2001
+From 4326ed2f6a16ae9d33e4209b540dc9a371aba840 Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:36:58 +0100
-Subject: [PATCH 20/23] CIFS: Decrypt and process small encrypted packets 
- (FATE#324404).
+Date: Thu, 17 Nov 2016 15:24:46 -0800
+Subject: [PATCH] CIFS: Decrypt and process small encrypted packets
 Patch-mainline: v4.11
 Git-commit: 4326ed2f6a16ae9d33e4209b540dc9a371aba840
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Allow to decrypt transformed packets, find a corresponding mid
 and process as usual further.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/cifsglob.h      |   1 +
- fs/cifs/cifsproto.h     |   2 +
- fs/cifs/connect.c       |   9 ++
- fs/cifs/smb2ops.c       | 226 ++++++++++++++++++++++++++++++++++++++++++++++++
- fs/cifs/smb2pdu.c       |   4 +-
- fs/cifs/smb2proto.h     |   2 +
- fs/cifs/smb2transport.c |   2 +-
+ fs/cifs/cifsglob.h      |    1 
+ fs/cifs/cifsproto.h     |    2 
+ fs/cifs/connect.c       |    9 +
+ fs/cifs/smb2ops.c       |  226 ++++++++++++++++++++++++++++++++++++++++++++++++
+ fs/cifs/smb2pdu.c       |    4 
+ fs/cifs/smb2proto.h     |    2 
+ fs/cifs/smb2transport.c |    2 
  7 files changed, 243 insertions(+), 3 deletions(-)
 
-diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index 1b9f313c66cb..f452e3bce5d8 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
-@@ -1320,6 +1320,7 @@ struct mid_q_entry {
+@@ -1318,6 +1318,7 @@ struct mid_q_entry {
  	bool large_buf:1;	/* if valid response, is pointer to large buf */
  	bool multiRsp:1;	/* multiple trans2 responses for one request  */
  	bool multiEnd:1;	/* both received */
-+	bool decrypted:1;	/* decrypted entry */	
++	bool decrypted:1;	/* decrypted entry */
  };
  
  struct close_cancelled_open {
-diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
-index e408c98aa8fd..a616cc8b3053 100644
 --- a/fs/cifs/cifsproto.h
 +++ b/fs/cifs/cifsproto.h
-@@ -75,6 +75,8 @@ extern struct mid_q_entry *AllocMidQEntry(const struct smb_hdr *smb_buffer,
+@@ -73,6 +73,8 @@ extern struct mid_q_entry *AllocMidQEntr
  extern void DeleteMidQEntry(struct mid_q_entry *midEntry);
  extern void cifs_delete_mid(struct mid_q_entry *mid);
  extern void cifs_wake_up_task(struct mid_q_entry *mid);
@@ -48,11 +44,9 @@ index e408c98aa8fd..a616cc8b3053 100644
  extern int cifs_call_async(struct TCP_Server_Info *server,
  			struct smb_rqst *rqst,
  			mid_receive_t *receive, mid_callback_t *callback,
-diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index 359e0ffe64ce..aa8e18510a5a 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -778,6 +778,15 @@ standard_receive3(struct TCP_Server_Info *server, struct mid_q_entry *mid)
+@@ -766,6 +766,15 @@ standard_receive3(struct TCP_Server_Info
  
  	dump_smb(buf, server->total_read);
  
@@ -68,11 +62,9 @@ index 359e0ffe64ce..aa8e18510a5a 100644
  	/*
  	 * We know that we received enough to get to the MID as we
  	 * checked the pdu_length earlier. Now check to see
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index d39ab84e147e..db856522eb98 100644
 --- a/fs/cifs/smb2ops.c
 +++ b/fs/cifs/smb2ops.c
-@@ -1762,6 +1762,228 @@ smb3_free_transform_rq(struct smb_rqst *rqst)
+@@ -1750,6 +1750,228 @@ smb3_free_transform_rq(struct smb_rqst *
  	kfree(rqst->rq_iov);
  }
  
@@ -301,7 +293,7 @@ index d39ab84e147e..db856522eb98 100644
  struct smb_version_operations smb20_operations = {
  	.compare_fids = smb2_compare_fids,
  	.setup_request = smb2_setup_request,
-@@ -2012,6 +2234,8 @@ struct smb_version_operations smb30_operations = {
+@@ -1997,6 +2219,8 @@ struct smb_version_operations smb30_oper
  	.fallocate = smb3_fallocate,
  	.init_transform_rq = smb3_init_transform_rq,
  	.free_transform_rq = smb3_free_transform_rq,
@@ -310,7 +302,7 @@ index d39ab84e147e..db856522eb98 100644
  };
  
  #ifdef CONFIG_CIFS_SMB311
-@@ -2103,6 +2327,8 @@ struct smb_version_operations smb311_operations = {
+@@ -2087,6 +2311,8 @@ struct smb_version_operations smb311_ope
  	.fallocate = smb3_fallocate,
  	.init_transform_rq = smb3_init_transform_rq,
  	.free_transform_rq = smb3_free_transform_rq,
@@ -319,11 +311,9 @@ index d39ab84e147e..db856522eb98 100644
  };
  #endif /* CIFS_SMB311 */
  
-diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
-index 7ae42fe2a776..35e71bdb7b30 100644
 --- a/fs/cifs/smb2pdu.c
 +++ b/fs/cifs/smb2pdu.c
-@@ -2140,7 +2140,7 @@ smb2_readv_callback(struct mid_q_entry *mid)
+@@ -2125,7 +2125,7 @@ smb2_readv_callback(struct mid_q_entry *
  	case MID_RESPONSE_RECEIVED:
  		credits_received = le16_to_cpu(shdr->CreditRequest);
  		/* result already set, check signature */
@@ -332,7 +322,7 @@ index 7ae42fe2a776..35e71bdb7b30 100644
  			int rc;
  
  			rc = smb2_verify_signature(&rqst, server);
-@@ -2243,7 +2243,7 @@ smb2_async_readv(struct cifs_readdata *rdata)
+@@ -2228,7 +2228,7 @@ smb2_async_readv(struct cifs_readdata *r
  	kref_get(&rdata->refcount);
  	rc = cifs_call_async(io_parms.tcon->ses->server, &rqst,
  			     cifs_readv_receive, smb2_readv_callback,
@@ -341,11 +331,9 @@ index 7ae42fe2a776..35e71bdb7b30 100644
  	if (rc) {
  		kref_put(&rdata->refcount, cifs_readdata_release);
  		cifs_stats_fail_inc(io_parms.tcon, SMB2_READ_HE);
-diff --git a/fs/cifs/smb2proto.h b/fs/cifs/smb2proto.h
-index 06bfe98d3c9f..5f4a089eb63d 100644
 --- a/fs/cifs/smb2proto.h
 +++ b/fs/cifs/smb2proto.h
-@@ -62,6 +62,8 @@ extern bool smb2_is_valid_oplock_break(char *buffer,
+@@ -62,6 +62,8 @@ extern bool smb2_is_valid_oplock_break(c
  				       struct TCP_Server_Info *srv);
  extern struct cifs_ses *smb2_find_smb_ses(struct TCP_Server_Info *server,
  					  __u64 ses_id);
@@ -354,11 +342,9 @@ index 06bfe98d3c9f..5f4a089eb63d 100644
  
  extern void move_smb2_info_to_cifs(FILE_ALL_INFO *dst,
  				   struct smb2_file_all_info *src);
-diff --git a/fs/cifs/smb2transport.c b/fs/cifs/smb2transport.c
-index d46bf58bed77..f2b34b91681a 100644
 --- a/fs/cifs/smb2transport.c
 +++ b/fs/cifs/smb2transport.c
-@@ -698,7 +698,7 @@ smb2_check_receive(struct mid_q_entry *mid, struct TCP_Server_Info *server,
+@@ -611,7 +611,7 @@ smb2_check_receive(struct mid_q_entry *m
  
  	dump_smb(mid->resp_buf, min_t(u32, 80, len));
  	/* convert the length into a more usable form */
@@ -367,6 +353,3 @@ index d46bf58bed77..f2b34b91681a 100644
  		int rc;
  
  		rc = smb2_verify_signature(&rqst, server);
--- 
-2.12.3
-

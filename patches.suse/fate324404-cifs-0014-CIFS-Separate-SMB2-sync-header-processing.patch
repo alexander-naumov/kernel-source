@@ -1,11 +1,10 @@
-From 03f792351111fcbcd315b1a314b347b407ced608 Mon Sep 17 00:00:00 2001
+From cb200bd6264a80c04e09e8635fa4f3901cabdaef Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:19:29 +0100
-Subject: [PATCH 10/23] CIFS: Separate SMB2 sync header processing
- (FATE#324404).
+Date: Mon, 24 Oct 2016 16:59:57 -0700
+Subject: [PATCH] CIFS: Separate SMB2 sync header processing
 Patch-mainline: v4.11
 Git-commit: cb200bd6264a80c04e09e8635fa4f3901cabdaef
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Do not process RFC1001 length in smb2_hdr_assemble() because
 it is not a part of SMB2 header. This allows to cleanup the code
@@ -14,6 +13,7 @@ for compounding.
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
  fs/cifs/smb2pdu.c | 50 ++++++++++++++++++++++++++++++--------------------
@@ -21,10 +21,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  2 files changed, 35 insertions(+), 20 deletions(-)
 
 diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
-index e515ce10c051..ee935e1619ba 100644
 --- a/fs/cifs/smb2pdu.c
 +++ b/fs/cifs/smb2pdu.c
-@@ -79,25 +79,9 @@ static const int smb2_req_struct_sizes[NUMBER_OF_SMB2_COMMANDS] = {
+@@ -79,25 +79,9 @@ static const int smb2_req_struct_sizes[N
  
  
  static void
@@ -51,7 +50,7 @@ index e515ce10c051..ee935e1619ba 100644
  	shdr->ProtocolId = SMB2_PROTO_NUMBER;
  	shdr->StructureSize = cpu_to_le16(64);
  	shdr->Command = smb2_cmd;
-@@ -149,7 +133,6 @@ smb2_hdr_assemble(struct smb2_hdr *hdr, __le16 smb2_cmd /* command */ ,
+@@ -149,7 +133,6 @@ smb2_hdr_assemble(struct smb2_hdr *hdr,
  	if (tcon->ses && tcon->ses->server && tcon->ses->server->sign)
  		shdr->Flags |= SMB2_FLAGS_SIGNED;
  out:
@@ -97,7 +96,7 @@ index e515ce10c051..ee935e1619ba 100644
  
  	rc = smb2_reconnect(smb2_command, tcon);
  	if (rc)
-@@ -304,7 +309,12 @@ small_smb2_init(__le16 smb2_command, struct cifs_tcon *tcon,
+@@ -304,7 +309,12 @@ small_smb2_init(__le16 smb2_command, str
  		return -ENOMEM;
  	}
  
@@ -112,7 +111,6 @@ index e515ce10c051..ee935e1619ba 100644
  	if (tcon != NULL) {
  #ifdef CONFIG_CIFS_STATS2
 diff --git a/fs/cifs/smb2pdu.h b/fs/cifs/smb2pdu.h
-index daf87c2309f9..bf9ba23970f4 100644
 --- a/fs/cifs/smb2pdu.h
 +++ b/fs/cifs/smb2pdu.h
 @@ -115,6 +115,11 @@ struct smb2_sync_hdr {
@@ -127,6 +125,3 @@ index daf87c2309f9..bf9ba23970f4 100644
  struct smb2_hdr {
  	__be32 smb2_buf_length;	/* big endian on wire */
  				/* length is only two or three bytes - with */
--- 
-2.12.3
-

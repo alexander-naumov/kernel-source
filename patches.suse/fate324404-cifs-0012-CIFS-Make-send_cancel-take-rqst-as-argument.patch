@@ -1,23 +1,21 @@
-From 139c6188bc05f793bf4a3c464cd9c07fcca5cb97 Mon Sep 17 00:00:00 2001
+From fb2036d817584df42504910fe104f68517e8990e Mon Sep 17 00:00:00 2001
 From: Pavel Shilovsky <pshilov@microsoft.com>
-Date: Mon, 20 Nov 2017 17:06:10 +0100
-Subject: [PATCH 07/23] CIFS: Make send_cancel take rqst as argument
- (FATE#324404).
+Date: Wed, 23 Nov 2016 15:08:14 -0800
+Subject: [PATCH] CIFS: Make send_cancel take rqst as argument
 Patch-mainline: v4.11
 Git-commit: fb2036d817584df42504910fe104f68517e8990e
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
+Acked-by: David Mulder <dmulder@suse.com>
 
 ---
- fs/cifs/cifsglob.h  |  2 +-
- fs/cifs/smb1ops.c   |  4 ++--
- fs/cifs/transport.c | 33 +++++++++++++++++++--------------
+ fs/cifs/cifsglob.h  |    2 +-
+ fs/cifs/smb1ops.c   |    4 ++--
+ fs/cifs/transport.c |   33 +++++++++++++++++++--------------
  3 files changed, 22 insertions(+), 17 deletions(-)
 
-diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index d0ed46d8201e..66a62c705b7a 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
 @@ -194,7 +194,7 @@ struct cifsInodeInfo;
@@ -29,8 +27,6 @@ index d0ed46d8201e..66a62c705b7a 100644
  			   struct mid_q_entry *);
  	bool (*compare_fids)(struct cifsFileInfo *, struct cifsFileInfo *);
  	/* setup request: allocate mid, sign message */
-diff --git a/fs/cifs/smb1ops.c b/fs/cifs/smb1ops.c
-index efd72e1fae74..c4255e292f6e 100644
 --- a/fs/cifs/smb1ops.c
 +++ b/fs/cifs/smb1ops.c
 @@ -36,11 +36,11 @@
@@ -47,11 +43,9 @@ index efd72e1fae74..c4255e292f6e 100644
  
  	/* -4 for RFC1001 length and +2 for BCC field */
  	in_buf->smb_buf_length = cpu_to_be32(sizeof(struct smb_hdr) - 4  + 2);
-diff --git a/fs/cifs/transport.c b/fs/cifs/transport.c
-index ce4b430168de..2d361727b5a6 100644
 --- a/fs/cifs/transport.c
 +++ b/fs/cifs/transport.c
-@@ -655,10 +655,11 @@ cifs_sync_mid_result(struct mid_q_entry *mid, struct TCP_Server_Info *server)
+@@ -595,10 +595,11 @@ cifs_sync_mid_result(struct mid_q_entry
  }
  
  static inline int
@@ -65,7 +59,7 @@ index ce4b430168de..2d361727b5a6 100644
  }
  
  int
-@@ -779,7 +780,7 @@ SendReceive2(const unsigned int xid, struct cifs_ses *ses,
+@@ -719,7 +720,7 @@ SendReceive2(const unsigned int xid, str
  	rc = wait_for_response(ses->server, midQ);
  	if (rc != 0) {
  		cifs_dbg(FYI, "Cancelling wait for mid %llu\n",	midQ->mid);
@@ -74,7 +68,7 @@ index ce4b430168de..2d361727b5a6 100644
  		spin_lock(&GlobalMid_Lock);
  		if (midQ->mid_state == MID_REQUEST_SUBMITTED) {
  			midQ->mid_flags |= MID_WAIT_CANCELLED;
-@@ -833,6 +834,9 @@ SendReceive(const unsigned int xid, struct cifs_ses *ses,
+@@ -773,6 +774,9 @@ SendReceive(const unsigned int xid, stru
  {
  	int rc = 0;
  	struct mid_q_entry *midQ;
@@ -84,7 +78,7 @@ index ce4b430168de..2d361727b5a6 100644
  
  	if (ses == NULL) {
  		cifs_dbg(VFS, "Null smb session\n");
-@@ -850,10 +854,9 @@ SendReceive(const unsigned int xid, struct cifs_ses *ses,
+@@ -790,10 +794,9 @@ SendReceive(const unsigned int xid, stru
  	   to the same server. We may make this configurable later or
  	   use ses->maxReq */
  
@@ -97,7 +91,7 @@ index ce4b430168de..2d361727b5a6 100644
  		return -EIO;
  	}
  
-@@ -884,7 +887,7 @@ SendReceive(const unsigned int xid, struct cifs_ses *ses,
+@@ -824,7 +827,7 @@ SendReceive(const unsigned int xid, stru
  	midQ->mid_state = MID_REQUEST_SUBMITTED;
  
  	cifs_in_send_inc(ses->server);
@@ -106,7 +100,7 @@ index ce4b430168de..2d361727b5a6 100644
  	cifs_in_send_dec(ses->server);
  	cifs_save_when_sent(midQ);
  
-@@ -901,7 +904,7 @@ SendReceive(const unsigned int xid, struct cifs_ses *ses,
+@@ -841,7 +844,7 @@ SendReceive(const unsigned int xid, stru
  
  	rc = wait_for_response(ses->server, midQ);
  	if (rc != 0) {
@@ -115,7 +109,7 @@ index ce4b430168de..2d361727b5a6 100644
  		spin_lock(&GlobalMid_Lock);
  		if (midQ->mid_state == MID_REQUEST_SUBMITTED) {
  			/* no longer considered to be "in-flight" */
-@@ -970,6 +973,9 @@ SendReceiveBlockingLock(const unsigned int xid, struct cifs_tcon *tcon,
+@@ -910,6 +913,9 @@ SendReceiveBlockingLock(const unsigned i
  	int rstart = 0;
  	struct mid_q_entry *midQ;
  	struct cifs_ses *ses;
@@ -125,7 +119,7 @@ index ce4b430168de..2d361727b5a6 100644
  
  	if (tcon == NULL || tcon->ses == NULL) {
  		cifs_dbg(VFS, "Null smb session\n");
-@@ -989,10 +995,9 @@ SendReceiveBlockingLock(const unsigned int xid, struct cifs_tcon *tcon,
+@@ -929,10 +935,9 @@ SendReceiveBlockingLock(const unsigned i
  	   to the same server. We may make this configurable later or
  	   use ses->maxReq */
  
@@ -138,7 +132,7 @@ index ce4b430168de..2d361727b5a6 100644
  		return -EIO;
  	}
  
-@@ -1021,7 +1026,7 @@ SendReceiveBlockingLock(const unsigned int xid, struct cifs_tcon *tcon,
+@@ -961,7 +966,7 @@ SendReceiveBlockingLock(const unsigned i
  
  	midQ->mid_state = MID_REQUEST_SUBMITTED;
  	cifs_in_send_inc(ses->server);
@@ -147,7 +141,7 @@ index ce4b430168de..2d361727b5a6 100644
  	cifs_in_send_dec(ses->server);
  	cifs_save_when_sent(midQ);
  
-@@ -1050,7 +1055,7 @@ SendReceiveBlockingLock(const unsigned int xid, struct cifs_tcon *tcon,
+@@ -990,7 +995,7 @@ SendReceiveBlockingLock(const unsigned i
  		if (in_buf->Command == SMB_COM_TRANSACTION2) {
  			/* POSIX lock. We send a NT_CANCEL SMB to cause the
  			   blocking lock to return. */
@@ -156,7 +150,7 @@ index ce4b430168de..2d361727b5a6 100644
  			if (rc) {
  				cifs_delete_mid(midQ);
  				return rc;
-@@ -1071,7 +1076,7 @@ SendReceiveBlockingLock(const unsigned int xid, struct cifs_tcon *tcon,
+@@ -1011,7 +1016,7 @@ SendReceiveBlockingLock(const unsigned i
  
  		rc = wait_for_response(ses->server, midQ);
  		if (rc) {
@@ -165,6 +159,3 @@ index ce4b430168de..2d361727b5a6 100644
  			spin_lock(&GlobalMid_Lock);
  			if (midQ->mid_state == MID_REQUEST_SUBMITTED) {
  				/* no longer considered to be "in-flight" */
--- 
-2.12.3
-

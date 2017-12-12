@@ -1,13 +1,13 @@
-From ebdd738c954206f93369e842aa0c082685cc6003 Mon Sep 17 00:00:00 2001
+From a6137305a8c47fa92ab1a8efcfe76f0e9fa96ab7 Mon Sep 17 00:00:00 2001
 From: Al Viro <viro@zeniv.linux.org.uk>
-Date: Mon, 20 Nov 2017 17:08:41 +0100
-Subject: [PATCH 08/23] cifs_readv_receive: use cifs_read_from_socket() 
- (FATE#324404).
+Date: Sat, 9 Jan 2016 19:37:16 -0500
+Subject: [PATCH] cifs_readv_receive: use cifs_read_from_socket()
 Patch-mainline: v4.7-rc1
 Git-commit: a6137305a8c47fa92ab1a8efcfe76f0e9fa96ab7
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+Acked-by: David Mulder <dmulder@suse.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
 
 ---
@@ -15,10 +15,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  1 file changed, 4 insertions(+), 7 deletions(-)
 
 diff --git a/fs/cifs/cifssmb.c b/fs/cifs/cifssmb.c
-index 22989aea271a..b29d9c9e4bc3 100644
 --- a/fs/cifs/cifssmb.c
 +++ b/fs/cifs/cifssmb.c
-@@ -1454,10 +1454,8 @@ cifs_readv_receive(struct TCP_Server_Info *server, struct mid_q_entry *mid)
+@@ -1449,10 +1449,8 @@ cifs_readv_receive(struct TCP_Server_Inf
  	len = min_t(unsigned int, buflen, server->vals->read_rsp_size) -
  							HEADER_SIZE(server) + 1;
  
@@ -31,7 +30,7 @@ index 22989aea271a..b29d9c9e4bc3 100644
  	if (length < 0)
  		return length;
  	server->total_read += length;
-@@ -1516,9 +1514,8 @@ cifs_readv_receive(struct TCP_Server_Info *server, struct mid_q_entry *mid)
+@@ -1504,9 +1502,8 @@ cifs_readv_receive(struct TCP_Server_Inf
  	len = data_offset - server->total_read;
  	if (len > 0) {
  		/* read any junk before data into the rest of smallbuf */
@@ -43,6 +42,3 @@ index 22989aea271a..b29d9c9e4bc3 100644
  		if (length < 0)
  			return length;
  		server->total_read += length;
--- 
-2.12.3
-

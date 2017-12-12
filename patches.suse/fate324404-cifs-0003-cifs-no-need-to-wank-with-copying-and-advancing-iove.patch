@@ -1,13 +1,14 @@
-From c61140b4c1d151178afb8c90b0a83eb29ea8ade5 Mon Sep 17 00:00:00 2001
+From 09aab880f7c5ac31e9db18a63353b980bcb52261 Mon Sep 17 00:00:00 2001
 From: Al Viro <viro@zeniv.linux.org.uk>
-Date: Mon, 20 Nov 2017 17:32:39 +0100
-Subject: [PATCH 17/23] cifs: no need to wank with copying and advancing iovec
- on  recvmsg side either (FATE#324404).
+Date: Fri, 13 Nov 2015 03:00:17 -0500
+Subject: cifs: no need to wank with copying and advancing iovec on
+ recvmsg side either
 Patch-mainline: v4.7-rc1
 Git-commit: 09aab880f7c5ac31e9db18a63353b980bcb52261
-References: fate#324404, fate#322075
+References: fate#322075, fate#324404, bsc#1071009
 
 Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+Acked-by: David Mulder <dmulder@suse.com>
 Acked-by: Aurelien Aptel <aaptel@suse.com>
 
 ---
@@ -16,10 +17,9 @@ Acked-by: Aurelien Aptel <aaptel@suse.com>
  2 files changed, 5 insertions(+), 69 deletions(-)
 
 diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index 140c3465affe..a2d3b69323c8 100644
 --- a/fs/cifs/cifsglob.h
 +++ b/fs/cifs/cifsglob.h
-@@ -625,8 +625,6 @@ struct TCP_Server_Info {
+@@ -622,8 +622,6 @@ struct TCP_Server_Info {
  	bool	sec_mskerberos;		/* supports legacy MS Kerberos */
  	bool	large_buf;		/* is current buffer large? */
  	struct delayed_work	echo; /* echo ping workqueue job */
@@ -29,10 +29,9 @@ index 140c3465affe..a2d3b69323c8 100644
  	char	*bigbuf;	/* pointer to current "big" buffer */
  	unsigned int total_read; /* total amount of data read in this pass */
 diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
-index d563b8b712b6..e212d9f09414 100644
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -515,77 +515,20 @@ server_unresponsive(struct TCP_Server_Info *server)
+@@ -503,77 +503,20 @@ server_unresponsive(struct TCP_Server_In
  	return false;
  }
  
@@ -113,7 +112,7 @@ index d563b8b712b6..e212d9f09414 100644
  		try_to_freeze();
  
  		if (server_unresponsive(server)) {
-@@ -593,10 +536,7 @@ cifs_readv_from_socket(struct TCP_Server_Info *server, struct kvec *iov_orig,
+@@ -581,10 +524,7 @@ cifs_readv_from_socket(struct TCP_Server
  			break;
  		}
  
@@ -125,7 +124,7 @@ index d563b8b712b6..e212d9f09414 100644
  
  		if (server->tcpStatus == CifsExiting) {
  			total_read = -ESHUTDOWN;
-@@ -617,8 +557,7 @@ cifs_readv_from_socket(struct TCP_Server_Info *server, struct kvec *iov_orig,
+@@ -605,8 +545,7 @@ cifs_readv_from_socket(struct TCP_Server
  			length = 0;
  			continue;
  		} else if (length <= 0) {
@@ -135,7 +134,7 @@ index d563b8b712b6..e212d9f09414 100644
  			cifs_reconnect(server);
  			total_read = -ECONNABORTED;
  			break;
-@@ -797,7 +736,6 @@ static void clean_demultiplex_info(struct TCP_Server_Info *server)
+@@ -785,7 +724,6 @@ static void clean_demultiplex_info(struc
  	}
  
  	kfree(server->hostname);
@@ -143,6 +142,3 @@ index d563b8b712b6..e212d9f09414 100644
  	kfree(server);
  
  	length = atomic_dec_return(&tcpSesAllocCount);
--- 
-2.12.3
-
