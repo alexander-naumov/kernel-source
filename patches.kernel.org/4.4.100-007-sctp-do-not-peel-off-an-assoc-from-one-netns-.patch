@@ -1,7 +1,7 @@
 From: Xin Long <lucien.xin@gmail.com>
 Date: Tue, 17 Oct 2017 23:26:10 +0800
 Subject: [PATCH] sctp: do not peel off an assoc from one netns to another one
-References: bnc#1012382
+References: CVE-2017-15115 bnc#1012382 bsc#1068671
 Patch-mainline: 4.4.100
 Git-commit: df80cd9b28b9ebaa284a41df611dbf3a2d05ca74
 

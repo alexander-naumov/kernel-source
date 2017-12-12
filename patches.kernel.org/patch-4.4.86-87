@@ -1,7 +1,7 @@
 From: Jiri Slaby <jslaby@suse.cz>
 Subject: Linux 4.4.87
 Patch-mainline: 4.4.87
-References: bnc#1012382 bsc#1057015
+References: CVE-2017-11600 bnc#1012382 bsc#1050231 bsc#1057015
 Git-commit: 445a582738de6802669aeed9c33ca406c23c3b1f
 Git-commit: 138e4ad67afd5c6c318b056b4d17c17f2c0ca5c0
 Git-commit: 2952a6070e07ebdd5896f1f5b861acad677caded
