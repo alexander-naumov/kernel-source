@@ -2,6 +2,7 @@ From 9a585582954f0fc71fa14f1cc5e916af997a4b1e Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Wed, 23 Aug 2017 14:21:14 -0700
 Subject: [PATCH 29/43] kaiser: fix perf crashes
+Patch-mainline: Not yet, under development
 
 Avoid perf crashes: place debug_store in the user-mapped per-cpu area
 instead of allocating, and use page allocator plus kaiser_add_mapping()
@@ -17,6 +18,8 @@ Westmere, implicating the debug_store offset of the per-cpu area.
 Conflicts:
 arch/x86/events/intel/ds.c (not in this tree)
 arch/x86/kernel/cpu/perf_event_intel_ds.c (patched instead of that)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/kernel/cpu/perf_event_intel_ds.c | 57 ++++++++++++++++++++++++-------
  1 file changed, 45 insertions(+), 12 deletions(-)

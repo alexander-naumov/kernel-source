@@ -2,11 +2,14 @@ From 438107a9158c1d4c02df875396fb66ff2105d344 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 18:48:02 -0700
 Subject: [PATCH 30/43] kaiser: ENOMEM if kaiser_pagetable_walk() NULL
+Patch-mainline: Not yet, under development
 
 kaiser_add_user_map() took no notice when kaiser_pagetable_walk() failed.
 And avoid its might_sleep() when atomic (though atomic at present unused).
 
 (cherry picked from Change-Id: Id9d884e8f3e61cdad2f3e53e70c94ca57233829e)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/kaiser.c |   10 +++++++---
  1 file changed, 7 insertions(+), 3 deletions(-)

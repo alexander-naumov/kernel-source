@@ -2,6 +2,7 @@ From e4fbe29cf88992297954c4a9c2ee46705759a4a7 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Wed, 30 Aug 2017 16:23:00 -0700
 Subject: [PATCH 23/43] kaiser: merged update
+Patch-mainline: Not yet, under development
 
 Merged fixes and cleanups, rebased to 4.4.89 tree (no 5-level paging).
 
@@ -10,6 +11,8 @@ Conflicts:
 arch/x86/kernel/cpu/common.c
 arch/x86/mm/kaiser.c
 kernel/fork.c
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/entry/entry_64.S            |  106 ++++++++++-
  arch/x86/include/asm/kaiser.h        |   43 ++--

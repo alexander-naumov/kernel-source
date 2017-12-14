@@ -2,6 +2,7 @@ From e865293e8ff0d0dd33b8772446792712dc52fa4e Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Tue, 5 Sep 2017 12:05:01 -0700
 Subject: [PATCH 24/43] kaiser: do not set _PAGE_NX on pgd_none
+Patch-mainline: Not yet, under development
 
 native_pgd_clear() uses native_set_pgd(), so native_set_pgd() must
 avoid setting the _PAGE_NX bit on an otherwise pgd_none() entry:
@@ -40,6 +41,8 @@ and de-void and de-space native_get_shadow/normal_pgd() while here.
 (cherry picked from Change-Id: I17fc68a717ca372137d0225a257b61f8fcb38a87)
 Conflicts:
 arch/x86/mm/kaslr.c (not in this tree)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/boot/compressed/misc.h   |    1 
  arch/x86/include/asm/pgtable_64.h |   51 +++++++++-----------------------------

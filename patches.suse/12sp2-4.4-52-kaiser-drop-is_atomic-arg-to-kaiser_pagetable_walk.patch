@@ -2,6 +2,7 @@ From 6c3d3a8785b870933477d8482f081f423d6cb783 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 29 Oct 2017 11:36:19 -0700
 Subject: [PATCH 04/14] kaiser: drop is_atomic arg to kaiser_pagetable_walk()
+Patch-mainline: Not yet, under development
 
 I have not observed a might_sleep() warning from setup_fixmap_gdt()'s
 use of kaiser_add_mapping() in our tree (why not?), but like upstream
@@ -10,6 +11,8 @@ kaiser_pagetable_walk(), and at startup it's far from a likely source
 of trouble: so just delete the walk's is_atomic arg and might_sleep().
 
 (cherry picked from Change-Id: I3d3bd33bed80260a74edf3e1e182156a3f4c82ab)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/kaiser.c |   10 ++--------
  1 file changed, 2 insertions(+), 8 deletions(-)

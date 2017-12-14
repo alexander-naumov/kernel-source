@@ -2,6 +2,7 @@ From c962a8354e6847474346d9a171a69d7e093dfb08 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 18:57:03 -0700
 Subject: [PATCH 25/43] kaiser: stack map PAGE_SIZE at THREAD_SIZE-PAGE_SIZE
+Patch-mainline: Not yet, under development
 
 Kaiser only needs to map one page of the stack; and
 kernel/fork.c did not build on powerpc (no __PAGE_KERNEL).
@@ -11,6 +12,8 @@ kaiser_add_mapping() and kaiser_remove_mapping().  And use
 linux/kaiser.h in init/main.c to avoid the #ifdefs there.
 
 (cherry picked from Change-Id: I700edd7d3b1c0b8c13367f61a483f92bc34e8654)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  include/linux/kaiser.h |   40 +++++++++++++++++++++++++++++++++-------
  init/main.c            |    6 +-----

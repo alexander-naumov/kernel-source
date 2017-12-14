@@ -2,6 +2,7 @@ From ef0f8509845be925b4293e5ec0ce4aade928ea00 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 24 Sep 2017 16:59:49 -0700
 Subject: [PATCH 02/14] kaiser: add "nokaiser" boot option, using ALTERNATIVE
+Patch-mainline: Not yet, under development
 
 Added "nokaiser" boot option: an early param like "noinvpcid".
 Most places now check int kaiser_enabled (#defined 0 when not
@@ -35,6 +36,8 @@ the manual is clear that it does not matter whether it's 0 or 1 when
 BSP and auxiliaries - BSP alone was adding PSE, in probe_page_size_mask().
 
 (cherry picked from Change-Id: I8e5bec716944444359cbd19f6729311eff943e9a)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  Documentation/kernel-parameters.txt  |    2 +
  arch/x86/entry/entry_64.S            |   15 +++++++------

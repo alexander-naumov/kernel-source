@@ -2,6 +2,7 @@ From f6cf50cae603d059903cade0000fef7dd1bae9ea Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Mon, 2 Oct 2017 10:57:24 -0700
 Subject: [PATCH 33/43] kaiser: kaiser_remove_mapping() move along the pgd
+Patch-mainline: Not yet, under development
 
 When removing the bogus comment from kaiser_remove_mapping(),
 I really ought to have checked the extent of its bogosity: as
@@ -20,6 +21,8 @@ stack anyway): the only way to hit this bug here would be when
 freeing a large modified ldt.
 
 (cherry picked from Change-Id: I216df7099de1d9e3b186e19586a7a5bc4784feed)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/kaiser.c |   10 ++++++----
  1 file changed, 6 insertions(+), 4 deletions(-)

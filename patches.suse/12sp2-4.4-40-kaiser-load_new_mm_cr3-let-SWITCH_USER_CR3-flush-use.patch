@@ -2,6 +2,7 @@ From 8863a363f0094837cf053546c8e7f0ffff600472 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Thu, 17 Aug 2017 15:00:37 -0700
 Subject: [PATCH 40/43] kaiser: load_new_mm_cr3() let SWITCH_USER_CR3 flush
+Patch-mainline: Not yet, under development
  user
 
 We have many machines (Westmere, Sandybridge, Ivybridge) supporting
@@ -42,6 +43,8 @@ features, but in principle incorrect.  However, my experiment
 to per-cpu-ify that one did not end well...
 
 (cherry picked from Change-Id: I171de6d71072b3d16b8f6078d445395c902da043)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/include/asm/kaiser.h   |   18 +++++++-----
  arch/x86/include/asm/tlbflush.h |   58 +++++++++++++++++++++++++++-------------

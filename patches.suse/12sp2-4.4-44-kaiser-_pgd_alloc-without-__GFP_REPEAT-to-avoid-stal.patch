@@ -2,6 +2,7 @@ From 8a44cdcb9c71998d7b74cc5d523810bdd503b161 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Fri, 13 Oct 2017 12:10:00 -0700
 Subject: [PATCH 44/43] kaiser: _pgd_alloc() without __GFP_REPEAT to avoid stalls
+Patch-mainline: Not yet, under development
 
 Synthetic filesystem mempressure testing has shown softlockups, with
 hour-long page allocation stalls, and pgd_alloc() trying for order:1
@@ -31,6 +32,8 @@ hughd adds: __alloc_pages_slowpath() in the 4.4.89-stable tree handles
 __GFP_REPEAT a little differently than in prod kernel or 3.18.72-stable,
 so it may not always be exactly a no-op on order:0 pages, as said above;
 but I think still appropriate to omit it from Kaiser or non-Kaiser pgd.
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/pgtable.c | 6 ++++--
  1 file changed, 4 insertions(+), 2 deletions(-)

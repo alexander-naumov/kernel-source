@@ -2,6 +2,7 @@ From 648e3526304072e09657cabaf9bb3c8a1130bbb1 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 27 Aug 2017 16:24:27 -0700
 Subject: [PATCH 42/43] kaiser: x86_cr3_pcid_noflush and x86_cr3_pcid_user
+Patch-mainline: Not yet, under development
 
 Mostly this commit is just unshouting X86_CR3_PCID_KERN_VAR and
 X86_CR3_PCID_USER_VAR: we usually name variables in lower-case.
@@ -20,6 +21,8 @@ NOFLUSH bit set (if PCID supported) when restoring context after:
 nothing done in do_nmi() should require a TLB to be flushed here.
 
 (cherry picked from Change-Id: If15c617e9ec86a7c06fc965e78911a2e10f53d16)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/entry/entry_64.S     |    8 ++++----
  arch/x86/include/asm/kaiser.h |   11 +++++------

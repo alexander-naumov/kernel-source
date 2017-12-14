@@ -1,5 +1,6 @@
 From: Borislav Petkov <bp@suse.de>
 Subject: x86/kaiser: Rename and simplify X86_FEATURE_KAISER handling
+Patch-mainline: Not yet, under development
 
 Concentrate it in arch/x86/mm/kaiser.c and use the upstream string "nopti".
 

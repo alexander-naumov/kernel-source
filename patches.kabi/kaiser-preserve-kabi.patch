@@ -1,5 +1,6 @@
 From: Jiri Kosina <jkosina@suse.cz>
 Subject: [PATCH] kaiser: work around kABI
+Patch-mainline: Never, SUSE-specific
 
 The most potentially dangerous one is the vmstats one.  I can't imagine what
 3rd party module would realistically be directly allocating pglist_data,

@@ -2,6 +2,7 @@ From 8ce4616f97b08e166f2028db38341ffde461e15b Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Fri, 8 Sep 2017 19:26:30 -0700
 Subject: [PATCH 41/43] kaiser: PCID 0 for kernel and 128 for user
+Patch-mainline: Not yet, under development
 
 Why was 4 chosen for kernel PCID and 6 for user PCID?
 No good reason in a backport where PCIDs are only used for Kaiser.
@@ -29,6 +30,8 @@ machine with PCID support, but 0 on a machine without PCID support...
 above 2^56, but even with 5-level paging, physical goes up to 2^52.)
 
 (cherry picked from Change-Id: I17fccf9c0624d3db717cb5d1f949c1320ed1b09e)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/include/asm/kaiser.h        |   19 ++++++++++++-------
  arch/x86/include/asm/pgtable_types.h |    7 ++++---

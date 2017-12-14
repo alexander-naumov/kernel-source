@@ -2,6 +2,7 @@ From 99a20744dc997e1ab9224e9a072e2476be61c6b9 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sat, 9 Sep 2017 21:27:32 -0700
 Subject: [PATCH 38/43] kaiser: vmstat show NR_KAISERTABLE as nr_overhead
+Patch-mainline: Not yet, under development
 
 The kaiser update made an interesting choice, never to free any shadow
 page tables.  Contention on global spinlock was worrying, particularly
@@ -31,6 +32,8 @@ tell a different story: keep an eye on this number, and bring back
 lighter freeing if it gets out of control (maybe a shrinker).
 
 (cherry picked from Change-Id: I254959b47c694f8604400ab411e02075a30f922a)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/kaiser.c   |   16 +++++++++++-----
  include/linux/mmzone.h |    3 ++-

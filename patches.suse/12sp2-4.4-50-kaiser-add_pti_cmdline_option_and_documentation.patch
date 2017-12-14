@@ -1,5 +1,6 @@
 From: Borislav Petkov <bp@suse.de>
 Subject: x86/kaiser: Check boottime cmdline params
+Patch-mainline: Not yet, under development
 
 AMD (and possibly other vendors) are not affected by the leak
 KAISER is protecting against.

@@ -2,6 +2,7 @@ From e5edda043f30c948e4da9c963e06a633b821f31f Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sat, 4 Nov 2017 18:43:06 -0700
 Subject: [PATCH 06/14] kaiser: kaiser_flush_tlb_on_return_to_user() check PCID
+Patch-mainline: Not yet, under development
 
 Let kaiser_flush_tlb_on_return_to_user() do the X86_FEATURE_PCID
 check, instead of each caller doing it inline first: nobody needs
@@ -10,6 +11,8 @@ suits later changes.  Replace those no-op X86_CR3_PCID_KERN_FLUSH lines
 by a BUILD_BUG_ON() in load_new_mm_cr3(), in case something changes.
 
 (cherry picked from Change-Id: I9b528ed9d7c1ae4a3b4738c2894ee1740b6fb0b9)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/include/asm/tlbflush.h |    4 ++--
  arch/x86/mm/kaiser.c            |    6 +++---

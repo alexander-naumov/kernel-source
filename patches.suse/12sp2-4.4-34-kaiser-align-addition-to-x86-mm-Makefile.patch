@@ -2,12 +2,15 @@ From e41f7b7b194dc960129e76f17717fd22c17df709 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 19:51:10 -0700
 Subject: [PATCH 34/43] kaiser: align addition to x86/mm/Makefile
+Patch-mainline: Not yet, under development
 
 Use tab not space so they line up properly, kaslr.o also.
 
 (cherry picked from Change-Id: I2f2b64c130b1bafe7eceb5b2a3d5be9a9014b02b)
 Conflicts:
 arch/x86/mm/Makefile
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/mm/Makefile |    2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

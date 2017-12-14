@@ -2,11 +2,14 @@ From 78dd553cccc1aa0ce8fdd1f1e935b32683c7359e Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Wed, 30 Aug 2017 16:23:00 -0700
 Subject: [PATCH 39/43] kaiser: enhanced by kernel and user PCIDs
+Patch-mainline: Not yet, under development
 
 Merged performance improvements to Kaiser, using distinct kernel
 and user Process Context Identifiers to minimize the TLB flushing.
 
 (cherry picked from Change-Id: I6c7d791433950a3e5954228f7379fff4c364f43b)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/entry/entry_64.S                   |   10 ++++-
  arch/x86/entry/entry_64_compat.S            |    1 

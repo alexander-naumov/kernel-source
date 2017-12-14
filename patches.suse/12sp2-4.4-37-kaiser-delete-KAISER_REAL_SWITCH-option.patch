@@ -2,6 +2,7 @@ From bd2a3aaac4fc3ed0870d2d6b3d451283ebdc9aa6 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 18:30:43 -0700
 Subject: [PATCH 37/43] kaiser: delete KAISER_REAL_SWITCH option
+Patch-mainline: Not yet, under development
 
 We fail to see what CONFIG_KAISER_REAL_SWITCH is for: it seems to be
 left over from early development, and now just obscures tricky parts
@@ -12,6 +13,8 @@ a help text - and a "depends on KAISER", so that all those without
 KAISER are not asked the question.)
 
 (cherry picked from Change-Id: Ic1ba10f7933d52bf2bac706f708fe39f1aec60d2)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/entry/entry_64.S     |    4 ----
  arch/x86/include/asm/kaiser.h |    4 ----

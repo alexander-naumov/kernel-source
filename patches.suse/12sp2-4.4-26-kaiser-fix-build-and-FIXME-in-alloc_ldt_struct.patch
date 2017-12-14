@@ -2,12 +2,15 @@ From 7e811c7363a755345b357b8b7ba31208b7eeebfd Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 17:09:44 -0700
 Subject: [PATCH 26/43] kaiser: fix build and FIXME in alloc_ldt_struct()
+Patch-mainline: Not yet, under development
 
 Include linux/kaiser.h instead of asm/kaiser.h to build ldt.c without
 CONFIG_KAISER.  kaiser_add_mapping() does already return an error code,
 so fix the FIXME.
 
 (cherry picked from Change-Id: I954c53636d4a2fb5755eb8366f01b2f5f5e1e75d)
+
+Acked-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/kernel/ldt.c | 10 ++++------
  1 file changed, 4 insertions(+), 6 deletions(-)
