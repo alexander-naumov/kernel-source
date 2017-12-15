@@ -3,6 +3,7 @@ Patch-mainline: Not yet, under development
 Subject: s390/spinlock: add gmb memory barrier
 
 Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/s390/include/asm/barrier.h |    9 +++++++++
  1 file changed, 9 insertions(+)

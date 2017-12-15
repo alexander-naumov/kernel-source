@@ -28,6 +28,7 @@ __init_begin : __init_end region and are freed after initialization.
 
 Signed-off-by: Vasily Gorbik <gor@linux.vnet.ibm.com>
 Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/s390/include/asm/alternative.h |  149 ++++++++++++++++++++++++++++++++++++
  arch/s390/kernel/Makefile           |    2 

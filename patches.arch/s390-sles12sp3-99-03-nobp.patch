@@ -1,0 +1,103 @@
+From: Martin Schwidefsky <schwidefsky@de.ibm.com>
+Patch-mainline: Not yet, under development
+Subject: s390/spinlock: add ppa to system call path
+
+Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/s390/kernel/alternative.c |   13 +++++++++++++
+ arch/s390/kernel/entry.S       |   32 ++++++++++++++++++++++++++++++++
+ arch/s390/kernel/vmlinux.lds.S |    3 +++
+ 3 files changed, 48 insertions(+)
+
+--- a/arch/s390/kernel/alternative.c
++++ b/arch/s390/kernel/alternative.c
+@@ -14,6 +14,19 @@ static int __init disable_alternative_in
+ 
+ early_param("noaltinstr", disable_alternative_instructions);
+ 
++extern struct alt_instr __alt_nobp[], __alt_nobp_end[];
++static int __init nobp_setup(char *str)
++{
++	bool enabled;
++	int rc;
++
++	rc = kstrtobool(str, &enabled);
++	if (!rc && enabled)
++		apply_alternatives(__alt_nobp, __alt_nobp_end);
++	return rc;
++}
++__setup("nobp=", nobp_setup);
++
+ struct brcl_insn {
+ 	u16 opc;
+ 	s32 disp;
+--- a/arch/s390/kernel/entry.S
++++ b/arch/s390/kernel/entry.S
+@@ -171,6 +171,34 @@ _PIF_WORK	= (_PIF_PER_TRAP)
+ 		tm	off+\addr, \mask
+ 	.endm
+ 
++	.macro BPOFF
++	.pushsection .altinstr_replacement, "ax"
++0:	.long	0xb2e8c000	# FIXME: PPA 12 correct ?
++	.popsection
++1:	.long	0x47000000
++	.pushsection .altnobp, "a"
++        .long 1b - .
++	.long 0b - .
++	.word 49		# FIXME: facility bit 49 correct ?
++	.byte 4
++	.byte 4
++	.popsection
++	.endm
++
++	.macro BPON
++	.pushsection .altinstr_replacement, "ax"
++0:	.long	0xb2e8d000	# FIXME: PPA 13 correct ?
++	.popsection
++1:	.long	0x47000000
++	.pushsection .altnobp, "a"
++        .long 1b - .
++	.long 0b - .
++	.word 49		# FIXME: facility bit 49 correct ?
++	.byte 4
++	.byte 4
++	.popsection
++	.endm
++
+ 	.section .kprobes.text, "ax"
+ 
+ /*
+@@ -310,7 +338,9 @@ ENTRY(system_call)
+ 	lgf	%r9,0(%r8,%r10)			# get system call add.
+ 	TSTMSK	__TI_flags(%r12),_TIF_TRACE
+ 	jnz	.Lsysc_tracesys
++	BPOFF
+ 	basr	%r14,%r9			# call sys_xxxx
++	BPON
+ 	stg	%r2,__PT_R2(%r11)		# store return value
+ 
+ .Lsysc_return:
+@@ -458,7 +488,9 @@ ENTRY(system_call)
+ 	lmg	%r3,%r7,__PT_R3(%r11)
+ 	stg	%r7,STACK_FRAME_OVERHEAD(%r15)
+ 	lg	%r2,__PT_ORIG_GPR2(%r11)
++	BPOFF
+ 	basr	%r14,%r9		# call sys_xxx
++	BPON
+ 	stg	%r2,__PT_R2(%r11)	# store return value
+ .Lsysc_tracenogo:
+ 	TSTMSK	__TI_flags(%r12),_TIF_TRACE
+--- a/arch/s390/kernel/vmlinux.lds.S
++++ b/arch/s390/kernel/vmlinux.lds.S
+@@ -97,6 +97,9 @@ SECTIONS
+ 		__alt_instructions = .;
+ 		*(.altinstructions)
+ 		__alt_instructions_end = .;
++		__alt_nobp = .;
++		*(.altnobp)
++		__alt_nobp_end = .;
+ 	}
+ 
+ 	/*
