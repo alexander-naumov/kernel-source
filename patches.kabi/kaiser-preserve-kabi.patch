@@ -103,41 +103,4 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  #include <linux/interrupt.h>
  #include <linux/capability.h>
  #include <linux/completion.h>
---- a/include/linux/mmzone.h
-+++ b/include/linux/mmzone.h
-@@ -129,7 +129,6 @@
- 	NR_PAGETABLE,		/* used for pagetables */
- 	/* Second 128 byte cacheline */
- 	NR_KERNEL_STACK,
--	NR_KAISERTABLE,
- 	NR_UNSTABLE_NFS,	/* NFS unstable pages */
- 	NR_BOUNCE,
- 	NR_VMSCAN_WRITE,
-@@ -154,6 +153,9 @@
- 	WORKINGSET_NODERECLAIM,
- 	NR_ANON_TRANSPARENT_HUGEPAGES,
- 	NR_FREE_CMA_PAGES,
-+#ifndef __GENKSYMS__
-+	NR_KAISERTABLE,
-+#endif
- 	NR_VM_ZONE_STAT_ITEMS };
- 
- /*
---- a/mm/vmstat.c
-+++ b/mm/vmstat.c
-@@ -713,7 +713,6 @@
- 	"nr_slab_unreclaimable",
- 	"nr_page_table_pages",
- 	"nr_kernel_stack",
--	"nr_overhead",
- 	"nr_unstable",
- 	"nr_bounce",
- 	"nr_vmscan_write",
-@@ -739,6 +738,7 @@
- 	"workingset_nodereclaim",
- 	"nr_anon_transparent_hugepages",
- 	"nr_free_cma",
-+	"nr_overhead",
- 
- 	/* enum writeback_stat_item counters */
- 	"nr_dirty_threshold",
+nr_dirty_threshold",
