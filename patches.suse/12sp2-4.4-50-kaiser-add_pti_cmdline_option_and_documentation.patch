@@ -24,7 +24,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  int kaiser_enabled __read_mostly = 1;
  EXPORT_SYMBOL(kaiser_enabled);	/* for inlined TLB flush functions */
-@@ -264,6 +265,41 @@ static void __init kaiser_init_all_pgds(
+@@ -258,6 +259,41 @@ static void __init kaiser_init_all_pgds(
  	WARN_ON(__ret);							\
  } while (0)
  
@@ -33,7 +33,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 +	bool enable = true;
 +	char arg[5];
 +
-+	if (cmdline_find_option(boot_command_line, "kaiser", arg, sizeof(arg))) {
++	if (cmdline_find_option(boot_command_line, "pti", arg, sizeof(arg))) {
 +		if (!strncmp(arg, "on", 2))
 +			goto enable;
 +
@@ -44,7 +44,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 +			goto skip;
 +	}
 +
-+	if (cmdline_find_option_bool(boot_command_line, "nokaiser"))
++	if (cmdline_find_option_bool(boot_command_line, "nopti"))
 +		goto disable;
 +
 +skip:
@@ -66,7 +66,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  /*
   * If anything in here fails, we will likely die on one of the
   * first kernel->user transitions and init will die.  But, we
-@@ -275,12 +311,10 @@ void __init kaiser_init(void)
+@@ -269,12 +305,10 @@ void __init kaiser_init(void)
  {
  	int cpu;
  
@@ -82,7 +82,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  	kaiser_init_all_pgds();
  
-@@ -424,16 +458,3 @@ void kaiser_flush_tlb_on_return_to_user(
+@@ -418,16 +452,3 @@ void kaiser_flush_tlb_on_return_to_user(
  			X86_CR3_PCID_USER_FLUSH | KAISER_SHADOW_PGD_OFFSET);
  }
  EXPORT_SYMBOL(kaiser_flush_tlb_on_return_to_user);
