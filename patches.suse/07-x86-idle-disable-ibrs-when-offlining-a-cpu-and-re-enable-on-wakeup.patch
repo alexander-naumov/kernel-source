@@ -1,0 +1,42 @@
+From: Tim Chen <tim.c.chen@linux.intel.com>
+Date: Wed, 15 Nov 2017 12:24:19 -0800
+Subject: x86/idle: Disable IBRS when offlining a CPU and re-enable on wakeup
+Patch-mainline: submitted on 2018/1/9
+References: bsc#1068032
+
+Clear IBRS when cpu is offlined and set it when brining it back online.
+
+Signed-off-by: Tim Chen <tim.c.chen@linux.intel.com>
+[ Switch to accessors. ]
+Signed-off-by: Borislav Petkov <bp@suse.de>
+---
+ arch/x86/kernel/smpboot.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/x86/kernel/smpboot.c b/arch/x86/kernel/smpboot.c
+index 0ff1d9aaa2ac..2100ee34888c 100644
+--- a/arch/x86/kernel/smpboot.c
++++ b/arch/x86/kernel/smpboot.c
+@@ -75,6 +75,7 @@
+ #include <asm/i8259.h>
+ #include <asm/realmode.h>
+ #include <asm/misc.h>
++#include <asm/spec_ctrl.h>
+ 
+ /* Number of siblings per CPU package */
+ int smp_num_siblings = 1;
+@@ -1544,9 +1545,13 @@ void native_play_dead(void)
+ 	play_dead_common();
+ 	tboot_shutdown(TB_SHUTDOWN_WFS);
+ 
++	x86_disable_ibrs();
++
+ 	mwait_play_dead();	/* Only returns on failure */
+ 	if (cpuidle_play_dead())
+ 		hlt_play_dead();
++
++	x86_enable_ibrs();
+ }
+ 
+ #else /* ... !CONFIG_HOTPLUG_CPU */
+
