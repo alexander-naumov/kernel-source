@@ -2,6 +2,7 @@ From 648e3526304072e09657cabaf9bb3c8a1130bbb1 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 27 Aug 2017 16:24:27 -0700
 Subject: [PATCH 42/43] kaiser: x86_cr3_pcid_noflush and x86_cr3_pcid_user
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Mostly this commit is just unshouting X86_CR3_PCID_KERN_VAR and

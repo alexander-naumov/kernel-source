@@ -2,6 +2,7 @@ From e4fbe29cf88992297954c4a9c2ee46705759a4a7 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Wed, 30 Aug 2017 16:23:00 -0700
 Subject: [PATCH 23/43] kaiser: merged update
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Merged fixes and cleanups, rebased to 4.4.89 tree (no 5-level paging).

@@ -2,6 +2,7 @@ From de654f04423e9799b548b3f04e97fdc8ef5ce199 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Mon, 4 Dec 2017 20:13:35 -0800
 Subject: [PATCH 45/43] kaiser: fix unlikely error in alloc_ldt_struct()
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 An error from kaiser_add_mapping() here is not at all likely, but

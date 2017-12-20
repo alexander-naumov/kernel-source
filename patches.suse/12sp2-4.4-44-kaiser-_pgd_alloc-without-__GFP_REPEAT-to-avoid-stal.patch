@@ -2,6 +2,7 @@ From 8a44cdcb9c71998d7b74cc5d523810bdd503b161 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Fri, 13 Oct 2017 12:10:00 -0700
 Subject: [PATCH 44/43] kaiser: _pgd_alloc() without __GFP_REPEAT to avoid stalls
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Synthetic filesystem mempressure testing has shown softlockups, with

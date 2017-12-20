@@ -1,5 +1,6 @@
 From: Borislav Petkov <bp@suse.de>
 Subject: x86/kaiser: Reenable PARAVIRT
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Now that the required bits have been addressed, reenable

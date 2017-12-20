@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Sat, 22 Apr 2017 00:01:20 -0700
 Subject: x86/mm: Remove flush_tlb() and flush_tlb_current_task()
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 29961b59a51f8c6838a26a45e871a7ed6771809b
 Patch-mainline: v4.12-rc1
 References: bsc#1068032

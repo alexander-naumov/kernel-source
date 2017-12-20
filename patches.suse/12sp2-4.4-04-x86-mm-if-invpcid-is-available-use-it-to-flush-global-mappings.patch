@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Fri, 29 Jan 2016 11:42:59 -0800
 Subject: x86/mm: If INVPCID is available, use it to flush global mappings
+References: bsc#1068032 CVE-2017-5754
 Git-commit: d8bced79af1db6734f66b42064cc773cada2ce99
 Patch-mainline: v4.6-rc1
 References: bsc#1068032

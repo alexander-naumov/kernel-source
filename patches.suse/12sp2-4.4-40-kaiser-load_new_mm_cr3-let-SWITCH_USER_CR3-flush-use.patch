@@ -2,6 +2,7 @@ From 8863a363f0094837cf053546c8e7f0ffff600472 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Thu, 17 Aug 2017 15:00:37 -0700
 Subject: [PATCH 40/43] kaiser: load_new_mm_cr3() let SWITCH_USER_CR3 flush
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
  user
 

@@ -1,5 +1,6 @@
 From: Jiri Kosina <jkosina@suse.cz>
 Subject: [PATCH] kaiser: Disable on Xen PV
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Kaiser cannot be used on paravirtualized MMUs (namely reading and writing CR3).

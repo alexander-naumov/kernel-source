@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Fri, 9 Jun 2017 11:49:15 -0700
 Subject: sched/core: Idle_task_exit() shouldn't use switch_mm_irqs_off()
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 252d2a4117bc181b287eeddf848863788da733ae
 Patch-mainline: v4.12-rc6
 References: bsc#1068032

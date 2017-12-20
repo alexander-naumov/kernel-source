@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Tue, 26 Apr 2016 09:39:07 -0700
 Subject: x86/mm: Build arch/x86/mm/tlb.c even on !SMP
+References: bsc#1068032 CVE-2017-5754
 Git-commit: e1074888c326038340a1ada9129d679e661f2ea6
 Patch-mainline: v4.7-rc1
 References: bsc#1068032

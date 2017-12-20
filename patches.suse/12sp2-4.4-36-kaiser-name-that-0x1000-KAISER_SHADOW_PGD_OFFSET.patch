@@ -2,6 +2,7 @@ From 52f05a70895ed05590da7d78fc2389f5069c3162 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sat, 9 Sep 2017 17:31:18 -0700
 Subject: [PATCH 36/43] kaiser: name that 0x1000 KAISER_SHADOW_PGD_OFFSET
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 There's a 0x1000 in various places, which looks better with a name.

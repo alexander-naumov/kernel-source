@@ -2,6 +2,7 @@ From e865293e8ff0d0dd33b8772446792712dc52fa4e Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Tue, 5 Sep 2017 12:05:01 -0700
 Subject: [PATCH 24/43] kaiser: do not set _PAGE_NX on pgd_none
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 native_pgd_clear() uses native_set_pgd(), so native_set_pgd() must

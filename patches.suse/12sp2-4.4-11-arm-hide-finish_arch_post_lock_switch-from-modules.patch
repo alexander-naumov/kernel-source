@@ -1,6 +1,7 @@
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 13 May 2016 15:30:13 +0200
 Subject: ARM: Hide finish_arch_post_lock_switch() from modules
+References: bsc#1068032 CVE-2017-5754
 Git-commit: ef0491ea17f8019821c7e9c8e801184ecf17f85a
 Patch-mainline: v4.7-rc1
 References: bsc#1068032

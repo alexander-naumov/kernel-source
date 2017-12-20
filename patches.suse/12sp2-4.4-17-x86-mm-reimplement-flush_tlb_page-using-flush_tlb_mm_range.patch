@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Mon, 22 May 2017 15:30:01 -0700
 Subject: x86/mm: Reimplement flush_tlb_page() using flush_tlb_mm_range()
+References: bsc#1068032 CVE-2017-5754
 Git-commit: ca6c99c0794875c6d1db6e22f246699691ab7e6b
 Patch-mainline: v4.13-rc1
 References: bsc#1068032

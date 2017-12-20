@@ -2,6 +2,7 @@ From 8ce4616f97b08e166f2028db38341ffde461e15b Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Fri, 8 Sep 2017 19:26:30 -0700
 Subject: [PATCH 41/43] kaiser: PCID 0 for kernel and 128 for user
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Why was 4 chosen for kernel PCID and 6 for user PCID?

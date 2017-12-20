@@ -2,6 +2,7 @@ From e97198ecb5afd74e15d30a46b9a9865ea25344ad Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 19:18:07 -0700
 Subject: [PATCH 31/43] kaiser: tidied up asm/kaiser.h somewhat
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Mainly deleting a surfeit of blank lines, and reflowing header comment.

@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Tue, 26 Apr 2016 09:39:09 -0700
 Subject: x86/mm, sched/core: Turn off IRQs in switch_mm()
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 078194f8e9fe3cf54c8fd8bded48a1db5bd8eb8a
 Patch-mainline: v4.7-rc1
 References: bsc#1068032

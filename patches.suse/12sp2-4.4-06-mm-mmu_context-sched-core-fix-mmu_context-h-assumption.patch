@@ -1,6 +1,7 @@
 From: Ingo Molnar <mingo@kernel.org>
 Date: Thu, 28 Apr 2016 11:39:12 +0200
 Subject: mm/mmu_context, sched/core: Fix mmu_context.h assumption
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 8efd755ac2fe262d4c8d5c9bbe054bb67dae93da
 Patch-mainline: v4.7-rc1
 References: bsc#1068032

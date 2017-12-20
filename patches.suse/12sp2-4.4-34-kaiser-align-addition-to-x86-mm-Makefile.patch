@@ -2,6 +2,7 @@ From e41f7b7b194dc960129e76f17717fd22c17df709 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 19:51:10 -0700
 Subject: [PATCH 34/43] kaiser: align addition to x86/mm/Makefile
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Use tab not space so they line up properly, kaslr.o also.

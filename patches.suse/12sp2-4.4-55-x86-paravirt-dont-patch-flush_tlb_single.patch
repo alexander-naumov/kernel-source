@@ -1,6 +1,7 @@
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 4 Dec 2017 15:07:30 +0100
 Subject: x86/paravirt: Dont patch flush_tlb_single
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 4a24c80e6f8a8468669cf46926a552c56fbb71c8
 Patch-mainline: v4.16 or v4.15-rc4 (next release)
 References: bsc#1068032

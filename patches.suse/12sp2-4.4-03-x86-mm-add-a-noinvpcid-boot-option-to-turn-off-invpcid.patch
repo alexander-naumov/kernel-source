@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Fri, 29 Jan 2016 11:42:58 -0800
 Subject: x86/mm: Add a 'noinvpcid' boot option to turn off INVPCID
+References: bsc#1068032 CVE-2017-5754
 Git-commit: d12a72b844a49d4162f24cefdab30bed3f86730e
 Patch-mainline: v4.6-rc1
 References: bsc#1068032

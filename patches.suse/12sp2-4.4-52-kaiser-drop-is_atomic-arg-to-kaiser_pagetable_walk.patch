@@ -2,6 +2,7 @@ From 6c3d3a8785b870933477d8482f081f423d6cb783 Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 29 Oct 2017 11:36:19 -0700
 Subject: [PATCH 04/14] kaiser: drop is_atomic arg to kaiser_pagetable_walk()
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 I have not observed a might_sleep() warning from setup_fixmap_gdt()'s

@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Sun, 28 May 2017 10:00:14 -0700
 Subject: x86/mm: Remove the UP asm/tlbflush.h code, always use the (formerly)
+References: bsc#1068032 CVE-2017-5754
  SMP code
 Git-commit: ce4a4e565f5264909a18c733b864c3f74467f69e
 Patch-mainline: v4.13-rc1

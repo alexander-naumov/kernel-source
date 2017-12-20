@@ -1,6 +1,7 @@
 From: Borislav Petkov <bp@suse.de>
 Date: Wed, 10 Feb 2016 15:51:16 +0100
 Subject: x86/mm: Fix INVPCID asm constraint
+References: bsc#1068032 CVE-2017-5754
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

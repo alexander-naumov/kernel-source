@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Sat, 22 Apr 2017 00:01:21 -0700
 Subject: x86/mm: Make flush_tlb_mm_range() more predictable
+References: bsc#1068032 CVE-2017-5754
 Git-commit: ce27374fabf553153c3f53efcaa9bfab9216bd8c
 Patch-mainline: v4.12-rc1
 References: bsc#1068032

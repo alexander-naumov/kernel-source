@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Tue, 26 Apr 2016 09:39:06 -0700
 Subject: sched/core: Add switch_mm_irqs_off() and use it in the scheduler
+References: bsc#1068032 CVE-2017-5754
 Git-commit: f98db6013c557c216da5038d9c52045be55cd039
 Patch-mainline: v4.7-rc1
 References: bsc#1068032

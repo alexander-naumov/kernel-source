@@ -2,6 +2,7 @@ From 7e811c7363a755345b357b8b7ba31208b7eeebfd Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Sun, 3 Sep 2017 17:09:44 -0700
 Subject: [PATCH 26/43] kaiser: fix build and FIXME in alloc_ldt_struct()
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Include linux/kaiser.h instead of asm/kaiser.h to build ldt.c without

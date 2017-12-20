@@ -1,6 +1,7 @@
 From: Tom Lendacky <thomas.lendacky@amd.com>
 Date: Mon, 17 Jul 2017 16:10:33 -0500
 Subject: x86/boot: Add early cmdline parsing for options with arguments
+References: bsc#1068032 CVE-2017-5754
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

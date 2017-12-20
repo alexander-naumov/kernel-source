@@ -1,5 +1,6 @@
 From: Jiri Kosina <jkosina@suse.cz>
 Subject: [PATCH] kaiser: work around kABI
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Never, SUSE-specific
 
 The most potentially dangerous one is the vmstats one.  I can't imagine what

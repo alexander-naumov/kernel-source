@@ -1,6 +1,7 @@
 From: Andy Lutomirski <luto@kernel.org>
 Date: Fri, 29 Jan 2016 11:42:57 -0800
 Subject: x86/mm: Add INVPCID helpers
+References: bsc#1068032 CVE-2017-5754
 Git-commit: 060a402a1ddb551455ee410de2eadd3349f2801b
 Patch-mainline: v4.6-rc1
 References: bsc#1068032

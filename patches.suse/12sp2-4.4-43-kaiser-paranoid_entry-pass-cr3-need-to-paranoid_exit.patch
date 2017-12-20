@@ -2,6 +2,7 @@ From 4b45a1e04f03e97a33b540974ed9e1a35f9728db Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Tue, 26 Sep 2017 18:43:07 -0700
 Subject: [PATCH 43/43] kaiser: paranoid_entry pass cr3 need to paranoid_exit
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Neel Natu points out that paranoid_entry() was wrong to assume that

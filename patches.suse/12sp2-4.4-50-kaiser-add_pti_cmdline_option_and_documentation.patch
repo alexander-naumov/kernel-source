@@ -1,5 +1,6 @@
 From: Borislav Petkov <bp@suse.de>
 Subject: x86/kaiser: Check boottime cmdline params
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 AMD (and possibly other vendors) are not affected by the leak

@@ -2,6 +2,7 @@ From 78dd553cccc1aa0ce8fdd1f1e935b32683c7359e Mon Sep 17 00:00:00 2001
 From: Hugh Dickins <hughd@google.com>
 Date: Wed, 30 Aug 2017 16:23:00 -0700
 Subject: [PATCH 39/43] kaiser: enhanced by kernel and user PCIDs
+References: bsc#1068032 CVE-2017-5754
 Patch-mainline: Not yet, under development
 
 Merged performance improvements to Kaiser, using distinct kernel
