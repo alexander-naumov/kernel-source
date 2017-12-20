@@ -1,0 +1,48 @@
+From: Tom Lendacky <thomas.lendacky@amd.com>
+Date: Mon, 18 Dec 2017 12:53:04 +0100
+Subject: KVM: x86: Add speculative control CPUID support for guests
+Patch-mainline: submitted on 2018/1/9
+References: bsc#1068032
+
+Provide the guest with the speculative control CPUID related values.
+
+[jkosina@suse.cz: cpuid 7.0.edx support is not present in SP2, dropped]
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Tom Lendacky <thomas.lendacky@amd.com>
+Signed-off-by: Borislav Petkov <bp@suse.de>
+---
+ arch/x86/kvm/cpuid.c |    9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+--- a/arch/x86/kvm/cpuid.c
++++ b/arch/x86/kvm/cpuid.c
+@@ -62,6 +62,7 @@ u64 kvm_supported_xcr0(void)
+ 
+ 	return xcr0;
+ }
++#define KVM_CPUID_BIT_SPEC_CTRL		26
+ 
+ #define F(x) bit(X86_FEATURE_##x)
+ 
+@@ -361,6 +362,10 @@ static inline int __do_cpuid_ent(struct
+ 	const u32 kvm_supported_word10_x86_features =
+ 		F(XSAVEOPT) | F(XSAVEC) | F(XGETBV1) | f_xsaves;
+ 
++	/* cpuid 0x80000008.0.ebx */
++	const u32 kvm_cpuid_80000008_0_ebx_x86_features =
++		F(IBPB);
++
+ 	/* all calls to cpuid_count() should be made on the same cpu */
+ 	get_cpu();
+ 
+@@ -586,7 +591,9 @@ static inline int __do_cpuid_ent(struct
+ 		if (!g_phys_as)
+ 			g_phys_as = phys_as;
+ 		entry->eax = g_phys_as | (virt_as << 8);
+-		entry->ebx = entry->edx = 0;
++		entry->ebx &= kvm_cpuid_80000008_0_ebx_x86_features;
++		cpuid_mask(&entry->ebx, CPUID_8000_0008_EBX);
++		entry->edx = 0;
+ 		break;
+ 	}
+ 	case 0x80000019:
