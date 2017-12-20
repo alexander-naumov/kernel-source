@@ -1,6 +1,7 @@
 From: Jiri Kosina <jkosina@suse.cz>
 Subject: powerpc/barrier: add gmb
 Patch-mainline: Not yet, under development
+References: bsc#1068032 CVE-2017-5753 
 
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 
