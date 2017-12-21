@@ -1,6 +1,7 @@
 From: Martin Schwidefsky <schwidefsky@de.ibm.com>
 Subject: s390/spinlock: add gmb memory barrier
 References: bsc#1068032
+Patch-mainline: Not yet, under development
     
 Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
