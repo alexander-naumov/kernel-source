@@ -1,8 +1,7 @@
 From: Majd Dibbiny <majd@mellanox.com>
 Date: Mon, 30 Oct 2017 14:23:14 +0200
 Subject: IB/mlx5: Fix RoCE Address Path fields
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dledford/rdma.git
+Patch-mainline: v4.15-rc1
 Git-commit: 2b621851acb34762ca893b2528823215e0d4b98c
 References: bsc#966170 FATE#320225 bsc#966172 FATE#320226
 
