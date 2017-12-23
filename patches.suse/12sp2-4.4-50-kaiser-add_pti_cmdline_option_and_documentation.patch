@@ -12,8 +12,8 @@ like upstream.
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
  Documentation/kernel-parameters.txt |    6 +++
- arch/x86/mm/kaiser.c                |   57 ++++++++++++++++++++++++------------
- 2 files changed, 45 insertions(+), 18 deletions(-)
+ arch/x86/mm/kaiser.c                |   59 +++++++++++++++++++++++++-----------
+ 2 files changed, 47 insertions(+), 18 deletions(-)
 
 --- a/arch/x86/mm/kaiser.c
 +++ b/arch/x86/mm/kaiser.c
@@ -25,7 +25,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  int kaiser_enabled __read_mostly = 1;
  EXPORT_SYMBOL(kaiser_enabled);	/* for inlined TLB flush functions */
-@@ -258,6 +259,41 @@ static void __init kaiser_init_all_pgds(
+@@ -258,6 +259,43 @@ static void __init kaiser_init_all_pgds(
  	WARN_ON(__ret);							\
  } while (0)
  
@@ -33,8 +33,10 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 +{
 +	bool enable = true;
 +	char arg[5];
++	int ret;
 +
-+	if (cmdline_find_option(boot_command_line, "pti", arg, sizeof(arg))) {
++	ret = cmdline_find_option(boot_command_line, "pti", arg, sizeof(arg));
++	if (ret > 0) {
 +		if (!strncmp(arg, "on", 2))
 +			goto enable;
 +
@@ -67,7 +69,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  /*
   * If anything in here fails, we will likely die on one of the
   * first kernel->user transitions and init will die.  But, we
-@@ -269,12 +305,10 @@ void __init kaiser_init(void)
+@@ -269,12 +307,10 @@ void __init kaiser_init(void)
  {
  	int cpu;
  
@@ -83,7 +85,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  	kaiser_init_all_pgds();
  
-@@ -418,16 +452,3 @@ void kaiser_flush_tlb_on_return_to_user(
+@@ -418,16 +454,3 @@ void kaiser_flush_tlb_on_return_to_user(
  			X86_CR3_PCID_USER_FLUSH | KAISER_SHADOW_PGD_OFFSET);
  }
  EXPORT_SYMBOL(kaiser_flush_tlb_on_return_to_user);
@@ -102,7 +104,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 -early_param("nopti", x86_nokaiser_setup);
 --- a/Documentation/kernel-parameters.txt
 +++ b/Documentation/kernel-parameters.txt
-@@ -3118,6 +3118,12 @@ bytes respectively. Such letter suffixes
+@@ -3165,6 +3165,12 @@ bytes respectively. Such letter suffixes
  	pt.		[PARIDE]
  			See Documentation/blockdev/paride.txt.
  
