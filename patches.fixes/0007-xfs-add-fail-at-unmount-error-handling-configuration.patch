@@ -1,0 +1,189 @@
+From 315a331ddbc724df3de95bfa08912be1e92aec0c Mon Sep 17 00:00:00 2001
+From: Carlos Maiolino <cmaiolino@redhat.com>
+Date: Thu, 28 Dec 2017 11:11:21 -0800
+Patch-mainline: v4.7-rc1
+Git-commit: e6b3bb78962e65c4ad125598755cfbf2a8779e86
+References: bsc#1068569
+Subject: [PATCH 7/7] xfs: add "fail at unmount" error handling configuration
+
+If we take "retry forever" literally on metadata IO errors, we can
+hang at unmount, once it retries those writes forever. This is the
+default behavior, unfortunately.
+
+Add an error configuration option for this behavior and default it
+to "fail" so that an unmount will trigger actuall errors, a shutdown
+and allow the unmount to succeed. It will be noisy, though, as it
+will log the errors and shutdown that occurs.
+
+To fix this, we need to mark the filesystem as being in the process
+of unmounting. Do this with a mount flag that is added at the
+appropriate time (i.e. before the blocking AIL sync). We also need
+to add this flag if mount fails after the initial phase of log
+recovery has been run.
+
+Signed-off-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Carlos Maiolino <cmaiolino@redhat.com>
+Reviewed-by: Brian Foster <bfoster@redhat.com>
+Signed-off-by: Dave Chinner <david@fromorbit.com>
+Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
+---
+ fs/xfs/xfs_buf_item.c |  4 ++++
+ fs/xfs/xfs_mount.c    | 12 ++++++++++++
+ fs/xfs/xfs_mount.h    |  3 +++
+ fs/xfs/xfs_sysfs.c    | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 65 insertions(+)
+
+diff --git a/fs/xfs/xfs_buf_item.c b/fs/xfs/xfs_buf_item.c
+index ac04b7ddb002..7af583002cb9 100644
+--- a/fs/xfs/xfs_buf_item.c
++++ b/fs/xfs/xfs_buf_item.c
+@@ -1114,6 +1114,10 @@ xfs_buf_iodone_callback_error(
+ 	    time_after(jiffies, cfg->retry_timeout + bp->b_first_retry_time))
+ 			goto permanent_error;
+ 
++	/* At unmount we may treat errors differently */
++	if ((mp->m_flags & XFS_MOUNT_UNMOUNTING) && mp->m_fail_unmount)
++		goto permanent_error;
++
+ 	/* still a transient error, higher layers will retry */
+ 	xfs_buf_ioerror(bp, 0);
+ 	xfs_buf_relse(bp);
+diff --git a/fs/xfs/xfs_mount.c b/fs/xfs/xfs_mount.c
+index c0b8bc2ad2ac..7ce357d71c8f 100644
+--- a/fs/xfs/xfs_mount.c
++++ b/fs/xfs/xfs_mount.c
+@@ -701,6 +701,9 @@ xfs_mountfs(
+ 
+ 	xfs_set_maxicount(mp);
+ 
++	/* enable fail_at_unmount as default */
++	mp->m_fail_unmount = 1;
++
+ 	error = xfs_sysfs_init(&mp->m_kobj, &xfs_mp_ktype, NULL, mp->m_fsname);
+ 	if (error)
+ 		goto out;
+@@ -981,6 +984,7 @@ xfs_mountfs(
+ 	cancel_delayed_work_sync(&mp->m_reclaim_work);
+ 	xfs_reclaim_inodes(mp, SYNC_WAIT);
+  out_log_dealloc:
++	mp->m_flags |= XFS_MOUNT_UNMOUNTING;
+ 	xfs_log_mount_cancel(mp);
+  out_fail_wait:
+ 	if (mp->m_logdev_targp && mp->m_logdev_targp != mp->m_ddev_targp)
+@@ -1031,6 +1035,14 @@ xfs_unmountfs(
+ 	 */
+ 	xfs_log_force(mp, XFS_LOG_SYNC);
+ 
++	/*
++	 * We now need to tell the world we are unmounting. This will allow
++	 * us to detect that the filesystem is going away and we should error
++	 * out anything that we have been retrying in the background. This will
++	 * prevent neverending retries in AIL pushing from hanging the unmount.
++	 */
++	mp->m_flags |= XFS_MOUNT_UNMOUNTING;
++
+ 	/*
+ 	 * Flush all pending changes from the AIL.
+ 	 */
+diff --git a/fs/xfs/xfs_mount.h b/fs/xfs/xfs_mount.h
+index 8f9a2e44b293..ac8945a20a0f 100644
+--- a/fs/xfs/xfs_mount.h
++++ b/fs/xfs/xfs_mount.h
+@@ -179,6 +179,8 @@ typedef struct xfs_mount {
+ 	 * to various other kinds of pain inflicted on the pNFS server.
+ 	 */
+ 	__uint32_t		m_generation;
++
++	bool			m_fail_unmount;
+ 	const char		*m_mtpt;
+ } xfs_mount_t;
+ 
+@@ -188,6 +190,7 @@ typedef struct xfs_mount {
+ #define XFS_MOUNT_WSYNC		(1ULL << 0)	/* for nfs - all metadata ops
+ 						   must be synchronous except
+ 						   for space allocations */
++#define XFS_MOUNT_UNMOUNTING	(1ULL << 1)	/* filesystem is unmounting */
+ #define XFS_MOUNT_DMAPI		(1ULL << 2)	/* dmapi is enabled */
+ #define XFS_MOUNT_WAS_CLEAN	(1ULL << 3)
+ #define XFS_MOUNT_FS_SHUTDOWN	(1ULL << 4)	/* atomic stop of all filesystem
+diff --git a/fs/xfs/xfs_sysfs.c b/fs/xfs/xfs_sysfs.c
+index b710a055f3bb..723ef04d4733 100644
+--- a/fs/xfs/xfs_sysfs.c
++++ b/fs/xfs/xfs_sysfs.c
+@@ -290,6 +290,13 @@ to_error_cfg(struct kobject *kobject)
+ 	return container_of(kobj, struct xfs_error_cfg, kobj);
+ }
+ 
++static inline struct xfs_mount *
++err_to_mp(struct kobject *kobject)
++{
++	struct xfs_kobj *kobj = to_kobj(kobject);
++	return container_of(kobj, struct xfs_mount, m_error_kobj);
++}
++
+ static ssize_t
+ max_retries_show(
+ 	struct kobject	*kobject,
+@@ -356,6 +363,38 @@ retry_timeout_seconds_store(
+ }
+ XFS_SYSFS_ATTR_RW(retry_timeout_seconds);
+ 
++static ssize_t
++fail_at_unmount_show(
++	struct kobject	*kobject,
++	char		*buf)
++{
++	struct xfs_mount	*mp = err_to_mp(kobject);
++
++	return snprintf(buf, PAGE_SIZE, "%d\n", mp->m_fail_unmount);
++}
++
++static ssize_t
++fail_at_unmount_store(
++	struct kobject	*kobject,
++	const char	*buf,
++	size_t		count)
++{
++	struct xfs_mount	*mp = err_to_mp(kobject);
++	int		ret;
++	int		val;
++
++	ret = kstrtoint(buf, 0, &val);
++	if (ret)
++		return ret;
++
++	if (val < 0 || val > 1)
++		return -EINVAL;
++
++	mp->m_fail_unmount = val;
++	return count;
++}
++XFS_SYSFS_ATTR_RW(fail_at_unmount);
++
+ static struct attribute *xfs_error_attrs[] = {
+ 	ATTR_LIST(max_retries),
+ 	ATTR_LIST(retry_timeout_seconds),
+@@ -371,6 +410,7 @@ struct kobj_type xfs_error_cfg_ktype = {
+ 
+ struct kobj_type xfs_error_ktype = {
+ 	.release = xfs_sysfs_release,
++	.sysfs_ops = &xfs_sysfs_ops,
+ };
+ 
+ /*
+@@ -457,6 +497,12 @@ xfs_error_sysfs_init(
+ 	if (error)
+ 		return error;
+ 
++	error = sysfs_create_file(&mp->m_error_kobj.kobject,
++				  ATTR_LIST(fail_at_unmount));
++
++	if (error)
++		goto out_error;
++
+ 	/* .../xfs/<dev>/error/metadata/ */
+ 	error = xfs_error_sysfs_init_class(mp, XFS_ERR_METADATA,
+ 				"metadata", &mp->m_error_meta_kobj,
+-- 
+2.15.0
+
