@@ -1,0 +1,124 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Wed, 3 Jan 2018 23:02:58 +0100
+Subject: Revert "netlink: add a start callback for starting a netlink dump"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit 27248d2fa77f028f639f2cbac621447cc94dbbb5, upstram
+commit fc9e50f5a5a4e1fa9ba2756f745a13e693cf6a06. It breaks kABI and I
+see no way out.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/netlink.h  |  2 --
+ include/net/genetlink.h  |  2 --
+ net/netlink/af_netlink.c |  4 ----
+ net/netlink/genetlink.c  | 16 ----------------
+ 4 files changed, 24 deletions(-)
+
+diff --git a/include/linux/netlink.h b/include/linux/netlink.h
+index 0b41959aab9f..639e9b8b0e4d 100644
+--- a/include/linux/netlink.h
++++ b/include/linux/netlink.h
+@@ -131,7 +131,6 @@ netlink_skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
+ struct netlink_callback {
+ 	struct sk_buff		*skb;
+ 	const struct nlmsghdr	*nlh;
+-	int			(*start)(struct netlink_callback *);
+ 	int			(*dump)(struct sk_buff * skb,
+ 					struct netlink_callback *cb);
+ 	int			(*done)(struct netlink_callback *cb);
+@@ -154,7 +153,6 @@ struct nlmsghdr *
+ __nlmsg_put(struct sk_buff *skb, u32 portid, u32 seq, int type, int len, int flags);
+ 
+ struct netlink_dump_control {
+-	int (*start)(struct netlink_callback *);
+ 	int (*dump)(struct sk_buff *skb, struct netlink_callback *);
+ 	int (*done)(struct netlink_callback *);
+ 	void *data;
+diff --git a/include/net/genetlink.h b/include/net/genetlink.h
+index 43c0e771f417..1b6b6dcb018d 100644
+--- a/include/net/genetlink.h
++++ b/include/net/genetlink.h
+@@ -114,7 +114,6 @@ static inline void genl_info_net_set(struct genl_info *info, struct net *net)
+  * @flags: flags
+  * @policy: attribute validation policy
+  * @doit: standard command callback
+- * @start: start callback for dumps
+  * @dumpit: callback for dumpers
+  * @done: completion callback for dumps
+  * @ops_list: operations list
+@@ -123,7 +122,6 @@ struct genl_ops {
+ 	const struct nla_policy	*policy;
+ 	int		       (*doit)(struct sk_buff *skb,
+ 				       struct genl_info *info);
+-	int		       (*start)(struct netlink_callback *cb);
+ 	int		       (*dumpit)(struct sk_buff *skb,
+ 					 struct netlink_callback *cb);
+ 	int		       (*done)(struct netlink_callback *cb);
+diff --git a/net/netlink/af_netlink.c b/net/netlink/af_netlink.c
+index a87afc4f3c91..9ecdd61c6463 100644
+--- a/net/netlink/af_netlink.c
++++ b/net/netlink/af_netlink.c
+@@ -2203,7 +2203,6 @@ int __netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
+ 
+ 	cb = &nlk->cb;
+ 	memset(cb, 0, sizeof(*cb));
+-	cb->start = control->start;
+ 	cb->dump = control->dump;
+ 	cb->done = control->done;
+ 	cb->nlh = nlh;
+@@ -2217,9 +2216,6 @@ int __netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
+ 
+ 	mutex_unlock(nlk->cb_mutex);
+ 
+-	if (cb->start)
+-		cb->start(cb);
+-
+ 	ret = netlink_dump(sk);
+ 	sock_put(sk);
+ 
+diff --git a/net/netlink/genetlink.c b/net/netlink/genetlink.c
+index 8e63662c6fb0..bc0e504f33a6 100644
+--- a/net/netlink/genetlink.c
++++ b/net/netlink/genetlink.c
+@@ -513,20 +513,6 @@ void *genlmsg_put(struct sk_buff *skb, u32 portid, u32 seq,
+ }
+ EXPORT_SYMBOL(genlmsg_put);
+ 
+-static int genl_lock_start(struct netlink_callback *cb)
+-{
+-	/* our ops are always const - netlink API doesn't propagate that */
+-	const struct genl_ops *ops = cb->data;
+-	int rc = 0;
+-
+-	if (ops->start) {
+-		genl_lock();
+-		rc = ops->start(cb);
+-		genl_unlock();
+-	}
+-	return rc;
+-}
+-
+ static int genl_lock_dumpit(struct sk_buff *skb, struct netlink_callback *cb)
+ {
+ 	/* our ops are always const - netlink API doesn't propagate that */
+@@ -591,7 +577,6 @@ static int genl_family_rcv_msg(struct genl_family *family,
+ 				.module = family->module,
+ 				/* we have const, but the netlink API doesn't */
+ 				.data = (void *)ops,
+-				.start = genl_lock_start,
+ 				.dump = genl_lock_dumpit,
+ 				.done = genl_lock_done,
+ 			};
+@@ -603,7 +588,6 @@ static int genl_family_rcv_msg(struct genl_family *family,
+ 		} else {
+ 			struct netlink_dump_control c = {
+ 				.module = family->module,
+-				.start = ops->start,
+ 				.dump = ops->dumpit,
+ 				.done = ops->done,
+ 			};
+-- 
+2.15.1
+

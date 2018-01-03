@@ -1,29 +1,31 @@
-From f3621a8eb59a913612c8e6e37d81f16b649f8b6c Mon Sep 17 00:00:00 2001
 From: Jonathan Liu <net147@gmail.com>
 Date: Mon, 7 Aug 2017 21:55:45 +1000
 Subject: [PATCH] drm/panel: simple: Add missing panel_simple_unprepare() calls
+Patch-mainline: 4.4.104
+References: bnc#1012382 bsc#1031717
 Git-commit: f3621a8eb59a913612c8e6e37d81f16b649f8b6c
-Patch-mainline: 4.15-rc1
-References: bsc#1031717
+
+commit f3621a8eb59a913612c8e6e37d81f16b649f8b6c upstream.
 
 During panel removal or system shutdown panel_simple_disable() is called
 which disables the panel backlight but the panel is still powered due to
 missing calls to panel_simple_unprepare().
 
 Fixes: d02fd93e2cd8 ("drm/panel: simple - Disable panel on shutdown")
-Cc: stable@vger.kernel.org # v3.16+
 Signed-off-by: Jonathan Liu <net147@gmail.com>
 Signed-off-by: Thierry Reding <treding@nvidia.com>
 Link: https://patchwork.freedesktop.org/patch/msgid/20170807115545.27747-1-net147@gmail.com
-Acked-by: Takashi Iwai <tiwai@suse.de>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/gpu/drm/panel/panel-simple.c |    2 ++
+ drivers/gpu/drm/panel/panel-simple.c | 2 ++
  1 file changed, 2 insertions(+)
 
+diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
+index f97b73ec4713..f418c002d323 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
-@@ -352,6 +352,7 @@ static int panel_simple_remove(struct de
+@@ -352,6 +352,7 @@ static int panel_simple_remove(struct device *dev)
  	drm_panel_remove(&panel->base);
  
  	panel_simple_disable(&panel->base);
@@ -31,7 +33,7 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  
  	if (panel->ddc)
  		put_device(&panel->ddc->dev);
-@@ -367,6 +368,7 @@ static void panel_simple_shutdown(struct
+@@ -367,6 +368,7 @@ static void panel_simple_shutdown(struct device *dev)
  	struct panel_simple *panel = dev_get_drvdata(dev);
  
  	panel_simple_disable(&panel->base);
@@ -39,3 +41,6 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  }
  
  static const struct drm_display_mode ampire_am800480r3tmqwa1h_mode = {
+-- 
+2.15.1
+

@@ -1,19 +1,20 @@
-From 56350fb8978bbf4aafe08f21234e161dd128b417 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Ville=20Syrj=C3=A4l=C3=A4?= <ville.syrjala@linux.intel.com>
 Date: Thu, 23 Nov 2017 21:41:57 +0200
 Subject: [PATCH] drm/i915: Prevent zero length "index" write
-Mime-version: 1.0
-Content-type: text/plain; charset=UTF-8
-Content-transfer-encoding: 8bit
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Patch-mainline: 4.4.104
+References: bnc#1012382 bsc#1031717
 Git-commit: 56350fb8978bbf4aafe08f21234e161dd128b417
-Patch-mainline: 4.15-rc2
-References: bsc#1031717
+Git-commit: bb9e0d4bca50f429152e74a459160b41f3d60fb2
+
+commit 56350fb8978bbf4aafe08f21234e161dd128b417 upstream.
 
 The hardware always writes one or two bytes in the index portion of
 an indexed transfer. Make sure the message we send as the index
 doesn't have a zero length.
 
-Cc: stable@vger.kernel.org
 Cc: Daniel Kurtz <djkurtz@chromium.org>
 Cc: Chris Wilson <chris@chris-wilson.co.uk>
 Cc: Daniel Vetter <daniel.vetter@ffwll.ch>
@@ -23,17 +24,18 @@ Signed-off-by: Ville Syrjälä <ville.syrjala@linux.intel.com>
 Link: https://patchwork.freedesktop.org/patch/msgid/20171123194157.25367-3-ville.syrjala@linux.intel.com
 Reviewed-by: Chris Wilson <chris@chris-wilson.co.uk>
 (cherry picked from commit bb9e0d4bca50f429152e74a459160b41f3d60fb2)
-
 Signed-off-by: Joonas Lahtinen <joonas.lahtinen@linux.intel.com>
-Acked-by: Takashi Iwai <tiwai@suse.de>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/gpu/drm/i915/intel_i2c.c |    3 ++-
+ drivers/gpu/drm/i915/intel_i2c.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
+diff --git a/drivers/gpu/drm/i915/intel_i2c.c b/drivers/gpu/drm/i915/intel_i2c.c
+index ce625496ce01..cb4313c68f71 100644
 --- a/drivers/gpu/drm/i915/intel_i2c.c
 +++ b/drivers/gpu/drm/i915/intel_i2c.c
-@@ -441,7 +441,8 @@ gmbus_is_index_read(struct i2c_msg *msgs
+@@ -441,7 +441,8 @@ gmbus_is_index_read(struct i2c_msg *msgs, int i, int num)
  {
  	return (i + 1 < num &&
  		msgs[i].addr == msgs[i + 1].addr &&
@@ -43,3 +45,6 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  		(msgs[i + 1].flags & I2C_M_RD));
  }
  
+-- 
+2.15.1
+

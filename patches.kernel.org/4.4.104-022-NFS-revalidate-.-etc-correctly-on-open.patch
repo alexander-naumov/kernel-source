@@ -1,9 +1,11 @@
 From: NeilBrown <neilb@suse.com>
 Date: Fri, 25 Aug 2017 17:34:41 +1000
 Subject: [PATCH] NFS: revalidate "." etc correctly on "open".
+Patch-mainline: 4.4.104
+References: bnc#1012382 git-fixes
 Git-commit: b688741cb06695312f18b730653d6611e1bad28d
-Patch-mainline: v4.15
-References: git-fixes
+
+commit b688741cb06695312f18b730653d6611e1bad28d upstream.
 
 For correct close-to-open semantics, NFS must validate
 the change attribute of a directory (or file) on open.
@@ -28,18 +30,20 @@ Without this patch, "echo *" sometimes doesn't produce any traffic.
 With the patch it always does.
 
 Fixes: ecf3d1f1aa74 ("vfs: kill FS_REVAL_DOT by adding a d_weak_revalidate dentry op")
-Cc: stable@vger.kernel.org (3.9+)
+cc: stable@vger.kernel.org (3.9+)
 Signed-off-by: NeilBrown <neilb@suse.com>
 Signed-off-by: Anna Schumaker <Anna.Schumaker@Netapp.com>
-Acked-by: NeilBrown <neilb@suse.com>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- fs/nfs/dir.c |    3 ++-
+ fs/nfs/dir.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
+diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
+index 348e0a05bd18..44e09483d2cd 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
-@@ -1265,7 +1265,7 @@ static int nfs_weak_revalidate(struct de
+@@ -1260,7 +1260,7 @@ static int nfs_weak_revalidate(struct dentry *dentry, unsigned int flags)
  		return 0;
  	}
  
@@ -48,7 +52,7 @@ Acked-by: NeilBrown <neilb@suse.com>
  	dfprintk(LOOKUPCACHE, "NFS: %s: inode %lu is %s\n",
  			__func__, inode->i_ino, error ? "invalid" : "valid");
  	return !error;
-@@ -1425,6 +1425,7 @@ static int nfs4_lookup_revalidate(struct
+@@ -1420,6 +1420,7 @@ static int nfs4_lookup_revalidate(struct dentry *, unsigned int);
  
  const struct dentry_operations nfs4_dentry_operations = {
  	.d_revalidate	= nfs4_lookup_revalidate,
@@ -56,3 +60,6 @@ Acked-by: NeilBrown <neilb@suse.com>
  	.d_delete	= nfs_dentry_delete,
  	.d_iput		= nfs_dentry_iput,
  	.d_automount	= nfs_d_automount,
+-- 
+2.15.1
+

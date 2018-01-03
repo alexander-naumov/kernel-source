@@ -26,14 +26,12 @@ Link: http://lkml.kernel.org/r/1461614832-17633-35-git-send-email-matt@codebluep
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
 Acked-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
 ---
- arch/x86/include/asm/efi.h | 39 ++++++++++++---------------------------
- 1 file changed, 12 insertions(+), 27 deletions(-)
+ arch/x86/include/asm/efi.h |   41 ++++++++++++-----------------------------
+ 1 file changed, 12 insertions(+), 29 deletions(-)
 
-diff --git a/arch/x86/include/asm/efi.h b/arch/x86/include/asm/efi.h
-index fc2d1bf..51ca622 100644
 --- a/arch/x86/include/asm/efi.h
 +++ b/arch/x86/include/asm/efi.h
-@@ -30,28 +30,16 @@
+@@ -31,28 +31,16 @@
  
  extern unsigned long asmlinkage efi_call_phys(void *, ...);
  
@@ -46,8 +44,7 @@ index fc2d1bf..51ca622 100644
 -
 -/* Use this macro if your virtual returns a non-void value */
 -#define efi_call_virt(f, args...) \
-+#define arch_efi_call_virt(f, args...)					\
- ({									\
+-({									\
 -	efi_status_t __s;						\
 -	kernel_fpu_begin();						\
 -	__s = ((efi_##f##_t __attribute__((regparm(0)))*)		\
@@ -58,7 +55,8 @@ index fc2d1bf..51ca622 100644
 -
 -/* Use this macro if your virtual call does not return any value */
 -#define __efi_call_virt(f, args...) \
--({									\
++#define arch_efi_call_virt(f, args...)					\
+ ({									\
 -	kernel_fpu_begin();						\
  	((efi_##f##_t __attribute__((regparm(0)))*)			\
  		efi.systab->runtime->f)(args);				\
@@ -66,9 +64,9 @@ index fc2d1bf..51ca622 100644
  })
  
  #define efi_ioremap(addr, size, type, attr)	ioremap_cache(addr, size)
-@@ -64,25 +52,22 @@ extern u64 asmlinkage efi_call(void *fp, ...);
- 
- #define efi_call_phys(f, args...)		efi_call((f), args)
+@@ -76,10 +64,8 @@ struct efi_scratch {
+ 	u64	phys_stack;
+ } __packed;
  
 -#define efi_call_virt(f, ...)						\
 +#define arch_efi_call_virt_setup()					\
@@ -78,7 +76,13 @@ index fc2d1bf..51ca622 100644
  	efi_sync_low_kernel_mappings();					\
  	preempt_disable();						\
  	__kernel_fpu_begin();						\
+@@ -89,9 +75,13 @@ struct efi_scratch {
+ 		write_cr3((unsigned long)efi_scratch.efi_pgt);		\
+ 		__flush_tlb_all();					\
+ 	}								\
+-									\
 -	__s = efi_call((void *)efi.systab->runtime->f, __VA_ARGS__);	\
+-									\
 +})
 +
 +#define arch_efi_call_virt(f, args...)					\
@@ -86,6 +90,11 @@ index fc2d1bf..51ca622 100644
 +
 +#define arch_efi_call_virt_teardown()					\
 +({									\
+ 	if (efi_scratch.use_pgd) {					\
+ 		write_cr3(efi_scratch.prev_cr3);			\
+ 		__flush_tlb_all();					\
+@@ -99,15 +89,8 @@ struct efi_scratch {
+ 									\
  	__kernel_fpu_end();						\
  	preempt_enable();						\
 -	__s;								\
@@ -100,6 +109,3 @@ index fc2d1bf..51ca622 100644
  extern void __iomem *__init efi_ioremap(unsigned long addr, unsigned long size,
  					u32 type, u64 attribute);
  
--- 
-1.8.5.6
-

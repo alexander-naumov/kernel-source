@@ -26,14 +26,14 @@ Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
 Acked-by: Jeff Mahoney <jeffm@suse.com>
 ---
  arch/x86/include/asm/pgtable.h |    7 ++++
- arch/x86/mm/gup.c              |   57 +++++++++++++++++++++++++++++++++--
+ arch/x86/mm/gup.c              |   57 ++++++++++++++++++++++++++++++++++-
  include/linux/huge_mm.h        |   10 +++++-
- include/linux/mm.h             |   48 +++++++++++++++++++++--------
+ include/linux/mm.h             |   48 ++++++++++++++++++++++--------
  kernel/memremap.c              |   12 +++++++
  mm/gup.c                       |   30 +++++++++++++++++-
- mm/huge_memory.c               |   66 ++++++++++++++++++++++++++++++++++-------
+ mm/huge_memory.c               |   65 +++++++++++++++++++++++++++++++++++------
  mm/swap.c                      |    3 +
- 8 files changed, 204 insertions(+), 29 deletions(-)
+ 8 files changed, 204 insertions(+), 28 deletions(-)
 
 --- a/arch/x86/include/asm/pgtable.h
 +++ b/arch/x86/include/asm/pgtable.h
@@ -441,7 +441,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  int copy_huge_pmd(struct mm_struct *dst_mm, struct mm_struct *src_mm,
  		  pmd_t *dst_pmd, pmd_t *src_pmd, unsigned long addr,
  		  struct vm_area_struct *vma)
-@@ -1337,16 +1391,8 @@ struct page *follow_trans_huge_pmd(struc
+@@ -1337,15 +1391,8 @@ struct page *follow_trans_huge_pmd(struc
  
  	page = pmd_page(*pmd);
  	VM_BUG_ON_PAGE(!PageHead(page), page);
@@ -450,9 +450,8 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
 -		_pmd = pmd_mkyoung(*pmd);
 -		if (flags & FOLL_WRITE)
 -			_pmd = pmd_mkdirty(_pmd);
--
 -		if (pmdp_set_access_flags(vma, addr & HPAGE_PMD_MASK,
--					  pmd, _pmd,  flags & FOLL_WRITE))
+-					  pmd, _pmd, flags & FOLL_WRITE))
 -			update_mmu_cache_pmd(vma, addr, pmd);
 -	}
 +	if (flags & FOLL_TOUCH)
