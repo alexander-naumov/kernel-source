@@ -1,0 +1,28 @@
+From c3123d6adb715de12fb366a55c1dedc6aabd94b0 Mon Sep 17 00:00:00 2001
+From: Florin Tudorache <florin_tudorache@live.com>
+Date: Fri, 5 May 2017 19:40:06 +0000
+Subject: [PATCH] ALSA: hda - Add mute led support for HP EliteBook 840 G3
+Git-commit: c3123d6adb715de12fb366a55c1dedc6aabd94b0
+Patch-mainline: 4.12-rc1
+References: bsc#1031717
+
+Signed-off-by: Florin Tudorache <florin_tudorache@live.com>
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+
+---
+ sound/pci/hda/patch_conexant.c |    4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- a/sound/pci/hda/patch_conexant.c
++++ b/sound/pci/hda/patch_conexant.c
+@@ -860,7 +860,9 @@ static const struct hda_fixup cxt_fixups
+ 			{ 0x16, 0x21011020 }, /* line-out */
+ 			{ 0x18, 0x2181103f }, /* line-in */
+ 			{ }
+-		}
++		},
++		.chained = true,
++		.chain_id = CXT_FIXUP_MUTE_LED_GPIO,
+ 	},
+ 	[CXT_FIXUP_HP_SPECTRE] = {
+ 		.type = HDA_FIXUP_PINS,
