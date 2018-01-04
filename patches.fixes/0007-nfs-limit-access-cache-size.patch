@@ -1,0 +1,60 @@
+From: NeilBrown <neilb@suse.com>
+Subject: [PATCH] nfs: improve shinking of access cache.
+Patch-mainline: not yet, under development
+References: bsc#1012917
+
+This patch contains 3 changes to help keep the per-inode
+access cache at a reasonable size.
+
+1/ The shinker shouldn't round the current total size
+   down to a multiple of 100.  If it then discards
+   fewer than 100 entries it could report no change
+   which is confusing.
+
+2/ The shrinker should keep shrinking until it
+   has achieved the goal, or cannot.  Currently it
+   discards are most one entry per file.  If there
+   are few files, each with many entries, this isn't
+   very effective.
+
+3/ When adding an entry, remove the oldest entry if
+   has already expired.  This keeps the size smaller
+   even when no shrinking happens.
+
+Acked-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Neil Brown <neilb@suse.com>
+
+---
+ fs/nfs/dir.c |   21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+--- a/fs/nfs/dir.c
++++ b/fs/nfs/dir.c
+@@ -2331,6 +2331,27 @@ void nfs_access_add_cache(struct inode *
+ 	struct nfs_access_entry *cache = kmalloc(sizeof(*cache), GFP_KERNEL);
+ 	if (cache == NULL)
+ 		return;
++	/* If there is an old entry, remove it first to avoid cache getting
++	 * too large
++	 */
++	if (!list_empty(&NFS_I(inode)->access_cache_entry_lru)) {
++		struct nfs_access_entry *old;
++		spin_lock(&inode->i_lock);
++		old = list_first_entry_or_null(&NFS_I(inode)->access_cache_entry_lru,
++					       struct nfs_access_entry, lru);
++		if (old &&
++		    !nfs_have_delegated_attributes(inode) &&
++		    !time_in_range_open(jiffies, old->jiffies,
++					old->jiffies + NFS_I(inode)->attrtimeo)) {
++			list_del_init(&old->lru);
++			rb_erase(&old->rb_node, &NFS_I(inode)->access_cache);
++		} else
++			old = NULL;
++		spin_unlock(&inode->i_lock);
++		if (old)
++			nfs_access_free_entry(old);
++	}
++
+ 	RB_CLEAR_NODE(&cache->rb_node);
+ 	cache->jiffies = set->jiffies;
+ 	cache->cred = get_rpccred(set->cred);

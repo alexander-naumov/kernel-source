@@ -1,0 +1,30 @@
+From: Frank Sorenson <sorenson@redhat.com>
+Date: Thu, 29 Sep 2016 10:44:37 -0500
+Subject: [PATCH] sunrpc: add hash_cred() function to rpc_authops struct
+Git-commit: e856a231d5d5742fe7c63e3a2b266bef668af5b4
+Patch-mainline: v4.9
+References: bsc#1012917
+
+Currently, a single hash algorithm is used to hash the auth_cred for
+the credcache for all rpc_auth types.  Add a hash_cred() function to
+the rpc_authops struct to allow a hash function specific to each
+auth flavor.
+
+Signed-off-by: Frank Sorenson <sorenson@redhat.com>
+Signed-off-by: Anna Schumaker <Anna.Schumaker@Netapp.com>
+Acked-by: NeilBrown <neilb@suse.com>
+
+---
+ include/linux/sunrpc/auth.h |    1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/include/linux/sunrpc/auth.h
++++ b/include/linux/sunrpc/auth.h
+@@ -119,6 +119,7 @@ struct rpc_authops {
+ 	struct rpc_auth *	(*create)(struct rpc_auth_create_args *, struct rpc_clnt *);
+ 	void			(*destroy)(struct rpc_auth *);
+ 
++	int			(*hash_cred)(struct auth_cred *, unsigned int);
+ 	struct rpc_cred *	(*lookup_cred)(struct rpc_auth *, struct auth_cred *, int);
+ 	struct rpc_cred *	(*crcreate)(struct rpc_auth*, struct auth_cred *, int);
+ 	int			(*list_pseudoflavors)(rpc_authflavor_t *, int);
