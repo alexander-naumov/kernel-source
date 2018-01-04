@@ -1,0 +1,30 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: [PATCH] kaiser: Disable on Xen PV
+References: bsc#1068032 CVE-2017-5754
+Patch-mainline: Not yet, under development
+
+Kaiser cannot be used on paravirtualized MMUs (namely reading and writing CR3).
+This does not work with KAISER as the CR3 switch from and to user space PGD
+would require to map the whole XEN_PV machinery into both.
+
+More importantly, enabling KAISER on Xen PV doesn't make too much sense, as PV
+guests use distinct %cr3 values for kernel and user already.
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+
+---
+ arch/x86/mm/kaiser.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/arch/x86/mm/kaiser.c
++++ b/arch/x86/mm/kaiser.c
+@@ -281,6 +281,9 @@ skip:
+ 	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD)
+ 		goto disable;
+ 
++	if (boot_cpu_has(X86_FEATURE_XENPV))
++		goto disable;
++
+ enable:
+ 	if (enable)
+ 		setup_force_cpu_cap(X86_FEATURE_KAISER);

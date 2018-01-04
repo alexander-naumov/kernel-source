@@ -1,0 +1,17 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: powerpc/barrier: add gmb
+Patch-mainline: Not yet, under development
+References: bsc#1068032 CVE-2017-5753 
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+
+--- a/arch/powerpc/include/asm/barrier.h
++++ b/arch/powerpc/include/asm/barrier.h
+@@ -75,6 +75,7 @@
+ })
+ 
+ #define smp_mb__before_spinlock()   smp_mb()
++#define gmb() asm volatile("ori 31,31,0");
+ 
+ #include <asm-generic/barrier.h>
+ 
