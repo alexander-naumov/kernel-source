@@ -1,0 +1,34 @@
+From: NeilBrown <neilb@suse.com>
+Subject: kabi fix for new hash_cred function.
+References: bsc#1012917
+Patch-mainline: Never, kabi
+
+Hide this from kabi.
+
+Acked-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Neil Brown <neilb@suse.com>
+
+---
+ include/linux/sunrpc/auth.h |    4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- a/include/linux/sunrpc/auth.h
++++ b/include/linux/sunrpc/auth.h
+@@ -119,7 +119,6 @@ struct rpc_authops {
+ 	struct rpc_auth *	(*create)(struct rpc_auth_create_args *, struct rpc_clnt *);
+ 	void			(*destroy)(struct rpc_auth *);
+ 
+-	int			(*hash_cred)(struct auth_cred *, unsigned int);
+ 	struct rpc_cred *	(*lookup_cred)(struct rpc_auth *, struct auth_cred *, int);
+ 	struct rpc_cred *	(*crcreate)(struct rpc_auth*, struct auth_cred *, int);
+ 	int			(*list_pseudoflavors)(rpc_authflavor_t *, int);
+@@ -128,6 +127,9 @@ struct rpc_authops {
+ 						struct rpcsec_gss_info *);
+ 	int			(*key_timeout)(struct rpc_auth *,
+ 						struct rpc_cred *);
++#ifndef __GENKSYMS__
++	int			(*hash_cred)(struct auth_cred *, unsigned int);
++#endif
+ };
+ 
+ struct rpc_credops {
