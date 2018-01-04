@@ -1,0 +1,43 @@
+From: David Forster <dforster@brocade.com>
+Date: Fri, 6 Jan 2017 10:27:59 +0000
+Subject: [PATCH] vti6: fix device register to report IFLA_INFO_KIND
+References: bnc#1012382
+Patch-mainline: 4.4.105
+Git-commit: 93e246f783e6bd1bc64fdfbfe68b18161f69b28e
+
+[ Upstream commit 93e246f783e6bd1bc64fdfbfe68b18161f69b28e ]
+
+vti6 interface is registered before the rtnl_link_ops block
+is attached. As a result the resulting RTM_NEWLINK is missing
+IFLA_INFO_KIND. Re-order attachment of rtnl_link_ops block to fix.
+
+Signed-off-by: Dave Forster <dforster@brocade.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/ipv6/ip6_vti.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/ipv6/ip6_vti.c b/net/ipv6/ip6_vti.c
+index 7ebb14def2cb..f58ad70f693e 100644
+--- a/net/ipv6/ip6_vti.c
++++ b/net/ipv6/ip6_vti.c
+@@ -189,12 +189,12 @@ static int vti6_tnl_create2(struct net_device *dev)
+ 	struct vti6_net *ip6n = net_generic(net, vti6_net_id);
+ 	int err;
+ 
++	dev->rtnl_link_ops = &vti6_link_ops;
+ 	err = register_netdevice(dev);
+ 	if (err < 0)
+ 		goto out;
+ 
+ 	strcpy(t->parms.name, dev->name);
+-	dev->rtnl_link_ops = &vti6_link_ops;
+ 
+ 	dev_hold(dev);
+ 	vti6_tnl_link(ip6n, t);
+-- 
+2.15.1
+

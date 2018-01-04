@@ -78,7 +78,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  arch/ia64/kernel/process.c          |   14 +++++++-------
  arch/metag/kernel/process.c         |    6 +++---
  arch/mn10300/kernel/process.c       |    4 ++--
- arch/s390/kernel/process.c          |    5 +++--
+ arch/s390/kernel/process.c          |    2 +-
  arch/sh/kernel/process_64.c         |    5 ++---
  arch/sparc/kernel/process_32.c      |   12 ++++++------
  arch/sparc/kernel/process_64.c      |    4 ++--
@@ -87,7 +87,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  arch/xtensa/kernel/process.c        |    4 ++--
  include/linux/sched.h               |    4 ++--
  kernel/exit.c                       |    2 +-
- 17 files changed, 42 insertions(+), 47 deletions(-)
+ 17 files changed, 40 insertions(+), 46 deletions(-)
 
 --- a/arch/arm/kernel/process.c
 +++ b/arch/arm/kernel/process.c
@@ -221,19 +221,15 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  void flush_thread(void)
 --- a/arch/s390/kernel/process.c
 +++ b/arch/s390/kernel/process.c
-@@ -70,9 +70,10 @@ extern void kernel_thread_starter(void);
+@@ -70,7 +70,7 @@ extern void kernel_thread_starter(void);
  /*
   * Free current thread data structures etc..
   */
 -void exit_thread(void)
 +void exit_thread(struct task_struct *tsk)
  {
--	exit_thread_runtime_instr();
-+	if (tsk == current)
-+		exit_thread_runtime_instr();
  }
  
- void flush_thread(void)
 --- a/arch/sh/kernel/process_64.c
 +++ b/arch/sh/kernel/process_64.c
 @@ -288,7 +288,7 @@ void show_regs(struct pt_regs *regs)
@@ -352,7 +348,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2635,9 +2635,9 @@ static inline int copy_thread_tls(
+@@ -2659,9 +2659,9 @@ static inline int copy_thread_tls(
  extern void flush_thread(void);
  
  #ifdef CONFIG_HAVE_EXIT_THREAD
@@ -366,7 +362,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  #endif
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
-@@ -746,7 +746,7 @@ void do_exit(long code)
+@@ -746,7 +746,7 @@ void __noreturn do_exit(long code)
  		disassociate_ctty(1);
  	exit_task_namespaces(tsk);
  	exit_task_work(tsk);

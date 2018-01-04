@@ -10,22 +10,20 @@ structures to guard against nasty surprises with SS+
 
 Signed-off-by: Oliver Neukum <oneukum@suse.com>
 ---
- include/linux/usb.h | 3 +++
+ include/linux/usb.h |    3 +++
  1 file changed, 3 insertions(+)
 
-diff --git a/include/linux/usb.h b/include/linux/usb.h
-index 56ab77c..f166fff2 100644
 --- a/include/linux/usb.h
 +++ b/include/linux/usb.h
-@@ -332,6 +332,7 @@ struct usb_host_bos {
- 	struct usb_ss_cap_descriptor	*ss_cap;
+@@ -331,6 +331,7 @@ struct usb_host_bos {
  	struct usb_ssp_cap_descriptor	*ssp_cap;
  	struct usb_ss_container_id_descriptor	*ss_id;
+ 	struct usb_ptm_cap_descriptor	*ptm_cap;
 +	void *suse_kabi_padding;
  };
  
  int __usb_get_extra_descriptor(char *buffer, unsigned size,
-@@ -397,6 +398,7 @@ struct usb_bus {
+@@ -395,6 +396,7 @@ struct usb_bus {
  	struct mon_bus *mon_bus;	/* non-null when associated */
  	int monitored;			/* non-zero when monitored */
  #endif
@@ -33,7 +31,7 @@ index 56ab77c..f166fff2 100644
  };
  
  struct usb_dev_state;
-@@ -616,6 +618,7 @@ struct usb_device {
+@@ -618,6 +620,7 @@ struct usb_device {
  	struct usb3_lpm_parameters u1_params;
  	struct usb3_lpm_parameters u2_params;
  	unsigned lpm_disable_count;
@@ -41,6 +39,3 @@ index 56ab77c..f166fff2 100644
  };
  #define	to_usb_device(d) container_of(d, struct usb_device, dev)
  
--- 
-2.1.4
-

@@ -1,0 +1,38 @@
+From: Andrzej Hajda <a.hajda@samsung.com>
+Date: Tue, 17 Jan 2017 15:15:20 +0100
+Subject: [PATCH] drm/exynos/decon5433: set STANDALONE_UPDATE_F on output
+ enablement
+References: bnc#1012382
+Patch-mainline: 4.4.105
+Git-commit: 11d8bcef7a0399e1d2519f207fd575fc404306b4
+
+[ Upstream commit 11d8bcef7a0399e1d2519f207fd575fc404306b4 ]
+
+DECON_TV requires STANDALONE_UPDATE after output enabling, otherwise it does
+not start. This change is neutral for DECON.
+
+Signed-off-by: Andrzej Hajda <a.hajda@samsung.com>
+Signed-off-by: Inki Dae <inki.dae@samsung.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/gpu/drm/exynos/exynos5433_drm_decon.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/exynos/exynos5433_drm_decon.c b/drivers/gpu/drm/exynos/exynos5433_drm_decon.c
+index fbe1b3174f75..34cebcdc2fc4 100644
+--- a/drivers/gpu/drm/exynos/exynos5433_drm_decon.c
++++ b/drivers/gpu/drm/exynos/exynos5433_drm_decon.c
+@@ -180,6 +180,8 @@ static void decon_commit(struct exynos_drm_crtc *crtc)
+ 
+ 	/* enable output and display signal */
+ 	decon_set_bits(ctx, DECON_VIDCON0, VIDCON0_ENVID | VIDCON0_ENVID_F, ~0);
++
++	decon_set_bits(ctx, DECON_UPDATE, STANDALONE_UPDATE_F, ~0);
+ }
+ 
+ static void decon_win_set_pixfmt(struct decon_context *ctx, unsigned int win,
+-- 
+2.15.1
+

@@ -1,10 +1,11 @@
-From 446fa3a95df1e8b78f25e1babc41e46edd200821 Mon Sep 17 00:00:00 2001
 From: John Youn <John.Youn@synopsys.com>
 Date: Fri, 5 Feb 2016 17:05:12 -0800
 Subject: [PATCH] usb: ch9: Add size macro for SSP dev cap descriptor
+Patch-mainline: 4.4.105
+References: FATE#319959 bnc#1012382
 Git-commit: 446fa3a95df1e8b78f25e1babc41e46edd200821
-Patch-Mainline: v4.6
-References: FATE#319959
+
+commit 446fa3a95df1e8b78f25e1babc41e46edd200821 upstream.
 
 The SuperspeedPlus Device Capability Descriptor has a variable size
 depending on the number of sublink speed attributes.
@@ -17,16 +18,17 @@ See USB 3.1 9.6.2.5, Table 9-19.
 
 Signed-off-by: John Youn <johnyoun@synopsys.com>
 Signed-off-by: Felipe Balbi <balbi@kernel.org>
-Signed-off-by: Oliver Neukum <oneukum@suse.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  include/uapi/linux/usb/ch9.h | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/include/uapi/linux/usb/ch9.h b/include/uapi/linux/usb/ch9.h
-index 252ac16..28bee8d 100644
+index 0ae800f60021..3e4f8af54611 100644
 --- a/include/uapi/linux/usb/ch9.h
 +++ b/include/uapi/linux/usb/ch9.h
-@@ -923,6 +923,12 @@ struct usb_ptm_cap_descriptor {
+@@ -906,6 +906,12 @@ struct usb_ptm_cap_descriptor {
  	__u8  bDevCapabilityType;
  } __attribute__((packed));
  
@@ -40,5 +42,5 @@ index 252ac16..28bee8d 100644
  
  /* USB_DT_WIRELESS_ENDPOINT_COMP:  companion descriptor associated with
 -- 
-2.1.4
+2.15.1
 

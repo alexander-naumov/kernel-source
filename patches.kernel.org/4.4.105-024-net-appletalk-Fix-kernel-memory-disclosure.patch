@@ -1,0 +1,39 @@
+From: Vlad Tsyrklevich <vlad@tsyrklevich.net>
+Date: Mon, 9 Jan 2017 20:57:48 +0700
+Subject: [PATCH] net/appletalk: Fix kernel memory disclosure
+References: bnc#1012382
+Patch-mainline: 4.4.105
+Git-commit: ce7e40c432ba84da104438f6799d460a4cad41bc
+
+[ Upstream commit ce7e40c432ba84da104438f6799d460a4cad41bc ]
+
+ipddp_route structs contain alignment padding so kernel heap memory
+is leaked when they are copied to user space in
+ipddp_ioctl(SIOCFINDIPDDPRT). Change kmalloc() to kzalloc() to clear
+that memory.
+
+Signed-off-by: Vlad Tsyrklevich <vlad@tsyrklevich.net>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/appletalk/ipddp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/appletalk/ipddp.c b/drivers/net/appletalk/ipddp.c
+index e90c6a7333d7..2e4649655181 100644
+--- a/drivers/net/appletalk/ipddp.c
++++ b/drivers/net/appletalk/ipddp.c
+@@ -191,7 +191,7 @@ static netdev_tx_t ipddp_xmit(struct sk_buff *skb, struct net_device *dev)
+  */
+ static int ipddp_create(struct ipddp_route *new_rt)
+ {
+-        struct ipddp_route *rt = kmalloc(sizeof(*rt), GFP_KERNEL);
++        struct ipddp_route *rt = kzalloc(sizeof(*rt), GFP_KERNEL);
+ 
+         if (rt == NULL)
+                 return -ENOMEM;
+-- 
+2.15.1
+

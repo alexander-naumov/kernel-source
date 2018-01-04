@@ -1,10 +1,11 @@
-From 3236a965486ba0c6043cf2c7b51943d8b382ae29 Mon Sep 17 00:00:00 2001
 From: Lukas Wunner <lukas@wunner.de>
 Date: Sat, 28 Oct 2017 11:35:49 +0200
 Subject: [PATCH] serial: 8250_fintek: Fix rs485 disablement on invalid ioctl()
+Patch-mainline: 4.4.105
+References: bnc#1012382 bsc#1031717
 Git-commit: 3236a965486ba0c6043cf2c7b51943d8b382ae29
-Patch-mainline: 4.15-rc1
-References: bsc#1031717
+
+[ Upstream commit 3236a965486ba0c6043cf2c7b51943d8b382ae29 ]
 
 This driver's ->rs485_config callback checks if SER_RS485_RTS_ON_SEND
 and SER_RS485_RTS_AFTER_SEND have the same value.  If they do, it means
@@ -21,15 +22,18 @@ Cc: Ricardo Ribalda Delgado <ricardo.ribalda@gmail.com>
 Cc: "Ji-Ze Hong (Peter Hong)" <hpeter@gmail.com>
 Signed-off-by: Lukas Wunner <lukas@wunner.de>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Acked-by: Takashi Iwai <tiwai@suse.de>
-
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/tty/serial/8250/8250_fintek.c |    2 +-
+ drivers/tty/serial/8250/8250_fintek.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
+diff --git a/drivers/tty/serial/8250/8250_fintek.c b/drivers/tty/serial/8250/8250_fintek.c
+index 89474399ab89..1d5a9e5fb069 100644
 --- a/drivers/tty/serial/8250/8250_fintek.c
 +++ b/drivers/tty/serial/8250/8250_fintek.c
-@@ -118,7 +118,7 @@ static int fintek_8250_rs485_config(stru
+@@ -117,7 +117,7 @@ static int fintek_8250_rs485_config(struct uart_port *port,
  
  	if ((!!(rs485->flags & SER_RS485_RTS_ON_SEND)) ==
  			(!!(rs485->flags & SER_RS485_RTS_AFTER_SEND)))
@@ -38,3 +42,6 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  	else
  		config |= RS485_URA;
  
+-- 
+2.15.1
+
