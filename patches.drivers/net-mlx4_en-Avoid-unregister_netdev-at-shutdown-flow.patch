@@ -67,7 +67,7 @@ Acked-by: Benjamin Poirier <bpoirier@suse.com>
  static int mlx4_en_change_mtu(struct net_device *dev, int new_mtu)
 --- a/drivers/net/ethernet/mellanox/mlx4/main.c
 +++ b/drivers/net/ethernet/mellanox/mlx4/main.c
-@@ -4071,8 +4071,11 @@ static void mlx4_shutdown(struct pci_dev
+@@ -4080,8 +4080,11 @@ static void mlx4_shutdown(struct pci_dev
  
  	mlx4_info(persist->dev, "mlx4_shutdown was called\n");
  	mutex_lock(&persist->interface_state_mutex);
@@ -82,10 +82,10 @@ Acked-by: Benjamin Poirier <bpoirier@suse.com>
  
 --- a/include/linux/mlx4/device.h
 +++ b/include/linux/mlx4/device.h
-@@ -466,6 +466,7 @@ enum {
- enum {
+@@ -467,6 +467,7 @@ enum {
  	MLX4_INTERFACE_STATE_UP		= 1 << 0,
  	MLX4_INTERFACE_STATE_DELETION	= 1 << 1,
+ 	MLX4_INTERFACE_STATE_NOWAIT	= 1 << 2,
 +	MLX4_INTERFACE_STATE_SHUTDOWN	= 1 << 2,
  };
  

@@ -1,0 +1,35 @@
+From: David Howells <dhowells@redhat.com>
+Date: Thu, 16 Mar 2017 16:27:43 +0000
+Subject: [PATCH] afs: Fix missing put_page()
+References: bnc#1012382
+Patch-mainline: 4.4.107
+Git-commit: 29c8bbbd6e21daa0997d1c3ee886b897ee7ad652
+
+[ Upstream commit 29c8bbbd6e21daa0997d1c3ee886b897ee7ad652 ]
+
+In afs_writepages_region(), inside the loop where we find dirty pages to
+deal with, one of the if-statements is missing a put_page().
+
+Signed-off-by: David Howells <dhowells@redhat.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ fs/afs/write.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/afs/write.c b/fs/afs/write.c
+index 0714abcd7f32..777ea2bbf401 100644
+--- a/fs/afs/write.c
++++ b/fs/afs/write.c
+@@ -503,6 +503,7 @@ static int afs_writepages_region(struct address_space *mapping,
+ 
+ 		if (PageWriteback(page) || !PageDirty(page)) {
+ 			unlock_page(page);
++			put_page(page);
+ 			continue;
+ 		}
+ 
+-- 
+2.15.1
+

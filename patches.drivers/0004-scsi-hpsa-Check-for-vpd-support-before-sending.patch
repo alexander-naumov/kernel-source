@@ -118,7 +118,7 @@ Reviewed-by: Martin Wilck <mwilck@suse.com>
  }
  
  static int hpsa_scsi_do_report_luns(struct ctlr_info *h, int logical,
-@@ -3858,8 +3875,15 @@ static int hpsa_update_device_info(struc
+@@ -3852,8 +3869,15 @@ static int hpsa_update_device_info(struc
  	this_device->rev = inq_buff[2];
  	memset(this_device->device_id, 0,
  		sizeof(this_device->device_id));
@@ -138,9 +138,9 @@ Reviewed-by: Martin Wilck <mwilck@suse.com>
  		this_device->devtype == TYPE_ZBC) &&
 --- a/drivers/scsi/hpsa_cmd.h
 +++ b/drivers/scsi/hpsa_cmd.h
-@@ -157,6 +157,7 @@
- 
+@@ -158,6 +158,7 @@
  /* VPD Inquiry types */
+ #define HPSA_INQUIRY_FAILED		0x02
  #define HPSA_VPD_SUPPORTED_PAGES        0x00
 +#define HPSA_VPD_LV_DEVICE_ID           0x83
  #define HPSA_VPD_LV_DEVICE_GEOMETRY     0xC1

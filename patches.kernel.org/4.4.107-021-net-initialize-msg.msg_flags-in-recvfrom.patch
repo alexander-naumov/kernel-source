@@ -1,0 +1,38 @@
+From: Alexander Potapenko <glider@google.com>
+Date: Wed, 8 Mar 2017 18:08:16 +0100
+Subject: [PATCH] net: initialize msg.msg_flags in recvfrom
+References: bnc#1012382
+Patch-mainline: 4.4.107
+Git-commit: 9f138fa609c47403374a862a08a41394be53d461
+
+[ Upstream commit 9f138fa609c47403374a862a08a41394be53d461 ]
+
+KMSAN reports a use of uninitialized memory in put_cmsg() because
+msg.msg_flags in recvfrom haven't been initialized properly.
+The flag values don't affect the result on this path, but it's still a
+good idea to initialize them explicitly.
+
+Signed-off-by: Alexander Potapenko <glider@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/socket.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/socket.c b/net/socket.c
+index fbfa9d2492cf..2cf4f25f5c2b 100644
+--- a/net/socket.c
++++ b/net/socket.c
+@@ -1697,6 +1697,7 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
+ 	/* We assume all kernel code knows the size of sockaddr_storage */
+ 	msg.msg_namelen = 0;
+ 	msg.msg_iocb = NULL;
++	msg.msg_flags = 0;
+ 	if (sock->file->f_flags & O_NONBLOCK)
+ 		flags |= MSG_DONTWAIT;
+ 	err = sock_recvmsg(sock, &msg, iov_iter_count(&msg.msg_iter), flags);
+-- 
+2.15.1
+

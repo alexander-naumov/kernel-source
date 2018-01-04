@@ -1,0 +1,37 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: protect struct t10_alua_tg_pt_gp
+Patch-mainline: never, kabi
+References: kabi
+
+In 4.4.107, commit dfd6deed831348fc8d6cb3efca1c68c3d5b195c7 (target: fix
+ALUA transition timeout handling), upstream commit
+d7175373f2745ed4abe5b388d5aabd06304f801e changed type of
+tg_pt_gp_transition_work from delayed_work to work_struct.  It indeed
+made the kABI checker to complain.
+
+Given delayed_work is larger that work_struct, let's ignore this change
+and hide it from the kABI checker.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/target/target_core_base.h |    9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+--- a/include/target/target_core_base.h
++++ b/include/target/target_core_base.h
+@@ -299,7 +299,14 @@ struct t10_alua_tg_pt_gp {
+ 	struct list_head tg_pt_gp_lun_list;
+ 	struct se_lun *tg_pt_gp_alua_lun;
+ 	struct se_node_acl *tg_pt_gp_alua_nacl;
+-	struct work_struct tg_pt_gp_transition_work;
++#ifdef __GENKSYMS__
++	struct delayed_work tg_pt_gp_transition_work;
++#else
++	union {
++		struct delayed_work kabi;
++		struct work_struct tg_pt_gp_transition_work;
++	};
++#endif
+ 	struct completion *tg_pt_gp_transition_complete;
+ };
+ 

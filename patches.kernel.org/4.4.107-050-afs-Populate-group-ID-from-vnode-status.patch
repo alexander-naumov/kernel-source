@@ -1,0 +1,37 @@
+From: Marc Dionne <marc.dionne@auristor.com>
+Date: Thu, 16 Mar 2017 16:27:43 +0000
+Subject: [PATCH] afs: Populate group ID from vnode status
+References: bnc#1012382
+Patch-mainline: 4.4.107
+Git-commit: 6186f0788b31f44affceeedc7b48eb10faea120d
+
+[ Upstream commit 6186f0788b31f44affceeedc7b48eb10faea120d ]
+
+The group was hard coded to GLOBAL_ROOT_GID; use the group
+ID that was received from the server.
+
+Signed-off-by: Marc Dionne <marc.dionne@auristor.com>
+Signed-off-by: David Howells <dhowells@redhat.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ fs/afs/inode.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/afs/inode.c b/fs/afs/inode.c
+index e06f5a23352a..9580456e8902 100644
+--- a/fs/afs/inode.c
++++ b/fs/afs/inode.c
+@@ -69,7 +69,7 @@ static int afs_inode_map_status(struct afs_vnode *vnode, struct key *key)
+ 
+ 	set_nlink(inode, vnode->status.nlink);
+ 	inode->i_uid		= vnode->status.owner;
+-	inode->i_gid		= GLOBAL_ROOT_GID;
++	inode->i_gid            = vnode->status.group;
+ 	inode->i_size		= vnode->status.size;
+ 	inode->i_ctime.tv_sec	= vnode->status.mtime_server;
+ 	inode->i_ctime.tv_nsec	= 0;
+-- 
+2.15.1
+

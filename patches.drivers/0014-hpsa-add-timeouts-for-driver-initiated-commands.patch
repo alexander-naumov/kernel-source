@@ -92,7 +92,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if (rc)
  		goto out;
  	ei = c->err_info;
-@@ -3605,7 +3605,8 @@ static int hpsa_volume_offline(struct ct
+@@ -3605,7 +3605,8 @@ static unsigned char hpsa_volume_offline
  	c = cmd_alloc(h);
  
  	(void) fill_cmd(c, TEST_UNIT_READY, h, NULL, 0, 0, scsi3addr, TYPE_CMD);
@@ -101,8 +101,8 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
 +					DEFAULT_TIMEOUT);
  	if (rc) {
  		cmd_free(h, c);
- 		return 0;
-@@ -3680,7 +3681,8 @@ static int hpsa_device_supports_aborts(s
+ 		return HPSA_VPD_LV_STATUS_UNSUPPORTED;
+@@ -3674,7 +3675,8 @@ static int hpsa_device_supports_aborts(s
  	c = cmd_alloc(h);
  
  	(void) fill_cmd(c, HPSA_ABORT_MSG, h, &tag, 0, 0, scsi3addr, TYPE_MSG);
@@ -112,7 +112,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	/* no unmap needed here because no data xfer. */
  	ei = c->err_info;
  	switch (ei->CommandStatus) {
-@@ -5450,7 +5452,7 @@ static int hpsa_send_test_unit_ready(str
+@@ -5529,7 +5531,7 @@ static int hpsa_send_test_unit_ready(str
  	/* Send the Test Unit Ready, fill_cmd can't fail, no mapping */
  	(void) fill_cmd(c, TEST_UNIT_READY, h,
  			NULL, 0, 0, lunaddr, TYPE_CMD);
@@ -121,7 +121,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if (rc)
  		return rc;
  	/* no unmap needed here because no data xfer. */
-@@ -5674,7 +5676,7 @@ static int hpsa_send_abort(struct ctlr_i
+@@ -5753,7 +5755,7 @@ static int hpsa_send_abort(struct ctlr_i
  		0, 0, scsi3addr, TYPE_MSG);
  	if (h->needs_abort_tags_swizzled)
  		swizzle_abort_tag(&c->Request.CDB[4]);
@@ -130,7 +130,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	hpsa_get_tag(h, abort, &taglower, &tagupper);
  	dev_dbg(&h->pdev->dev, "%s: Tag:0x%08x:%08x: do_simple_cmd(abort) completed.\n",
  		__func__, tagupper, taglower);
-@@ -5839,7 +5841,7 @@ static int hpsa_send_abort_ioaccel2(stru
+@@ -5918,7 +5920,7 @@ static int hpsa_send_abort_ioaccel2(stru
  	c = cmd_alloc(h);
  	setup_ioaccel2_abort_cmd(c, h, abort, reply_queue);
  	c2 = &h->ioaccel2_cmd_pool[c->cmdindex];
@@ -139,7 +139,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	hpsa_get_tag(h, abort, &taglower, &tagupper);
  	dev_dbg(&h->pdev->dev,
  		"%s: Tag:0x%08x:%08x: do_simple_cmd(ioaccel2 abort) completed.\n",
-@@ -6384,7 +6386,8 @@ static int hpsa_passthru_ioctl(struct ct
+@@ -6463,7 +6465,8 @@ static int hpsa_passthru_ioctl(struct ct
  		c->SG[0].Len = cpu_to_le32(iocommand.buf_size);
  		c->SG[0].Ext = cpu_to_le32(HPSA_SG_LAST); /* not chaining */
  	}
@@ -149,7 +149,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if (iocommand.buf_size > 0)
  		hpsa_pci_unmap(h->pdev, c, 1, PCI_DMA_BIDIRECTIONAL);
  	check_ioctl_unit_attention(h, c);
-@@ -6516,7 +6519,8 @@ static int hpsa_big_passthru_ioctl(struc
+@@ -6595,7 +6598,8 @@ static int hpsa_big_passthru_ioctl(struc
  		}
  		c->SG[--i].Ext = cpu_to_le32(HPSA_SG_LAST);
  	}
@@ -159,7 +159,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if (sg_used)
  		hpsa_pci_unmap(h->pdev, c, sg_used, PCI_DMA_BIDIRECTIONAL);
  	check_ioctl_unit_attention(h, c);
-@@ -8745,7 +8749,7 @@ static void hpsa_flush_cache(struct ctlr
+@@ -8825,7 +8829,7 @@ static void hpsa_flush_cache(struct ctlr
  		goto out;
  	}
  	rc = hpsa_scsi_do_simple_cmd_with_retry(h, c,
@@ -168,7 +168,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if (rc)
  		goto out;
  	if (c->err_info->CommandStatus != 0)
-@@ -8784,7 +8788,7 @@ static void hpsa_disable_rld_caching(str
+@@ -8864,7 +8868,7 @@ static void hpsa_disable_rld_caching(str
  		goto errout;
  
  	rc = hpsa_scsi_do_simple_cmd_with_retry(h, c,
@@ -177,7 +177,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if ((rc != 0) || (c->err_info->CommandStatus != 0))
  		goto errout;
  
-@@ -8796,7 +8800,7 @@ static void hpsa_disable_rld_caching(str
+@@ -8876,7 +8880,7 @@ static void hpsa_disable_rld_caching(str
  		goto errout;
  
  	rc = hpsa_scsi_do_simple_cmd_with_retry(h, c,
@@ -186,7 +186,7 @@ Acked-by: Johannes Thumshirn <jthumshirn@suse.com>
  	if ((rc != 0)  || (c->err_info->CommandStatus != 0))
  		goto errout;
  
-@@ -8806,7 +8810,7 @@ static void hpsa_disable_rld_caching(str
+@@ -8886,7 +8890,7 @@ static void hpsa_disable_rld_caching(str
  		goto errout;
  
  	rc = hpsa_scsi_do_simple_cmd_with_retry(h, c,

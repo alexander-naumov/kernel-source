@@ -397,7 +397,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		if (time_before(expire_time, jiffies)) {
 --- a/drivers/android/binder.c
 +++ b/drivers/android/binder.c
-@@ -2219,13 +2219,17 @@ retry:
+@@ -2223,13 +2223,17 @@ retry:
  			if (!binder_has_proc_work(proc, thread))
  				ret = -EAGAIN;
  		} else
@@ -528,7 +528,7 @@ Cc: Tejun Heo <tj@kernel.org>
  			break;
 --- a/drivers/char/ipmi/ipmi_si_intf.c
 +++ b/drivers/char/ipmi/ipmi_si_intf.c
-@@ -1076,6 +1076,8 @@ static int ipmi_thread(void *data)
+@@ -1075,6 +1075,8 @@ static int ipmi_thread(void *data)
  	while (!kthread_should_stop()) {
  		int busy_wait;
  
@@ -539,7 +539,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
 --- a/drivers/char/ipmi/ipmi_ssif.c
 +++ b/drivers/char/ipmi/ipmi_ssif.c
-@@ -479,6 +479,8 @@ static int ipmi_ssif_thread(void *data)
+@@ -478,6 +478,8 @@ static int ipmi_ssif_thread(void *data)
  	while (!kthread_should_stop()) {
  		int result;
  
@@ -642,7 +642,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		mutex_lock(&dev->queue_mutex);
 --- a/drivers/dma/dmatest.c
 +++ b/drivers/dma/dmatest.c
-@@ -488,6 +488,8 @@ static int dmatest_func(void *data)
+@@ -502,6 +502,8 @@ static int dmatest_func(void *data)
  
  		total_tests++;
  
@@ -651,14 +651,14 @@ Cc: Tejun Heo <tj@kernel.org>
  		/* honor alignment restrictions */
  		if (thread->type == DMA_MEMCPY)
  			align = dev->copy_align;
-@@ -620,7 +622,9 @@ static int dmatest_func(void *data)
+@@ -634,7 +636,9 @@ static int dmatest_func(void *data)
  		}
  		dma_async_issue_pending(chan);
  
--		wait_event_freezable_timeout(done_wait, done.done,
-+		wait_event_freezable_timeout(done_wait, ({
+-		wait_event_freezable_timeout(thread->done_wait, done->done,
++		wait_event_freezable_timeout(thread->done_wait, ({
 +					     klp_kgraft_mark_task_safe(current);
-+					     done.done; }),
++					     done->done; }),
  					     msecs_to_jiffies(params->timeout));
  
  		status = dma_async_is_tx_complete(chan, cookie, NULL, NULL);
@@ -1253,7 +1253,7 @@ Cc: Tejun Heo <tj@kernel.org>
  	chain = 0;
 --- a/drivers/s390/scsi/zfcp_erp.c
 +++ b/drivers/s390/scsi/zfcp_erp.c
-@@ -1398,9 +1398,10 @@ static int zfcp_erp_thread(void *data)
+@@ -1402,9 +1402,10 @@ static int zfcp_erp_thread(void *data)
  	unsigned long flags;
  
  	for (;;) {
@@ -1384,7 +1384,7 @@ Cc: Tejun Heo <tj@kernel.org>
  			goto end_loop;
 --- a/drivers/scsi/scsi_error.c
 +++ b/drivers/scsi/scsi_error.c
-@@ -2226,6 +2226,8 @@ int scsi_error_handler(void *data)
+@@ -2235,6 +2235,8 @@ int scsi_error_handler(void *data)
  	 * disables signal delivery for the created thread.
  	 */
  	while (true) {
@@ -1698,7 +1698,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		if (thread_test_and_clear_flags(thread, SVC_STOPPING))
 --- a/drivers/staging/lustre/lustre/ptlrpc/service.c
 +++ b/drivers/staging/lustre/lustre/ptlrpc/service.c
-@@ -1954,12 +1954,13 @@ ptlrpc_wait_event(struct ptlrpc_service_
+@@ -1949,12 +1949,13 @@ ptlrpc_wait_event(struct ptlrpc_service_
  
  	cond_resched();
  
@@ -1714,7 +1714,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
  	if (ptlrpc_thread_stopping(thread))
  		return -EINTR;
-@@ -2201,7 +2202,8 @@ static int ptlrpc_hr_main(void *arg)
+@@ -2196,7 +2197,8 @@ static int ptlrpc_hr_main(void *arg)
  	wake_up(&ptlrpc_hr.hr_waitq);
  
  	while (!ptlrpc_hr.hr_stopping) {
@@ -1874,7 +1874,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		down(&wl->txq_event);
 --- a/drivers/target/iscsi/iscsi_target.c
 +++ b/drivers/target/iscsi/iscsi_target.c
-@@ -3816,8 +3816,10 @@ int iscsi_target_tx_thread(void *arg)
+@@ -3814,8 +3814,10 @@ int iscsi_target_tx_thread(void *arg)
  		 */
  		iscsit_thread_check_cpumask(conn, current, 1);
  
@@ -1887,7 +1887,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
  		if (signal_pending(current))
  			goto transport_err;
-@@ -3951,6 +3953,7 @@ static void iscsit_get_rx_pdu(struct isc
+@@ -3949,6 +3951,7 @@ static void iscsit_get_rx_pdu(struct isc
  	struct kvec iov;
  
  	while (!kthread_should_stop()) {
@@ -2033,7 +2033,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
 --- a/drivers/usb/usbip/stub_tx.c
 +++ b/drivers/usb/usbip/stub_tx.c
-@@ -392,10 +392,11 @@ int stub_tx_loop(void *data)
+@@ -399,10 +399,11 @@ int stub_tx_loop(void *data)
  		if (stub_send_ret_unlink(sdev) < 0)
  			break;
  
@@ -2150,7 +2150,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
 --- a/fs/cifs/connect.c
 +++ b/fs/cifs/connect.c
-@@ -974,6 +974,7 @@ cifs_demultiplex_thread(void *p)
+@@ -941,6 +941,7 @@ cifs_demultiplex_thread(void *p)
  	if (!task_to_wake) {
  		set_current_state(TASK_INTERRUPTIBLE);
  		while (!signal_pending(current)) {
@@ -2160,7 +2160,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		}
 --- a/fs/cifs/transport.c
 +++ b/fs/cifs/transport.c
-@@ -497,8 +497,9 @@ wait_for_response(struct TCP_Server_Info
+@@ -461,8 +461,9 @@ wait_for_response(struct TCP_Server_Info
  {
  	int error;
  
@@ -2289,7 +2289,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		 */
 --- a/fs/nilfs2/segment.c
 +++ b/fs/nilfs2/segment.c
-@@ -2547,6 +2547,7 @@ static int nilfs_segctor_thread(void *ar
+@@ -2549,6 +2549,7 @@ static int nilfs_segctor_thread(void *ar
  
  	spin_lock(&sci->sc_state_lock);
   loop:
@@ -2649,7 +2649,7 @@ Cc: Tejun Heo <tj@kernel.org>
  		n_barrier_attempts++;
 --- a/kernel/rcu/tree.c
 +++ b/kernel/rcu/tree.c
-@@ -2078,9 +2078,10 @@ static int __noreturn rcu_gp_kthread(voi
+@@ -2088,9 +2088,10 @@ static int __noreturn rcu_gp_kthread(voi
  					       READ_ONCE(rsp->gpnum),
  					       TPS("reqwait"));
  			rsp->gp_state = RCU_GP_WAIT_GPS;
@@ -2662,7 +2662,7 @@ Cc: Tejun Heo <tj@kernel.org>
  			rsp->gp_state = RCU_GP_DONE_GPS;
  			/* Locking provides needed memory barrier. */
  			if (rcu_gp_init(rsp))
-@@ -2110,6 +2111,7 @@ static int __noreturn rcu_gp_kthread(voi
+@@ -2120,6 +2121,7 @@ static int __noreturn rcu_gp_kthread(voi
  			rsp->gp_state = RCU_GP_WAIT_FQS;
  			ret = wait_event_interruptible_timeout(rsp->gp_wq,
  					rcu_gp_fqs_check_wake(rsp, &gf), j);
@@ -2832,7 +2832,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
 --- a/kernel/trace/trace_events.c
 +++ b/kernel/trace/trace_events.c
-@@ -3224,6 +3224,7 @@ static __init int event_test_thread(void
+@@ -3212,6 +3212,7 @@ static __init int event_test_thread(void
  
  	set_current_state(TASK_INTERRUPTIBLE);
  	while (!kthread_should_stop()) {
@@ -2852,7 +2852,7 @@ Cc: Tejun Heo <tj@kernel.org>
  	}
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
-@@ -2292,6 +2292,7 @@ sleep:
+@@ -2287,6 +2287,7 @@ sleep:
  	__set_current_state(TASK_INTERRUPTIBLE);
  	spin_unlock_irq(&pool->lock);
  	schedule();
@@ -2860,7 +2860,7 @@ Cc: Tejun Heo <tj@kernel.org>
  	goto woke_up;
  }
  
-@@ -2333,6 +2334,8 @@ static int rescuer_thread(void *__rescue
+@@ -2328,6 +2329,8 @@ static int rescuer_thread(void *__rescue
  repeat:
  	set_current_state(TASK_INTERRUPTIBLE);
  
@@ -2871,7 +2871,7 @@ Cc: Tejun Heo <tj@kernel.org>
  	 * shouldn't have any work pending, but @wq->maydays may still have
 --- a/mm/huge_memory.c
 +++ b/mm/huge_memory.c
-@@ -3002,6 +3002,7 @@ static void khugepaged_do_scan(void)
+@@ -2998,6 +2998,7 @@ static void khugepaged_do_scan(void)
  			break;
  
  		cond_resched();
@@ -2879,7 +2879,7 @@ Cc: Tejun Heo <tj@kernel.org>
  
  		if (unlikely(kthread_should_stop() || try_to_freeze()))
  			break;
-@@ -3028,14 +3029,17 @@ static void khugepaged_wait_work(void)
+@@ -3024,14 +3025,17 @@ static void khugepaged_wait_work(void)
  		if (!khugepaged_scan_sleep_millisecs)
  			return;
  

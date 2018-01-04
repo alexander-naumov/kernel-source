@@ -1,0 +1,39 @@
+From: Vlad Yasevich <vyasevich@gmail.com>
+Date: Tue, 14 Mar 2017 08:58:08 -0400
+Subject: [PATCH] net: Resend IGMP memberships upon peer notification.
+References: bnc#1012382
+Patch-mainline: 4.4.107
+Git-commit: 37c343b4f4e70e9dc328ab04903c0ec8d154c1a4
+
+[ Upstream commit 37c343b4f4e70e9dc328ab04903c0ec8d154c1a4 ]
+
+When we notify peers of potential changes,  it's also good to update
+IGMP memberships.  For example, during VM migration, updating IGMP
+memberships will redirect existing multicast streams to the VM at the
+new location.
+
+Signed-off-by: Vladislav Yasevich <vyasevic@redhat.com>
+Acked-by: Michael S. Tsirkin <mst@redhat.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/core/dev.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 630704d8d6a2..3b67c1e5756f 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -1300,6 +1300,7 @@ void netdev_notify_peers(struct net_device *dev)
+ {
+ 	rtnl_lock();
+ 	call_netdevice_notifiers(NETDEV_NOTIFY_PEERS, dev);
++	call_netdevice_notifiers(NETDEV_RESEND_IGMP, dev);
+ 	rtnl_unlock();
+ }
+ EXPORT_SYMBOL(netdev_notify_peers);
+-- 
+2.15.1
+

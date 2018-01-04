@@ -21,13 +21,11 @@ Signed-off-by: Guoqing Jiang <gqjiang@suse.com>
 Signed-off-by: NeilBrown <neilb@suse.com>
 Acked-by: Guoqing Jiang <gqjiang@suse.com>
 ---
- drivers/md/md-cluster.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++++
- drivers/md/md-cluster.h |  2 ++
- drivers/md/md.c         | 13 +++++++++++
+ drivers/md/md-cluster.c |   57 ++++++++++++++++++++++++++++++++++++++++++++++++
+ drivers/md/md-cluster.h |    2 +
+ drivers/md/md.c         |   13 ++++++++++
  3 files changed, 72 insertions(+)
 
-diff --git a/drivers/md/md-cluster.c b/drivers/md/md-cluster.c
-index 1e18a2d..5aad52d 100644
 --- a/drivers/md/md-cluster.c
 +++ b/drivers/md/md-cluster.c
 @@ -69,6 +69,7 @@ struct md_cluster_info {
@@ -38,7 +36,7 @@ index 1e18a2d..5aad52d 100644
  	struct dlm_lock_resource *resync_lockres;
  	struct list_head suspend_list;
  	spinlock_t suspend_lock;
-@@ -838,6 +839,7 @@ static void resync_bitmap(struct mddev *mddev)
+@@ -836,6 +837,7 @@ static void resync_bitmap(struct mddev *
  			__func__, __LINE__, err);
  }
  
@@ -46,15 +44,15 @@ index 1e18a2d..5aad52d 100644
  static int leave(struct mddev *mddev)
  {
  	struct md_cluster_info *cinfo = mddev->cluster_info;
-@@ -858,6 +860,7 @@ static int leave(struct mddev *mddev)
+@@ -856,6 +858,7 @@ static int leave(struct mddev *mddev)
  	lockres_free(cinfo->ack_lockres);
  	lockres_free(cinfo->no_new_dev_lockres);
  	lockres_free(cinfo->bitmap_lockres);
 +	unlock_all_bitmaps(mddev);
  	dlm_release_lockspace(cinfo->lockspace, 2);
+ 	kfree(cinfo);
  	return 0;
- }
-@@ -1057,6 +1060,58 @@ static int remove_disk(struct mddev *mddev, struct md_rdev *rdev)
+@@ -1056,6 +1059,58 @@ static int remove_disk(struct mddev *mdd
  	return sendmsg(cinfo, &cmsg);
  }
  
@@ -113,7 +111,7 @@ index 1e18a2d..5aad52d 100644
  static int gather_bitmaps(struct md_rdev *rdev)
  {
  	int sn, err;
-@@ -1102,6 +1157,8 @@ static struct md_cluster_operations cluster_ops = {
+@@ -1101,6 +1156,8 @@ static struct md_cluster_operations clus
  	.new_disk_ack = new_disk_ack,
  	.remove_disk = remove_disk,
  	.gather_bitmaps = gather_bitmaps,
@@ -122,8 +120,6 @@ index 1e18a2d..5aad52d 100644
  };
  
  static int __init cluster_init(void)
-diff --git a/drivers/md/md-cluster.h b/drivers/md/md-cluster.h
-index e75ea26..45ce6c9 100644
 --- a/drivers/md/md-cluster.h
 +++ b/drivers/md/md-cluster.h
 @@ -24,6 +24,8 @@ struct md_cluster_operations {
@@ -135,11 +131,9 @@ index e75ea26..45ce6c9 100644
  };
  
  #endif /* _MD_CLUSTER_H */
-diff --git a/drivers/md/md.c b/drivers/md/md.c
-index 8a0c881..c19aa2d 100644
 --- a/drivers/md/md.c
 +++ b/drivers/md/md.c
-@@ -6632,6 +6632,19 @@ static int update_array_info(struct mddev *mddev, mdu_array_info_t *info)
+@@ -6704,6 +6704,19 @@ static int update_array_info(struct mdde
  				rv = -EINVAL;
  				goto err;
  			}
@@ -159,6 +153,3 @@ index 8a0c881..c19aa2d 100644
  			mddev->pers->quiesce(mddev, 1);
  			bitmap_destroy(mddev);
  			mddev->pers->quiesce(mddev, 0);
--- 
-2.6.2
-
