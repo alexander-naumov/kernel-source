@@ -77,9 +77,9 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  		poll(to_clean);
  		schedule_timeout_uninterruptible(1);
  	}
--	disable_si_irq(to_clean, false);
+-	disable_si_irq(to_clean);
 +	if (to_clean->handlers)
-+		disable_si_irq(to_clean, false);
++		disable_si_irq(to_clean);
  	while (to_clean->curr_msg || (to_clean->si_state != SI_NORMAL)) {
  		poll(to_clean);
  		schedule_timeout_uninterruptible(1);

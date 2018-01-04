@@ -1,0 +1,33 @@
+From: "Blomme, Maarten" <Maarten.Blomme@flir.com>
+Date: Thu, 2 Mar 2017 13:08:36 +0100
+Subject: [PATCH] spi_ks8995: fix "BUG: key accdaa28 not in .data!"
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: 4342696df764ec65dcdfbd0c10d90ea52505f8ba
+
+[ Upstream commit 4342696df764ec65dcdfbd0c10d90ea52505f8ba ]
+
+Signed-off-by: Maarten Blomme <Maarten.Blomme@flir.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/phy/spi_ks8995.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/phy/spi_ks8995.c b/drivers/net/phy/spi_ks8995.c
+index c72c42206850..21d22f86134e 100644
+--- a/drivers/net/phy/spi_ks8995.c
++++ b/drivers/net/phy/spi_ks8995.c
+@@ -310,6 +310,7 @@ static int ks8995_probe(struct spi_device *spi)
+ 	if (err)
+ 		return err;
+ 
++	sysfs_attr_init(&ks->regs_attr.attr);
+ 	err = sysfs_create_bin_file(&spi->dev.kobj, &ks->regs_attr);
+ 	if (err) {
+ 		dev_err(&spi->dev, "unable to create sysfs file, err=%d\n",
+-- 
+2.15.1
+

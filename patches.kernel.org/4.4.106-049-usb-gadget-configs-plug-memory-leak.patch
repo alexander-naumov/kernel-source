@@ -1,0 +1,36 @@
+From: John Keeping <john@metanate.com>
+Date: Tue, 28 Feb 2017 10:55:30 +0000
+Subject: [PATCH] usb: gadget: configs: plug memory leak
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: 38355b2a44776c25b0f2ad466e8c51bb805b3032
+
+[ Upstream commit 38355b2a44776c25b0f2ad466e8c51bb805b3032 ]
+
+When binding a gadget to a device, "name" is stored in gi->udc_name, but
+this does not happen when unregistering and the string is leaked.
+
+Signed-off-by: John Keeping <john@metanate.com>
+Signed-off-by: Felipe Balbi <felipe.balbi@linux.intel.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/gadget/configfs.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/usb/gadget/configfs.c b/drivers/usb/gadget/configfs.c
+index 163d305e1200..6abb6a10ee82 100644
+--- a/drivers/usb/gadget/configfs.c
++++ b/drivers/usb/gadget/configfs.c
+@@ -270,6 +270,7 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
+ 		ret = unregister_gadget(gi);
+ 		if (ret)
+ 			goto err;
++		kfree(name);
+ 	} else {
+ 		if (gi->udc_name) {
+ 			ret = -EBUSY;
+-- 
+2.15.1
+

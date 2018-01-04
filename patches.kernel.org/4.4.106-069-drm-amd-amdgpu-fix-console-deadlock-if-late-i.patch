@@ -1,0 +1,39 @@
+From: Jim Qu <Jim.Qu@amd.com>
+Date: Wed, 1 Mar 2017 15:53:29 +0800
+Subject: [PATCH] drm/amd/amdgpu: fix console deadlock if late init failed
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: c085bd5119d5d0bdf3ef591a5563566be7dedced
+
+[ Upstream commit c085bd5119d5d0bdf3ef591a5563566be7dedced ]
+
+Signed-off-by: Jim Qu <Jim.Qu@amd.com>
+Reviewed-by: Alex Deucher <alexander.deucher@amd.com>
+Signed-off-by: Alex Deucher <alexander.deucher@amd.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/gpu/drm/amd/amdgpu/amdgpu_device.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
+index 16302f7d59f6..fc9f14747f70 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
+@@ -1760,8 +1760,11 @@ int amdgpu_resume_kms(struct drm_device *dev, bool resume, bool fbcon)
+ 	}
+ 
+ 	r = amdgpu_late_init(adev);
+-	if (r)
++	if (r) {
++		if (fbcon)
++			console_unlock();
+ 		return r;
++	}
+ 
+ 	/* pin cursors */
+ 	list_for_each_entry(crtc, &dev->mode_config.crtc_list, head) {
+-- 
+2.15.1
+

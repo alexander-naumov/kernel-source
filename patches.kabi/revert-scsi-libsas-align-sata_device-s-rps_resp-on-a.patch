@@ -1,0 +1,36 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Thu, 4 Jan 2018 20:50:53 +0100
+Subject: Revert "scsi: libsas: align sata_device's rps_resp on a cacheline"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit 7e0091c2951fa831992d2f00e4453951d84a58b6, upstream
+commit c2e8fbf908afd81ad502b567a6639598f92c9b9d. It breaks kABI as it
+changes sata_device which is inlined in struct domain_device. And that
+one is used by many drivers.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/scsi/libsas.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/scsi/libsas.h b/include/scsi/libsas.h
+index 706a7017885c..dae99d7d2bc0 100644
+--- a/include/scsi/libsas.h
++++ b/include/scsi/libsas.h
+@@ -165,11 +165,11 @@ struct expander_device {
+ 
+ struct sata_device {
+ 	unsigned int class;
++	struct smp_resp        rps_resp; /* report_phy_sata_resp */
+ 	u8     port_no;        /* port number, if this is a PM (Port) */
+ 
+ 	struct ata_port *ap;
+ 	struct ata_host ata_host;
+-	struct smp_resp rps_resp ____cacheline_aligned; /* report_phy_sata_resp */
+ 	u8     fis[ATA_RESP_FIS_SIZE];
+ };
+ 
+-- 
+2.15.1
+

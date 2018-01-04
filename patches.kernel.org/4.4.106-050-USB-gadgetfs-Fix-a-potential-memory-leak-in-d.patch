@@ -1,0 +1,40 @@
+From: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Date: Tue, 21 Feb 2017 22:33:11 +0100
+Subject: [PATCH] USB: gadgetfs: Fix a potential memory leak in 'dev_config()'
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: b6e7aeeaf235901c42ec35de4633c7c69501d303
+
+[ Upstream commit b6e7aeeaf235901c42ec35de4633c7c69501d303 ]
+
+'kbuf' is allocated just a few lines above using 'memdup_user()'.
+If the 'if (dev->buf)' test fails, this memory is never released.
+
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Signed-off-by: Felipe Balbi <felipe.balbi@linux.intel.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/gadget/legacy/inode.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode.c
+index b6df47aa25af..81f3c9cb333c 100644
+--- a/drivers/usb/gadget/legacy/inode.c
++++ b/drivers/usb/gadget/legacy/inode.c
+@@ -1837,8 +1837,10 @@ dev_config (struct file *fd, const char __user *buf, size_t len, loff_t *ptr)
+ 
+ 	spin_lock_irq (&dev->lock);
+ 	value = -EINVAL;
+-	if (dev->buf)
++	if (dev->buf) {
++		kfree(kbuf);
+ 		goto fail;
++	}
+ 	dev->buf = kbuf;
+ 
+ 	/* full or low speed config */
+-- 
+2.15.1
+

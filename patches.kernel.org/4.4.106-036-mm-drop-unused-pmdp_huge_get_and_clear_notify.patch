@@ -1,0 +1,62 @@
+From: "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>
+Date: Thu, 13 Apr 2017 14:56:23 -0700
+Subject: [PATCH] mm: drop unused pmdp_huge_get_and_clear_notify()
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: c0c379e2931b05facef538e53bf3b21f283d9a0b
+
+commit c0c379e2931b05facef538e53bf3b21f283d9a0b upstream.
+
+Dave noticed that after fixing MADV_DONTNEED vs numa balancing race the
+last pmdp_huge_get_and_clear_notify() user is gone.
+
+Let's drop the helper.
+
+Link: http://lkml.kernel.org/r/20170306112047.24809-1-kirill.shutemov@linux.intel.com
+Signed-off-by: Kirill A. Shutemov <kirill.shutemov@linux.intel.com>
+Cc: Dave Hansen <dave.hansen@intel.com>
+Cc: <stable@vger.kernel.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+[jwang: adjust context for 4.4]
+Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/mmu_notifier.h | 13 -------------
+ 1 file changed, 13 deletions(-)
+
+diff --git a/include/linux/mmu_notifier.h b/include/linux/mmu_notifier.h
+index a1a210d59961..38c5eb21883e 100644
+--- a/include/linux/mmu_notifier.h
++++ b/include/linux/mmu_notifier.h
+@@ -381,18 +381,6 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
+ 	___pmd;								\
+ })
+ 
+-#define pmdp_huge_get_and_clear_notify(__mm, __haddr, __pmd)		\
+-({									\
+-	unsigned long ___haddr = __haddr & HPAGE_PMD_MASK;		\
+-	pmd_t ___pmd;							\
+-									\
+-	___pmd = pmdp_huge_get_and_clear(__mm, __haddr, __pmd);		\
+-	mmu_notifier_invalidate_range(__mm, ___haddr,			\
+-				      ___haddr + HPAGE_PMD_SIZE);	\
+-									\
+-	___pmd;								\
+-})
+-
+ /*
+  * set_pte_at_notify() sets the pte _after_ running the notifier.
+  * This is safe to start by updating the secondary MMUs, because the primary MMU
+@@ -475,7 +463,6 @@ static inline void mmu_notifier_mm_destroy(struct mm_struct *mm)
+ #define pmdp_clear_young_notify pmdp_test_and_clear_young
+ #define	ptep_clear_flush_notify ptep_clear_flush
+ #define pmdp_huge_clear_flush_notify pmdp_huge_clear_flush
+-#define pmdp_huge_get_and_clear_notify pmdp_huge_get_and_clear
+ #define set_pte_at_notify set_pte_at
+ 
+ #endif /* CONFIG_MMU_NOTIFIER */
+-- 
+2.15.1
+

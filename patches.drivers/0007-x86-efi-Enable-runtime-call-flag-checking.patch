@@ -50,10 +50,10 @@ Acked-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
  #include <asm/fpu/api.h>
  #include <asm/pgtable.h>
 +#include <asm/processor-flags.h>
- #include <asm/tlb.h>
  
  /*
-@@ -26,8 +27,9 @@
+  * We map the EFI regions needed for runtime services non-contiguously,
+@@ -25,8 +26,9 @@
  #define EFI32_LOADER_SIGNATURE	"EL32"
  #define EFI64_LOADER_SIGNATURE	"EL64"
  

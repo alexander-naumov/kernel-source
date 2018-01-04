@@ -1,0 +1,52 @@
+From: Guenter Roeck <linux@roeck-us.net>
+Date: Sat, 4 Mar 2017 07:02:11 -0800
+Subject: [PATCH] ARM: OMAP2+: Release device node after it is no longer
+ needed.
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: b92675d998a9fa37fe9e0e35053a95b4a23c158b
+
+[ Upstream commit b92675d998a9fa37fe9e0e35053a95b4a23c158b ]
+
+The device node returned by of_find_node_by_name() needs to be released
+after it is no longer needed to avoid a device node leak.
+
+Signed-off-by: Guenter Roeck <linux@roeck-us.net>
+Signed-off-by: Tony Lindgren <tony@atomide.com>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/arm/mach-omap2/omap_hwmod_3xxx_data.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-omap2/omap_hwmod_3xxx_data.c b/arch/arm/mach-omap2/omap_hwmod_3xxx_data.c
+index 9ef0bd1676cd..13e22a4a5a20 100644
+--- a/arch/arm/mach-omap2/omap_hwmod_3xxx_data.c
++++ b/arch/arm/mach-omap2/omap_hwmod_3xxx_data.c
+@@ -3967,15 +3967,20 @@ int __init omap3xxx_hwmod_init(void)
+ 
+ 	if (h_sham && omap3xxx_hwmod_is_hs_ip_block_usable(bus, "sham")) {
+ 		r = omap_hwmod_register_links(h_sham);
+-		if (r < 0)
++		if (r < 0) {
++			of_node_put(bus);
+ 			return r;
++		}
+ 	}
+ 
+ 	if (h_aes && omap3xxx_hwmod_is_hs_ip_block_usable(bus, "aes")) {
+ 		r = omap_hwmod_register_links(h_aes);
+-		if (r < 0)
++		if (r < 0) {
++			of_node_put(bus);
+ 			return r;
++		}
+ 	}
++	of_node_put(bus);
+ 
+ 	/*
+ 	 * Register hwmod links specific to certain ES levels of a
+-- 
+2.15.1
+

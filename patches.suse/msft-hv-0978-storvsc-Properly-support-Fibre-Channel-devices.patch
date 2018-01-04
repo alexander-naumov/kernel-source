@@ -15,11 +15,9 @@ Tested-by: Alex Ng <alexng@microsoft.com>
 Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
 Acked-by: <ohering@suse.de>
 ---
- drivers/scsi/storvsc_drv.c | 181 +++++++++++++++++++++++++++++++++------------
+ drivers/scsi/storvsc_drv.c |  181 +++++++++++++++++++++++++++++++++------------
  1 file changed, 134 insertions(+), 47 deletions(-)
 
-diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
-index 00bb4bd..cfbb289 100644
 --- a/drivers/scsi/storvsc_drv.c
 +++ b/drivers/scsi/storvsc_drv.c
 @@ -41,6 +41,7 @@
@@ -30,9 +28,9 @@ index 00bb4bd..cfbb289 100644
  
  /*
   * All wire protocol details (storage protocol between the guest and the host)
-@@ -397,6 +398,9 @@ static int storvsc_timeout = 180;
- 
- static int msft_blist_flags = BLIST_TRY_VPD_PAGES;
+@@ -398,6 +399,9 @@ MODULE_PARM_DESC(vcpus_per_sub_channel,
+  */
+ static int storvsc_timeout = 180;
  
 +#if IS_ENABLED(CONFIG_SCSI_FC_ATTRS)
 +static struct scsi_transport_template *fc_transport_template;
@@ -40,7 +38,7 @@ index 00bb4bd..cfbb289 100644
  
  static void storvsc_on_channel_callback(void *context);
  
-@@ -456,6 +460,11 @@ struct storvsc_device {
+@@ -457,6 +461,11 @@ struct storvsc_device {
  	/* Used for vsc/vsp channel reset process */
  	struct storvsc_cmd_request init_request;
  	struct storvsc_cmd_request reset_request;
@@ -52,7 +50,7 @@ index 00bb4bd..cfbb289 100644
  };
  
  struct hv_host_device {
-@@ -695,7 +704,26 @@ static void  handle_multichannel_storage(struct hv_device *device, int max_chns)
+@@ -696,7 +705,26 @@ static void  handle_multichannel_storage
  	vmbus_are_subchannels_present(device->channel);
  }
  
@@ -80,7 +78,7 @@ index 00bb4bd..cfbb289 100644
  {
  	struct storvsc_device *stor_device;
  	struct storvsc_cmd_request *request;
-@@ -727,19 +755,15 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -728,19 +756,15 @@ static int storvsc_channel_init(struct h
  			       VM_PKT_DATA_INBAND,
  			       VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
  	if (ret != 0)
@@ -105,7 +103,7 @@ index 00bb4bd..cfbb289 100644
  
  
  	for (i = 0; i < ARRAY_SIZE(vmstor_protocols); i++) {
-@@ -764,18 +788,14 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -765,18 +789,14 @@ static int storvsc_channel_init(struct h
  			       VM_PKT_DATA_INBAND,
  			       VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
  		if (ret != 0)
@@ -129,7 +127,7 @@ index 00bb4bd..cfbb289 100644
  
  		if (vstor_packet->status == 0) {
  			vmstor_proto_version =
-@@ -791,10 +811,8 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -792,10 +812,8 @@ static int storvsc_channel_init(struct h
  		}
  	}
  
@@ -142,7 +140,7 @@ index 00bb4bd..cfbb289 100644
  
  
  	memset(vstor_packet, 0, sizeof(struct vstor_packet));
-@@ -809,19 +827,15 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -810,19 +828,15 @@ static int storvsc_channel_init(struct h
  			       VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
  
  	if (ret != 0)
@@ -167,7 +165,7 @@ index 00bb4bd..cfbb289 100644
  
  	/*
  	 * Check to see if multi-channel support is there.
-@@ -837,6 +851,38 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -838,6 +852,38 @@ static int storvsc_channel_init(struct h
  	stor_device->max_transfer_bytes =
  		vstor_packet->storage_channel_properties.max_transfer_bytes;
  
@@ -206,7 +204,7 @@ index 00bb4bd..cfbb289 100644
  	memset(vstor_packet, 0, sizeof(struct vstor_packet));
  	vstor_packet->operation = VSTOR_OPERATION_END_INITIALIZATION;
  	vstor_packet->flags = REQUEST_COMPLETION_FLAG;
-@@ -849,25 +895,19 @@ static int storvsc_channel_init(struct hv_device *device)
+@@ -850,25 +896,19 @@ static int storvsc_channel_init(struct h
  			       VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
  
  	if (ret != 0)
@@ -237,7 +235,7 @@ index 00bb4bd..cfbb289 100644
  	return ret;
  }
  
-@@ -1076,6 +1116,14 @@ static void storvsc_on_receive(struct hv_device *device,
+@@ -1094,6 +1134,14 @@ static void storvsc_on_receive(struct hv
  		schedule_work(&work->work);
  		break;
  
@@ -252,7 +250,7 @@ index 00bb4bd..cfbb289 100644
  	default:
  		break;
  	}
-@@ -1131,7 +1179,8 @@ static void storvsc_on_channel_callback(void *context)
+@@ -1149,7 +1197,8 @@ static void storvsc_on_channel_callback(
  	return;
  }
  
@@ -262,7 +260,7 @@ index 00bb4bd..cfbb289 100644
  {
  	struct vmstorage_channel_properties props;
  	int ret;
-@@ -1148,7 +1197,7 @@ static int storvsc_connect_to_vsp(struct hv_device *device, u32 ring_size)
+@@ -1166,7 +1215,7 @@ static int storvsc_connect_to_vsp(struct
  	if (ret != 0)
  		return ret;
  
@@ -271,7 +269,7 @@ index 00bb4bd..cfbb289 100644
  
  	return ret;
  }
-@@ -1573,6 +1622,7 @@ static int storvsc_probe(struct hv_device *device,
+@@ -1609,6 +1658,7 @@ static int storvsc_probe(struct hv_devic
  	struct Scsi_Host *host;
  	struct hv_host_device *host_dev;
  	bool dev_is_ide = ((dev_id->driver_data == IDE_GUID) ? true : false);
@@ -279,7 +277,7 @@ index 00bb4bd..cfbb289 100644
  	int target = 0;
  	struct storvsc_device *stor_device;
  	int max_luns_per_target;
-@@ -1630,7 +1680,7 @@ static int storvsc_probe(struct hv_device *device,
+@@ -1666,7 +1716,7 @@ static int storvsc_probe(struct hv_devic
  	hv_set_drvdata(device, stor_device);
  
  	stor_device->port_number = host->host_no;
@@ -288,7 +286,7 @@ index 00bb4bd..cfbb289 100644
  	if (ret)
  		goto err_out1;
  
-@@ -1642,6 +1692,9 @@ static int storvsc_probe(struct hv_device *device,
+@@ -1678,6 +1728,9 @@ static int storvsc_probe(struct hv_devic
  		host->max_lun = STORVSC_FC_MAX_LUNS_PER_TARGET;
  		host->max_id = STORVSC_FC_MAX_TARGETS;
  		host->max_channel = STORVSC_FC_MAX_CHANNELS - 1;
@@ -298,7 +296,7 @@ index 00bb4bd..cfbb289 100644
  		break;
  
  	case SCSI_GUID:
-@@ -1681,6 +1734,12 @@ static int storvsc_probe(struct hv_device *device,
+@@ -1717,6 +1770,12 @@ static int storvsc_probe(struct hv_devic
  			goto err_out2;
  		}
  	}
@@ -311,7 +309,7 @@ index 00bb4bd..cfbb289 100644
  	return 0;
  
  err_out2:
-@@ -1706,6 +1765,10 @@ static int storvsc_remove(struct hv_device *dev)
+@@ -1742,6 +1801,10 @@ static int storvsc_remove(struct hv_devi
  	struct storvsc_device *stor_device = hv_get_drvdata(dev);
  	struct Scsi_Host *host = stor_device->host;
  
@@ -322,7 +320,7 @@ index 00bb4bd..cfbb289 100644
  	scsi_remove_host(host);
  	storvsc_dev_remove(dev);
  	scsi_host_put(host);
-@@ -1720,8 +1783,16 @@ static struct hv_driver storvsc_drv = {
+@@ -1756,8 +1819,16 @@ static struct hv_driver storvsc_drv = {
  	.remove = storvsc_remove,
  };
  
@@ -339,7 +337,7 @@ index 00bb4bd..cfbb289 100644
  
  	/*
  	 * Divide the ring buffer data size (which is 1 page less
-@@ -1736,12 +1807,28 @@ static int __init storvsc_drv_init(void)
+@@ -1772,12 +1843,28 @@ static int __init storvsc_drv_init(void)
  		vmscsi_size_delta,
  		sizeof(u64)));
  

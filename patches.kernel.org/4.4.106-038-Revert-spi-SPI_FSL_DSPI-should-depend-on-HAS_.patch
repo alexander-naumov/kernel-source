@@ -1,0 +1,33 @@
+From: Sasha Levin <alexander.levin@verizon.com>
+Date: Thu, 7 Dec 2017 23:23:42 -0500
+Subject: [PATCH] Revert "spi: SPI_FSL_DSPI should depend on HAS_DMA"
+References: bnc#1012382
+Patch-mainline: 4.4.106
+Git-commit: e891a29531d4fc6026099421e81f4000521aaa70
+
+This reverts commit dadab2d4e3cf708ceba22ecddd94aedfecb39199.
+
+Not required on < 4.10.
+
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/spi/Kconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
+index b0a24dedd1ed..8b9c2a38d1cc 100644
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -315,7 +315,6 @@ config SPI_FSL_SPI
+ config SPI_FSL_DSPI
+ 	tristate "Freescale DSPI controller"
+ 	select REGMAP_MMIO
+-	depends on HAS_DMA
+ 	depends on SOC_VF610 || SOC_LS1021A || ARCH_LAYERSCAPE || COMPILE_TEST
+ 	help
+ 	  This enables support for the Freescale DSPI controller in master
+-- 
+2.15.1
+
