@@ -1,0 +1,36 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: PTI: unbreak EFI
+References: bsc#1074709
+Patch-mainline: Not yet, under development
+
+efi_call_phys_prolog() calls set_pgd() with swapper PGD that has PAGE_USER set,
+which makes KAISER set NX on it, and therefore EFI can't execute it's code.
+
+Fix that by forcefully clearing _PAGE_NX from the PGD (this can't be done
+by the pgprot API).
+
+_PAGE_NX will be automatically reintroduced in efi_call_phys_epilog() by
+kaiser_set_shadow_pgd().
+
+Thanks a lot for debugging help from Matt Fleming and Borislav Petkov.
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/x86/platform/efi/efi_64.c |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
+--- a/arch/x86/platform/efi/efi_64.c
++++ b/arch/x86/platform/efi/efi_64.c
+@@ -95,6 +95,12 @@ pgd_t * __init efi_call_phys_prolog(void
+ 		save_pgd[pgd] = *pgd_offset_k(pgd * PGDIR_SIZE);
+ 		vaddress = (unsigned long)__va(pgd * PGDIR_SIZE);
+ 		set_pgd(pgd_offset_k(pgd * PGDIR_SIZE), *pgd_offset_k(vaddress));
++		/*
++		 * pgprot API doesn't clear it for PGD
++		 *
++		 * Will be brought back automatically in _epilog()
++		 */
++		pgd_offset_k(pgd * PGDIR_SIZE)->pgd &= ~_PAGE_NX;
+ 	}
+ 	__flush_tlb_all();
+ 
