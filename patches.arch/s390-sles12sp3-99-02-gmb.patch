@@ -2,12 +2,12 @@ From: Martin Schwidefsky <schwidefsky@de.ibm.com>
 Subject: s390/spinlock: add gmb memory barrier
 References: bsc#1068032
 Patch-mainline: Not yet, under development
-    
+
 Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 ---
- arch/s390/include/asm/barrier.h |    9 +++++++++
- 1 file changed, 9 insertions(+)
+ arch/s390/include/asm/barrier.h |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
 
 --- a/arch/s390/include/asm/barrier.h
 +++ b/arch/s390/include/asm/barrier.h
@@ -20,7 +20,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  /*
   * Force strict CPU ordering.
   * And yes, this is required on UP too when we're talking
-@@ -22,6 +24,13 @@
+@@ -22,6 +24,14 @@
  
  #define mb() do {  asm volatile(__ASM_BARRIER : : : "memory"); } while (0)
  
@@ -30,6 +30,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 +		ALTERNATIVE("", ".long 0xb2e8f000", 81)
 +		: : : "memory");
 +}
++#define gmb gmb
 +
  #define rmb()				barrier()
  #define wmb()				barrier()
