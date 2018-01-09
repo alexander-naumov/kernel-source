@@ -1,0 +1,43 @@
+From 581a790aa2c1240c91f7e14fefd8f919d020b28d Mon Sep 17 00:00:00 2001
+From: Michael Ellerman <mpe@ellerman.id.au>
+Date: Fri, 14 Oct 2016 15:58:28 +1100
+Subject: [PATCH 1/4] powerpc/asm: Allow including ppc_asm.h in asm files
+
+References: bsc#1068032, bsc#1075087
+Patch-mainline: no, under development
+
+There's no reason to #error if we include ppc_asm.h in asm files, the
+ifdef already prevents any problems.
+
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Acked-by: Michal Suchanek <msuchanek@suse.de>
+---
+ arch/powerpc/include/asm/ppc_asm.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/include/asm/ppc_asm.h b/arch/powerpc/include/asm/ppc_asm.h
+index dd0fc18d8103..b3a235fdf638 100644
+--- a/arch/powerpc/include/asm/ppc_asm.h
++++ b/arch/powerpc/include/asm/ppc_asm.h
+@@ -10,9 +10,7 @@
+ #include <asm/ppc-opcode.h>
+ #include <asm/firmware.h>
+ 
+-#ifndef __ASSEMBLY__
+-#error __FILE__ should only be used in assembler files
+-#else
++#ifdef __ASSEMBLY__
+ 
+ #define SZL			(BITS_PER_LONG/8)
+ 
+@@ -808,5 +806,7 @@ END_FTR_SECTION_NESTED(CPU_FTR_HAS_PPR,CPU_FTR_HAS_PPR,945)
+ 	.long 0xa6037b7d; /* mtsrr1 r11				*/ \
+ 	.long 0x2400004c  /* rfid				*/
+ #endif /* !CONFIG_PPC_BOOK3E */
++
+ #endif /*  __ASSEMBLY__ */
++
+ #endif /* _ASM_POWERPC_PPC_ASM_H */
+-- 
+2.13.6
+
