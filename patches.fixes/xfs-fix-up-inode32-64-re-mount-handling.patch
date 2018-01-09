@@ -1,0 +1,260 @@
+From 0c1cf9f5a4c29854143fc5dcdde1e8802be97d72 Mon Sep 17 00:00:00 2001
+From: Eric Sandeen <sandeen@redhat.com>
+Date: Wed, 2 Mar 2016 09:58:09 +1100
+Subject: [PATCH] xfs: fix up inode32/64 (re)mount handling
+Git-commit: 12c3f05c7b592ae3bf2219392f1cbf252645cd79
+Patch-mainline: v4.6-rc1
+References: bsc#1069160
+
+inode32/inode64 allocator behavior with respect to mount, remount
+and growfs is a little tricky.
+
+The inode32 mount option should only enable the inode32 allocator
+heuristics if the filesystem is large enough for 64-bit inodes to
+exist.  Today, it has this behavior on the initial mount, but a
+remount with inode32 unconditionally changes the allocation
+heuristics, even for a small fs.
+
+Also, an inode32 mounted small filesystem should transition to the
+inode32 allocator if the filesystem is subsequently grown to a
+sufficient size.  Today that does not happen.
+
+This patch consolidates xfs_set_inode32 and xfs_set_inode64 into a
+single new function, and moves the "is the maximum inode number big
+enough to matter" test into that function, so it doesn't rely on the
+caller to get it right - which remount did not do, previously.
+
+Signed-off-by: Eric Sandeen <sandeen@redhat.com>
+Reviewed-by: Brian Foster <bfoster@redhat.com>
+Signed-off-by: Dave Chinner <david@fromorbit.com>
+
+Signed-off-by: Flex Liu <fliu@suse.com>
+
+---
+ fs/xfs/xfs_mount.c |  20 +----------
+ fs/xfs/xfs_mount.h |   5 ++-
+ fs/xfs/xfs_super.c | 102 +++++++++++++++++++++++++++++------------------------
+ fs/xfs/xfs_super.h |   4 +--
+ 4 files changed, 60 insertions(+), 71 deletions(-)
+
+diff --git a/fs/xfs/xfs_mount.c b/fs/xfs/xfs_mount.c
+index dbc29eed5e90..87af64a5b5f7 100644
+--- a/fs/xfs/xfs_mount.c
++++ b/fs/xfs/xfs_mount.c
+@@ -185,9 +185,6 @@ xfs_initialize_perag(
+ 	xfs_agnumber_t	index;
+ 	xfs_agnumber_t	first_initialised = 0;
+ 	xfs_perag_t	*pag;
+-	xfs_agino_t	agino;
+-	xfs_ino_t	ino;
+-	xfs_sb_t	*sbp = &mp->m_sb;
+ 	int		error = -ENOMEM;
+ 
+ 	/*
+@@ -230,22 +227,7 @@ xfs_initialize_perag(
+ 		radix_tree_preload_end();
+ 	}
+ 
+-	/*
+-	 * If we mount with the inode64 option, or no inode overflows
+-	 * the legacy 32-bit address space clear the inode32 option.
+-	 */
+-	agino = XFS_OFFBNO_TO_AGINO(mp, sbp->sb_agblocks - 1, 0);
+-	ino = XFS_AGINO_TO_INO(mp, agcount - 1, agino);
+-
+-	if ((mp->m_flags & XFS_MOUNT_SMALL_INUMS) && ino > XFS_MAXINUMBER_32)
+-		mp->m_flags |= XFS_MOUNT_32BITINODES;
+-	else
+-		mp->m_flags &= ~XFS_MOUNT_32BITINODES;
+-
+-	if (mp->m_flags & XFS_MOUNT_32BITINODES)
+-		index = xfs_set_inode32(mp, agcount);
+-	else
+-		index = xfs_set_inode64(mp, agcount);
++	index = xfs_set_inode_alloc(mp, agcount);
+ 
+ 	if (maxagi)
+ 		*maxagi = index;
+diff --git a/fs/xfs/xfs_mount.h b/fs/xfs/xfs_mount.h
+index 3530e281f105..5907a0f11142 100644
+--- a/fs/xfs/xfs_mount.h
++++ b/fs/xfs/xfs_mount.h
+@@ -171,9 +171,8 @@ typedef struct xfs_mount {
+ #define XFS_MOUNT_GRPID		(1ULL << 9)	/* group-ID assigned from directory */
+ #define XFS_MOUNT_NORECOVERY	(1ULL << 10)	/* no recovery - dirty fs */
+ #define XFS_MOUNT_DFLT_IOSIZE	(1ULL << 12)	/* set default i/o size */
+-#define XFS_MOUNT_32BITINODES	(1ULL << 14)	/* do not create inodes above
+-						 * 32 bits in size */
+-#define XFS_MOUNT_SMALL_INUMS	(1ULL << 15)	/* users wants 32bit inodes */
++#define XFS_MOUNT_SMALL_INUMS	(1ULL << 14)	/* user wants 32bit inodes */
++#define XFS_MOUNT_32BITINODES	(1ULL << 15)	/* inode32 allocator active */
+ #define XFS_MOUNT_NOUUID	(1ULL << 16)	/* ignore uuid during mount */
+ #define XFS_MOUNT_BARRIER	(1ULL << 17)
+ #define XFS_MOUNT_IKEEP		(1ULL << 18)	/* keep empty inode clusters*/
+diff --git a/fs/xfs/xfs_super.c b/fs/xfs/xfs_super.c
+index fb93c6900f45..af3d41334f21 100644
+--- a/fs/xfs/xfs_super.c
++++ b/fs/xfs/xfs_super.c
+@@ -613,23 +613,35 @@ xfs_max_file_offset(
+ }
+ 
+ /*
+- * xfs_set_inode32() and xfs_set_inode64() are passed an agcount
+- * because in the growfs case, mp->m_sb.sb_agcount is not updated
+- * yet to the potentially higher ag count.
++ * Set parameters for inode allocation heuristics, taking into account
++ * filesystem size and inode32/inode64 mount options; i.e. specifically
++ * whether or not XFS_MOUNT_SMALL_INUMS is set.
++ *
++ * Inode allocation patterns are altered only if inode32 is requested
++ * (XFS_MOUNT_SMALL_INUMS), and the filesystem is sufficiently large.
++ * If altered, XFS_MOUNT_32BITINODES is set as well.
++ *
++ * An agcount independent of that in the mount structure is provided
++ * because in the growfs case, mp->m_sb.sb_agcount is not yet updated
++ * to the potentially higher ag count.
++ *
++ * Returns the maximum AG index which may contain inodes.
+  */
+ xfs_agnumber_t
+-xfs_set_inode32(struct xfs_mount *mp, xfs_agnumber_t agcount)
++xfs_set_inode_alloc(
++	struct xfs_mount *mp,
++	xfs_agnumber_t	agcount)
+ {
+-	xfs_agnumber_t	index = 0;
++	xfs_agnumber_t	index;
+ 	xfs_agnumber_t	maxagi = 0;
+ 	xfs_sb_t	*sbp = &mp->m_sb;
+ 	xfs_agnumber_t	max_metadata;
+ 	xfs_agino_t	agino;
+ 	xfs_ino_t	ino;
+-	xfs_perag_t	*pag;
+ 
+-	/* Calculate how much should be reserved for inodes to meet
+-	 * the max inode percentage.
++	/*
++	 * Calculate how much should be reserved for inodes to meet
++	 * the max inode percentage.  Used only for inode32.
+ 	 */
+ 	if (mp->m_maxicount) {
+ 		__uint64_t	icount;
+@@ -643,54 +655,48 @@ xfs_set_inode32(struct xfs_mount *mp, xfs_agnumber_t agcount)
+ 		max_metadata = agcount;
+ 	}
+ 
++	/* Get the last possible inode in the filesystem */
+ 	agino =	XFS_OFFBNO_TO_AGINO(mp, sbp->sb_agblocks - 1, 0);
++	ino = XFS_AGINO_TO_INO(mp, agcount - 1, agino);
++
++	/*
++	 * If user asked for no more than 32-bit inodes, and the fs is
++	 * sufficiently large, set XFS_MOUNT_32BITINODES if we must alter
++	 * the allocator to accommodate the request.
++	 */
++	if ((mp->m_flags & XFS_MOUNT_SMALL_INUMS) && ino > XFS_MAXINUMBER_32)
++		mp->m_flags |= XFS_MOUNT_32BITINODES;
++	else
++		mp->m_flags &= ~XFS_MOUNT_32BITINODES;
+ 
+ 	for (index = 0; index < agcount; index++) {
+-		ino = XFS_AGINO_TO_INO(mp, index, agino);
++		struct xfs_perag	*pag;
+ 
+-		if (ino > XFS_MAXINUMBER_32) {
+-			pag = xfs_perag_get(mp, index);
+-			pag->pagi_inodeok = 0;
+-			pag->pagf_metadata = 0;
+-			xfs_perag_put(pag);
+-			continue;
+-		}
++		ino = XFS_AGINO_TO_INO(mp, index, agino);
+ 
+ 		pag = xfs_perag_get(mp, index);
+-		pag->pagi_inodeok = 1;
+-		maxagi++;
+-		if (index < max_metadata)
+-			pag->pagf_metadata = 1;
+-		xfs_perag_put(pag);
+-	}
+-	mp->m_flags |= (XFS_MOUNT_32BITINODES |
+-			XFS_MOUNT_SMALL_INUMS);
+ 
+-	return maxagi;
+-}
+-
+-xfs_agnumber_t
+-xfs_set_inode64(struct xfs_mount *mp, xfs_agnumber_t agcount)
+-{
+-	xfs_agnumber_t index = 0;
+-
+-	for (index = 0; index < agcount; index++) {
+-		struct xfs_perag	*pag;
++		if (mp->m_flags & XFS_MOUNT_32BITINODES) {
++			if (ino > XFS_MAXINUMBER_32) {
++				pag->pagi_inodeok = 0;
++				pag->pagf_metadata = 0;
++			} else {
++				pag->pagi_inodeok = 1;
++				maxagi++;
++				if (index < max_metadata)
++					pag->pagf_metadata = 1;
++				else
++					pag->pagf_metadata = 0;
++			}
++		} else {
++			pag->pagi_inodeok = 1;
++			pag->pagf_metadata = 0;
++		}
+ 
+-		pag = xfs_perag_get(mp, index);
+-		pag->pagi_inodeok = 1;
+-		pag->pagf_metadata = 0;
+ 		xfs_perag_put(pag);
+ 	}
+ 
+-	/* There is no need for lock protection on m_flags,
+-	 * the rw_semaphore of the VFS superblock is locked
+-	 * during mount/umount/remount operations, so this is
+-	 * enough to avoid concurency on the m_flags field
+-	 */
+-	mp->m_flags &= ~(XFS_MOUNT_32BITINODES |
+-			 XFS_MOUNT_SMALL_INUMS);
+-	return index;
++	return (mp->m_flags & XFS_MOUNT_32BITINODES) ? maxagi : agcount;
+ }
+ 
+ STATIC int
+@@ -1234,10 +1240,12 @@ xfs_fs_remount(
+ 			mp->m_flags &= ~XFS_MOUNT_BARRIER;
+ 			break;
+ 		case Opt_inode64:
+-			mp->m_maxagi = xfs_set_inode64(mp, sbp->sb_agcount);
++			mp->m_flags &= ~XFS_MOUNT_SMALL_INUMS;
++			mp->m_maxagi = xfs_set_inode_alloc(mp, sbp->sb_agcount);
+ 			break;
+ 		case Opt_inode32:
+-			mp->m_maxagi = xfs_set_inode32(mp, sbp->sb_agcount);
++			mp->m_flags |= XFS_MOUNT_SMALL_INUMS;
++			mp->m_maxagi = xfs_set_inode_alloc(mp, sbp->sb_agcount);
+ 			break;
+ 		default:
+ 			/*
+diff --git a/fs/xfs/xfs_super.h b/fs/xfs/xfs_super.h
+index e6d20c3e7a06..81ba1e610a85 100644
+--- a/fs/xfs/xfs_super.h
++++ b/fs/xfs/xfs_super.h
+@@ -72,8 +72,8 @@ extern __uint64_t xfs_max_file_offset(unsigned int);
+ 
+ extern void xfs_flush_inodes(struct xfs_mount *mp);
+ extern void xfs_blkdev_issue_flush(struct xfs_buftarg *);
+-extern xfs_agnumber_t xfs_set_inode32(struct xfs_mount *, xfs_agnumber_t agcount);
+-extern xfs_agnumber_t xfs_set_inode64(struct xfs_mount *, xfs_agnumber_t agcount);
++extern xfs_agnumber_t xfs_set_inode_alloc(struct xfs_mount *,
++					   xfs_agnumber_t agcount);
+ 
+ extern const struct export_operations xfs_export_operations;
+ extern const struct xattr_handler *xfs_xattr_handlers[];
+-- 
+2.13.6
+
