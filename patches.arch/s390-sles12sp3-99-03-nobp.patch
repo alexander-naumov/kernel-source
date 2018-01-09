@@ -108,14 +108,14 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  	lg	%r10,__LC_LAST_BREAK
  	lg	%r12,__LC_THREAD_INFO
  	lghi	%r14,_PIF_SYSCALL
-@@ -326,6 +362,7 @@ ENTRY(system_call)
+@@ -322,6 +358,7 @@ ENTRY(system_call)
+ 	jnz	.Lsysc_work			# check for work
+ 	TSTMSK	__LC_CPU_FLAGS,_CIF_WORK
+ 	jnz	.Lsysc_work
++	BPON
+ .Lsysc_restore:
  	lg	%r14,__LC_VDSO_PER_CPU
  	lmg	%r0,%r10,__PT_R0(%r11)
- 	mvc	__LC_RETURN_PSW(16),__PT_PSW(%r11)
-+	BPON
- .Lsysc_exit_timer:
- 	stpt	__LC_EXIT_TIMER
- 	mvc	__VDSO_ECTG_BASE(16,%r14),__LC_EXIT_TIMER
 @@ -484,6 +521,7 @@ ENTRY(kernel_thread_starter)
  
  ENTRY(pgm_check_handler)
