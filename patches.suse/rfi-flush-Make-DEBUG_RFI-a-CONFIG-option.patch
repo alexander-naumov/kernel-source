@@ -1,0 +1,52 @@
+From de68b4ce41fbdcf650ac7be05d0172fbfa2f6b79 Mon Sep 17 00:00:00 2001
+From: Michael Ellerman <mpe@ellerman.id.au>
+Date: Fri, 5 Jan 2018 12:53:05 +1100
+Subject: [PATCH 4/4] rfi-flush: Make DEBUG_RFI a CONFIG option
+
+References: bsc#1068032, bsc#1075087
+Patch-mainline: no, under development
+
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Acked-by: Michal Suchanek <msuchanek@suse.de>
+---
+ arch/powerpc/Kconfig.debug               | 10 ++++++++++
+ arch/powerpc/include/asm/exception-64s.h |  4 +---
+ 2 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/Kconfig.debug b/arch/powerpc/Kconfig.debug
+index 3a510f4a6b68..64b7b5df0c18 100644
+--- a/arch/powerpc/Kconfig.debug
++++ b/arch/powerpc/Kconfig.debug
+@@ -356,4 +356,14 @@ config FAIL_IOMMU
+ 
+ 	  If you are unsure, say N.
+ 
++config PPC_DEBUG_RFI
++	bool "Debug RFIs (Return From Interrupt)"
++	depends on PPC_BOOK3S_64
++	help
++	  The enables extra debug code in some RFI (Return From Interrupt)
++	  sequences, to detect that we are returning to the correct context
++	  (user, kernel or guest). This adds some performance overhead.
++
++	  If unsure, say N.
++
+ endmenu
+diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
+index c02eef2388a5..8cee35ccb1ec 100644
+--- a/arch/powerpc/include/asm/exception-64s.h
++++ b/arch/powerpc/include/asm/exception-64s.h
+@@ -66,9 +66,7 @@
+ 	nop;								\
+ 	nop
+ 
+-#define DEBUG_RFI
+-
+-#ifdef DEBUG_RFI
++#ifdef CONFIG_PPC_DEBUG_RFI
+ #define CHECK_TARGET_MSR_PR(srr_reg, expected_pr)			\
+ 	SET_SCRATCH0(r3);						\
+ 	mfspr	r3,srr_reg;						\
+-- 
+2.13.6
+
