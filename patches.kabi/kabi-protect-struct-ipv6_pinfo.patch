@@ -1,0 +1,33 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: protect struct ipv6_pinfo
+Patch-mainline: never, kabi
+References: kabi
+
+In 4.4.109, commit e0bdd21a86c5831d6039a3d46d25cab9e58a7ae4 (net:
+reevalulate autoflowlabel setting after sysctl setting), upstream commit
+513674b5a2c9c7a67501506419da5c3c77ac6f08 added one bit to a bitfield in
+struct ipv6_pinfo.  It indeed made the kABI checker to complain.
+
+Given the newly added bit only ate a hole in the structure, let's ignore
+this change and hide it from the kABI checker.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/ipv6.h |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+--- a/include/linux/ipv6.h
++++ b/include/linux/ipv6.h
+@@ -215,8 +215,12 @@ struct ipv6_pinfo {
+ 						 * 100: prefer care-of address
+ 						 */
+ 				dontfrag:1,
++#ifdef __GENKSYMS__
++				autoflowlabel:1;
++#else
+ 				autoflowlabel:1,
+ 				autoflowlabel_set:1;
++#endif
+ 	__u8			min_hopcount;
+ 	__u8			tclass;
+ 	__be32			rcv_flowinfo;

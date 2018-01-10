@@ -32,9 +32,9 @@ Signed-off-by: Mel Gorman <mgorman@suse.de>
  				 unsigned long end);
 --- a/arch/x86/include/asm/tlbflush.h
 +++ b/arch/x86/include/asm/tlbflush.h
-@@ -253,12 +253,13 @@ extern void flush_tlb_kernel_range(unsig
- 
- #define flush_tlb()	flush_tlb_current_task()
+@@ -239,12 +239,13 @@ static inline void flush_tlb_page(struct
+ 	flush_tlb_mm_range(vma->vm_mm, a, a + PAGE_SIZE, VM_NONE);
+ }
  
 -void native_flush_tlb_others(const struct cpumask *cpumask,
 +void native_flush_tlb_others(struct cpumask *cpumask,
@@ -71,7 +71,7 @@ Signed-off-by: Mel Gorman <mgorman@suse.de>
  
 --- a/arch/x86/mm/tlb.c
 +++ b/arch/x86/mm/tlb.c
-@@ -128,7 +128,7 @@ static void flush_tlb_func(void *info)
+@@ -231,7 +231,7 @@ static void flush_tlb_func(void *info)
  
  }
  
@@ -82,7 +82,7 @@ Signed-off-by: Mel Gorman <mgorman@suse.de>
  {
 --- a/arch/x86/platform/uv/tlb_uv.c
 +++ b/arch/x86/platform/uv/tlb_uv.c
-@@ -1090,7 +1090,7 @@ static int set_distrib_bits(struct cpuma
+@@ -1125,7 +1125,7 @@ static int set_distrib_bits(struct cpuma
   * Returns pointer to cpumask if some remote flushing remains to be
   * done.  The returned pointer is valid till preemption is re-enabled.
   */

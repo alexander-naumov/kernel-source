@@ -22,12 +22,12 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
 ---
  include/linux/sched.h    |    5 +++++
  kernel/sched/core.c      |    8 ++++++++
- kernel/time/tick-sched.c |    2 +-
- 3 files changed, 14 insertions(+), 1 deletion(-)
+ kernel/time/tick-sched.c |    5 +++--
+ 3 files changed, 16 insertions(+), 2 deletions(-)
 
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2249,6 +2249,11 @@ static inline int set_cpus_allowed_ptr(s
+@@ -2277,6 +2277,11 @@ static inline int set_cpus_allowed_ptr(s
  #ifdef CONFIG_NO_HZ_COMMON
  void calc_load_enter_idle(void);
  void calc_load_exit_idle(void);
@@ -41,7 +41,7 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
  static inline void calc_load_exit_idle(void) { }
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -705,6 +705,14 @@ static inline bool got_nohz_idle_kick(vo
+@@ -707,6 +707,14 @@ static inline bool got_nohz_idle_kick(vo
  	return false;
  }
  
@@ -58,12 +58,15 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
  static inline bool got_nohz_idle_kick(void)
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
-@@ -584,7 +584,7 @@ static ktime_t tick_nohz_stop_sched_tick
- 	} while (read_seqretry(&jiffies_lock, seq));
- 	ts->last_jiffies = basejiff;
- 
--	if (rcu_needs_cpu(basemono, &next_rcu) ||
+@@ -599,8 +599,9 @@ static ktime_t tick_nohz_stop_sched_tick
+ 	 * minimal delta which brings us back to this place
+ 	 * immediately. Lather, rinse and repeat...
+ 	 */
+-	if (rcu_needs_cpu(basemono, &next_rcu) || arch_needs_cpu() ||
+-	    irq_work_needs_cpu() || local_timer_softirq_pending()) {
 +	if (sched_needs_cpu(cpu) || rcu_needs_cpu(basemono, &next_rcu) ||
- 	    arch_needs_cpu() || irq_work_needs_cpu()) {
++	    arch_needs_cpu() || irq_work_needs_cpu() ||
++	    local_timer_softirq_pending()) {
  		next_tick = basemono + TICK_NSEC;
  	} else {
+ 		/*
