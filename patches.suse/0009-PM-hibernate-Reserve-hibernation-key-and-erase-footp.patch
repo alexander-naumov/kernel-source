@@ -47,16 +47,16 @@ Signed-off-by: Lee, Chun-Yi <jlee@suse.com>
  #endif
 --- a/arch/x86/kernel/setup.c
 +++ b/arch/x86/kernel/setup.c
-@@ -114,6 +114,8 @@
- #include <asm/prom.h>
+@@ -115,6 +115,8 @@
  #include <asm/microcode.h>
+ #include <asm/kaiser.h>
  
 +#include <asm/suspend.h>
 +
  /*
   * max_low_pfn_mapped: highest direct mapped pfn under 4GB
   * max_pfn_mapped:     highest direct mapped pfn over 4GB
-@@ -407,10 +409,22 @@ static void __init reserve_initrd(void)
+@@ -408,10 +410,22 @@ static void __init reserve_initrd(void)
  }
  #endif /* CONFIG_BLK_DEV_INITRD */
  
@@ -80,7 +80,7 @@ Signed-off-by: Lee, Chun-Yi <jlee@suse.com>
  
  	pa_data = boot_params.hdr.setup_data;
  	while (pa_data) {
-@@ -432,9 +446,14 @@ static void __init parse_setup_data(void
+@@ -433,9 +447,14 @@ static void __init parse_setup_data(void
  		case SETUP_EFI:
  			parse_efi_setup(pa_data, data_len);
  			break;

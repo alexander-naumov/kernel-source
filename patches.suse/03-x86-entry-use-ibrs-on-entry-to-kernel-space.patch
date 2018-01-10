@@ -10,12 +10,10 @@ disable *before* CR3 write.
 Originally-by: Tim Chen <tim.c.chen@linux.intel.com>
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
- arch/x86/entry/entry_64.S        | 22 ++++++++++++++++++++++
- arch/x86/entry/entry_64_compat.S |  9 +++++++++
+ arch/x86/entry/entry_64.S        |   22 ++++++++++++++++++++++
+ arch/x86/entry/entry_64_compat.S |    9 +++++++++
  2 files changed, 31 insertions(+)
 
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 038aa6a8b824..cc74fbce80f4 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -36,6 +36,7 @@
@@ -92,7 +90,7 @@ index 038aa6a8b824..cc74fbce80f4 100644
  	TRACE_IRQS_OFF_DEBUG
  	TRACE_IRQS_IRETQ_DEBUG
 +	DISABLE_IBRS
- #ifdef CONFIG_KAISER
+ #ifdef CONFIG_PAGE_TABLE_ISOLATION
  	/* No ALTERNATIVE for X86_FEATURE_KAISER: paranoid_entry sets %ebx */
  	testl	$2, %ebx			/* SWITCH_USER_CR3 needed? */
 @@ -1156,6 +1170,8 @@ ENTRY(error_entry)
@@ -123,11 +121,9 @@ index 038aa6a8b824..cc74fbce80f4 100644
  
 +	DISABLE_IBRS
 +
- #ifdef CONFIG_KAISER
+ #ifdef CONFIG_PAGE_TABLE_ISOLATION
  	/*
  	 * Unconditionally restore CR3.  I know we return to
-diff --git a/arch/x86/entry/entry_64_compat.S b/arch/x86/entry/entry_64_compat.S
-index 7519c638b0f0..a907572d7591 100644
 --- a/arch/x86/entry/entry_64_compat.S
 +++ b/arch/x86/entry/entry_64_compat.S
 @@ -15,6 +15,7 @@
@@ -181,4 +177,3 @@ index 7519c638b0f0..a907572d7591 100644
  	SWITCH_USER_CR3
  	SWAPGS
  	jmp	restore_regs_and_iret
-

@@ -14,16 +14,14 @@ permissions but the vsyscall page is the only exception here so ...
 Signed-off-by: Borislav Petkov <bp@suse.de>
 Acked-by: Hugh Dickins <hughd@google.com>
 ---
- arch/x86/entry/vsyscall/vsyscall_64.c |  5 +++++
- arch/x86/include/asm/vsyscall.h       |  2 ++
- arch/x86/mm/kaiser.c                  | 34 ++++++++++++++++++++++++++++++----
+ arch/x86/entry/vsyscall/vsyscall_64.c |    5 +++++
+ arch/x86/include/asm/vsyscall.h       |    2 ++
+ arch/x86/mm/kaiser.c                  |   34 ++++++++++++++++++++++++++++++----
  3 files changed, 37 insertions(+), 4 deletions(-)
 
-diff --git a/arch/x86/entry/vsyscall/vsyscall_64.c b/arch/x86/entry/vsyscall/vsyscall_64.c
-index 174c2549939d..112178b401a1 100644
 --- a/arch/x86/entry/vsyscall/vsyscall_64.c
 +++ b/arch/x86/entry/vsyscall/vsyscall_64.c
-@@ -66,6 +66,11 @@ static int __init vsyscall_setup(char *str)
+@@ -66,6 +66,11 @@ static int __init vsyscall_setup(char *s
  }
  early_param("vsyscall", vsyscall_setup);
  
@@ -35,8 +33,6 @@ index 174c2549939d..112178b401a1 100644
  static void warn_bad_vsyscall(const char *level, struct pt_regs *regs,
  			      const char *message)
  {
-diff --git a/arch/x86/include/asm/vsyscall.h b/arch/x86/include/asm/vsyscall.h
-index 6ba66ee79710..d10cabbc8915 100644
 --- a/arch/x86/include/asm/vsyscall.h
 +++ b/arch/x86/include/asm/vsyscall.h
 @@ -12,12 +12,14 @@ extern void map_vsyscall(void);
@@ -54,11 +50,9 @@ index 6ba66ee79710..d10cabbc8915 100644
  #endif
  
  #endif /* _ASM_X86_VSYSCALL_H */
-diff --git a/arch/x86/mm/kaiser.c b/arch/x86/mm/kaiser.c
-index acfbf8c69eef..3c448aa63d3e 100644
 --- a/arch/x86/mm/kaiser.c
 +++ b/arch/x86/mm/kaiser.c
-@@ -17,6 +17,7 @@
+@@ -20,6 +20,7 @@
  #include <asm/pgalloc.h>
  #include <asm/desc.h>
  #include <asm/cmdline.h>
@@ -66,7 +60,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  
  int kaiser_enabled __read_mostly = 1;
  EXPORT_SYMBOL(kaiser_enabled);	/* for inlined TLB flush functions */
-@@ -108,12 +109,13 @@ static inline unsigned long get_pa_from_mapping(unsigned long vaddr)
+@@ -111,12 +112,13 @@ static inline unsigned long get_pa_from_
   *
   * Returns a pointer to a PTE on success, or NULL on failure.
   */
@@ -81,7 +75,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  
  	if (pgd_none(*pgd)) {
  		WARN_ONCE(1, "All shadow pgds should have been populated");
-@@ -121,6 +123,17 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
+@@ -124,6 +126,17 @@ static pte_t *kaiser_pagetable_walk(unsi
  	}
  	BUILD_BUG_ON(pgd_large(*pgd) != 0);
  
@@ -99,7 +93,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  	pud = pud_offset(pgd, address);
  	/* The shadow page tables do not use large mappings: */
  	if (pud_large(*pud)) {
-@@ -133,7 +146,7 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
+@@ -136,7 +149,7 @@ static pte_t *kaiser_pagetable_walk(unsi
  			return NULL;
  		spin_lock(&shadow_table_allocation_lock);
  		if (pud_none(*pud))
@@ -108,7 +102,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  		else
  			free_page(new_pmd_page);
  		spin_unlock(&shadow_table_allocation_lock);
-@@ -151,7 +164,7 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
+@@ -154,7 +167,7 @@ static pte_t *kaiser_pagetable_walk(unsi
  			return NULL;
  		spin_lock(&shadow_table_allocation_lock);
  		if (pmd_none(*pmd))
@@ -117,7 +111,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  		else
  			free_page(new_pte_page);
  		spin_unlock(&shadow_table_allocation_lock);
-@@ -185,7 +198,7 @@ static int kaiser_add_user_map(const void *__start_addr, unsigned long size,
+@@ -188,7 +201,7 @@ static int kaiser_add_user_map(const voi
  			ret = -EIO;
  			break;
  		}
@@ -126,7 +120,7 @@ index acfbf8c69eef..3c448aa63d3e 100644
  		if (!pte) {
  			ret = -ENOMEM;
  			break;
-@@ -310,6 +323,19 @@ void __init kaiser_init(void)
+@@ -313,6 +326,19 @@ void __init kaiser_init(void)
  
  	kaiser_init_all_pgds();
  
@@ -146,4 +140,3 @@ index acfbf8c69eef..3c448aa63d3e 100644
  	for_each_possible_cpu(cpu) {
  		void *percpu_vaddr = __per_cpu_user_mapped_start +
  				     per_cpu_offset(cpu);
-

@@ -33,7 +33,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 +#define X86_FEATURE_SPEC_CTRL	( 7*32+19) /* Control Speculation Control */
  
  /* Because the ALTERNATIVE scheme is for members of the X86_FEATURE club... */
- #define X86_FEATURE_KAISER	( 7*32+31) /* CONFIG_KAISER w/o nokaiser */
+ #define X86_FEATURE_KAISER	( 7*32+31) /* CONFIG_PAGE_TABLE_ISOLATION w/o nokaiser */
 --- a/arch/x86/include/asm/msr-index.h
 +++ b/arch/x86/include/asm/msr-index.h
 @@ -32,6 +32,9 @@
