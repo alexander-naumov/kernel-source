@@ -1,0 +1,37 @@
+From: Dan Murphy <dmurphy@ti.com>
+Date: Tue, 10 Oct 2017 12:42:56 -0500
+Subject: [PATCH] net: phy: at803x: Change error to EINVAL for invalid MAC
+References: bnc#1012382
+Patch-mainline: 4.4.108
+Git-commit: fc7556877d1748ac00958822a0a3bba1d4bd9e0d
+
+[ Upstream commit fc7556877d1748ac00958822a0a3bba1d4bd9e0d ]
+
+Change the return error code to EINVAL if the MAC
+address is not valid in the set_wol function.
+
+Signed-off-by: Dan Murphy <dmurphy@ti.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/phy/at803x.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/at803x.c b/drivers/net/phy/at803x.c
+index 2d020a3ec0b5..37333d38b576 100644
+--- a/drivers/net/phy/at803x.c
++++ b/drivers/net/phy/at803x.c
+@@ -105,7 +105,7 @@ static int at803x_set_wol(struct phy_device *phydev,
+ 		mac = (const u8 *) ndev->dev_addr;
+ 
+ 		if (!is_valid_ether_addr(mac))
+-			return -EFAULT;
++			return -EINVAL;
+ 
+ 		for (i = 0; i < 3; i++) {
+ 			phy_write(phydev, AT803X_MMD_ACCESS_CONTROL,
+-- 
+2.15.1
+

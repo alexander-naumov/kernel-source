@@ -1,0 +1,27 @@
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Date: Mon, 25 Dec 2017 14:22:16 +0100
+Subject: [PATCH] Linux 4.4.108
+References: bnc#1012382
+Patch-mainline: 4.4.108
+Git-commit: 03028e068a1f75d3b2e0989d7a452e701df0727b
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index f7997b15d055..99f9834c4ba6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,6 @@
+ VERSION = 4
+ PATCHLEVEL = 4
+-SUBLEVEL = 107
++SUBLEVEL = 108
+ EXTRAVERSION =
+ NAME = Blurry Fish Butt
+ 
+-- 
+2.15.1
+

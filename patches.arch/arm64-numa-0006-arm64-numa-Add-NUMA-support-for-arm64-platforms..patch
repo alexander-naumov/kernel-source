@@ -50,7 +50,7 @@ Signed-off-by: Matthias Brugger <mbrugger@suse.com>
  	help
  	  ARM 64-bit (AArch64) Linux support.
  
-@@ -504,6 +506,30 @@ config HOTPLUG_CPU
+@@ -524,6 +526,30 @@ config HOTPLUG_CPU
  	  Say Y here to experiment with turning CPUs off and on.  CPUs
  	  can be controlled through /sys/devices/system/cpu.
  
@@ -220,7 +220,7 @@ Signed-off-by: Matthias Brugger <mbrugger@suse.com>
  }
  
  /*
-@@ -518,6 +520,8 @@ static void __init of_parse_and_init_cpu
+@@ -517,6 +519,8 @@ static void __init of_parse_and_init_cpu
  
  		pr_debug("cpu logical map 0x%llx\n", hwid);
  		cpu_logical_map(cpu_count) = hwid;
@@ -299,7 +299,7 @@ Signed-off-by: Matthias Brugger <mbrugger@suse.com>
  }
  #endif
  
-@@ -181,7 +204,6 @@ void __init arm64_memblock_init(void)
+@@ -182,7 +205,6 @@ void __init arm64_memblock_init(void)
  	dma_contiguous_reserve(arm64_dma_phys_limit);
  
  	memblock_allow_resize();
@@ -307,7 +307,7 @@ Signed-off-by: Matthias Brugger <mbrugger@suse.com>
  }
  
  void __init bootmem_init(void)
-@@ -193,6 +215,9 @@ void __init bootmem_init(void)
+@@ -194,6 +216,9 @@ void __init bootmem_init(void)
  
  	early_memtest(min << PAGE_SHIFT, max << PAGE_SHIFT);
  
@@ -318,9 +318,9 @@ Signed-off-by: Matthias Brugger <mbrugger@suse.com>
  	 * Sparsemem tries to allocate bootmem in memory_present(), so must be
  	 * done after the fixed reservations.
 @@ -203,7 +228,7 @@ void __init bootmem_init(void)
+ 	sparse_init();
  	zone_sizes_init(min, max);
  
- 	high_memory = __va((max << PAGE_SHIFT) - 1) + 1;
 -	max_pfn = max_low_pfn = max;
 +	memblock_dump_all();
  }

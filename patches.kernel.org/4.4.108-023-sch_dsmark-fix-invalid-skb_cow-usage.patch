@@ -1,0 +1,58 @@
+From: Eric Dumazet <edumazet@google.com>
+Date: Fri, 17 Mar 2017 08:05:28 -0700
+Subject: [PATCH] sch_dsmark: fix invalid skb_cow() usage
+References: bnc#1012382
+Patch-mainline: 4.4.108
+Git-commit: aea92fb2e09e29653b023d4254ac9fbf94221538
+
+[ Upstream commit aea92fb2e09e29653b023d4254ac9fbf94221538 ]
+
+skb_cow(skb, sizeof(ip header)) is not very helpful in this context.
+
+First we need to use pskb_may_pull() to make sure the ip header
+is in skb linear part, then use skb_try_make_writable() to
+address clones issues.
+
+Fixes: 4c30719f4f55 ("[PKT_SCHED] dsmark: handle cloned and non-linear skb's")
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/sched/sch_dsmark.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/net/sched/sch_dsmark.c b/net/sched/sch_dsmark.c
+index d0dff0cd8186..cce4e6ada7fa 100644
+--- a/net/sched/sch_dsmark.c
++++ b/net/sched/sch_dsmark.c
+@@ -199,9 +199,13 @@ static int dsmark_enqueue(struct sk_buff *skb, struct Qdisc *sch)
+ 	pr_debug("%s(skb %p,sch %p,[qdisc %p])\n", __func__, skb, sch, p);
+ 
+ 	if (p->set_tc_index) {
++		int wlen = skb_network_offset(skb);
++
+ 		switch (tc_skb_protocol(skb)) {
+ 		case htons(ETH_P_IP):
+-			if (skb_cow_head(skb, sizeof(struct iphdr)))
++			wlen += sizeof(struct iphdr);
++			if (!pskb_may_pull(skb, wlen) ||
++			    skb_try_make_writable(skb, wlen))
+ 				goto drop;
+ 
+ 			skb->tc_index = ipv4_get_dsfield(ip_hdr(skb))
+@@ -209,7 +213,9 @@ static int dsmark_enqueue(struct sk_buff *skb, struct Qdisc *sch)
+ 			break;
+ 
+ 		case htons(ETH_P_IPV6):
+-			if (skb_cow_head(skb, sizeof(struct ipv6hdr)))
++			wlen += sizeof(struct ipv6hdr);
++			if (!pskb_may_pull(skb, wlen) ||
++			    skb_try_make_writable(skb, wlen))
+ 				goto drop;
+ 
+ 			skb->tc_index = ipv6_get_dsfield(ipv6_hdr(skb))
+-- 
+2.15.1
+

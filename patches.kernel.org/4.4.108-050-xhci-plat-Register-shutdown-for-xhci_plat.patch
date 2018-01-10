@@ -1,0 +1,38 @@
+From: Adam Wallis <awallis@codeaurora.org>
+Date: Tue, 28 Mar 2017 15:55:28 +0300
+Subject: [PATCH] xhci: plat: Register shutdown for xhci_plat
+References: bnc#1012382
+Patch-mainline: 4.4.108
+Git-commit: b07c12517f2aed0add8ce18146bb426b14099392
+
+[ Upstream commit b07c12517f2aed0add8ce18146bb426b14099392 ]
+
+Shutdown should be called for xhci_plat devices especially for
+situations where kexec might be used by stopping DMA
+transactions.
+
+Signed-off-by: Adam Wallis <awallis@codeaurora.org>
+Signed-off-by: Mathias Nyman <mathias.nyman@linux.intel.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/host/xhci-plat.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/usb/host/xhci-plat.c b/drivers/usb/host/xhci-plat.c
+index 062cf8a84a59..7afd607ea60f 100644
+--- a/drivers/usb/host/xhci-plat.c
++++ b/drivers/usb/host/xhci-plat.c
+@@ -284,6 +284,7 @@ MODULE_DEVICE_TABLE(acpi, usb_xhci_acpi_match);
+ static struct platform_driver usb_xhci_driver = {
+ 	.probe	= xhci_plat_probe,
+ 	.remove	= xhci_plat_remove,
++	.shutdown	= usb_hcd_platform_shutdown,
+ 	.driver	= {
+ 		.name = "xhci-hcd",
+ 		.pm = DEV_PM_OPS,
+-- 
+2.15.1
+

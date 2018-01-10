@@ -1,0 +1,43 @@
+From: hayeswang <hayeswang@realtek.com>
+Date: Tue, 14 Mar 2017 14:15:20 +0800
+Subject: [PATCH] r8152: fix the list rx_done may be used without
+ initialization
+References: bnc#1012382
+Patch-mainline: 4.4.108
+Git-commit: 98d068ab52b4b11d403995ed14154660797e7136
+
+[ Upstream commit 98d068ab52b4b11d403995ed14154660797e7136 ]
+
+The list rx_done would be initialized when the linking on occurs.
+Therefore, if a napi is scheduled without any linking on before,
+the following kernel panic would happen.
+
+	BUG: unable to handle kernel NULL pointer dereference at 000000000000008
+	IP: [<ffffffffc085efde>] r8152_poll+0xe1e/0x1210 [r8152]
+	PGD 0
+	Oops: 0002 [#1] SMP
+
+Signed-off-by: Hayes Wang <hayeswang@realtek.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/usb/r8152.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/usb/r8152.c b/drivers/net/usb/r8152.c
+index 1c27e6fb99f9..a1dc43b9bd38 100644
+--- a/drivers/net/usb/r8152.c
++++ b/drivers/net/usb/r8152.c
+@@ -1277,6 +1277,7 @@ static int alloc_all_mem(struct r8152 *tp)
+ 	spin_lock_init(&tp->rx_lock);
+ 	spin_lock_init(&tp->tx_lock);
+ 	INIT_LIST_HEAD(&tp->tx_free);
++	INIT_LIST_HEAD(&tp->rx_done);
+ 	skb_queue_head_init(&tp->tx_queue);
+ 	skb_queue_head_init(&tp->rx_queue);
+ 
+-- 
+2.15.1
+

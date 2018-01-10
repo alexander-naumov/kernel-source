@@ -35,12 +35,12 @@ Fixes: 7c90705bf2a3 ("KVM: Inject asynchronous page fault into a PV guest if pag
 Signed-off-by: Radim Krčmář <rkrcmar@redhat.com>
 Acked-by: Joerg Roedel <jroedel@suse.de>
 ---
- arch/x86/kvm/x86.c | 37 ++++++++++++++++++++++++++++---------
- 1 file changed, 28 insertions(+), 9 deletions(-)
+ arch/x86/kvm/x86.c |   35 +++++++++++++++++++++++++++--------
+ 1 file changed, 27 insertions(+), 8 deletions(-)
 
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -8211,6 +8211,13 @@ static int apf_put_user(struct kvm_vcpu
+@@ -8214,6 +8214,13 @@ static int apf_put_user(struct kvm_vcpu
  				      sizeof(val));
  }
  
@@ -54,17 +54,17 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  void kvm_arch_async_page_not_present(struct kvm_vcpu *vcpu,
  				     struct kvm_async_pf *work)
  {
-@@ -8237,6 +8244,7 @@ void kvm_arch_async_page_present(struct
+@@ -8240,6 +8247,7 @@ void kvm_arch_async_page_present(struct
  				 struct kvm_async_pf *work)
  {
  	struct x86_exception fault;
 +	u32 val;
  
- 	trace_kvm_async_pf_ready(work->arch.token, work->gva);
  	if (work->wakeup_all)
-@@ -8244,14 +8252,25 @@ void kvm_arch_async_page_present(struct
- 	else
+ 		work->arch.token = ~0; /* broadcast wakeup */
+@@ -8247,14 +8255,25 @@ void kvm_arch_async_page_present(struct
  		kvm_del_async_pf_gfn(vcpu, work->arch.gfn);
+ 	trace_kvm_async_pf_ready(work->arch.token, work->gva);
  
 -	if ((vcpu->arch.apf.msr_val & KVM_ASYNC_PF_ENABLED) &&
 -	    !apf_put_user(vcpu, KVM_PV_REASON_PAGE_READY)) {
