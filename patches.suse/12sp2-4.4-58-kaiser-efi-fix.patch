@@ -1,7 +1,9 @@
 From: Jiri Kosina <jkosina@suse.cz>
 Subject: PTI: unbreak EFI
 References: bsc#1074709
-Patch-mainline: Not yet, under development
+Patch-mainline: Queued in subsystem maintainer repository
+Git-commit: de53c3786a3ce162a1c815d0c04c766c23ec9c0a
+Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git#x86/pti
 
 efi_call_phys_prolog() calls set_pgd() with swapper PGD that has PAGE_USER set,
 which makes KAISER set NX on it, and therefore EFI can't execute it's code.
