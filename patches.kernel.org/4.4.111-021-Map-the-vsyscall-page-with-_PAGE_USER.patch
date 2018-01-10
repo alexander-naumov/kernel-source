@@ -1,8 +1,9 @@
 From: Borislav Petkov <bp@suse.de>
 Date: Thu, 4 Jan 2018 17:42:45 +0100
-Subject: Map the vsyscall page with _PAGE_USER
-Patch-mainline: Not yet, under development
-References: bsc#1068032 CVE-2017-5754
+Subject: [PATCH] Map the vsyscall page with _PAGE_USER
+References: bnc#1012382 bsc#1068032 CVE-2017-5754
+Patch-mainline: 4.4.111
+Git-commit: 6dcf5491e01c3d1135497d0661bb5b35a126b9d8
 
 This needs to happen early in kaiser_pagetable_walk(), before the
 hierarchy is established so that _PAGE_USER permission can be really
@@ -13,15 +14,19 @@ permissions but the vsyscall page is the only exception here so ...
 
 Signed-off-by: Borislav Petkov <bp@suse.de>
 Acked-by: Hugh Dickins <hughd@google.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- arch/x86/entry/vsyscall/vsyscall_64.c |    5 +++++
- arch/x86/include/asm/vsyscall.h       |    2 ++
- arch/x86/mm/kaiser.c                  |   34 ++++++++++++++++++++++++++++++----
+ arch/x86/entry/vsyscall/vsyscall_64.c |  5 +++++
+ arch/x86/include/asm/vsyscall.h       |  2 ++
+ arch/x86/mm/kaiser.c                  | 34 ++++++++++++++++++++++++++++++----
  3 files changed, 37 insertions(+), 4 deletions(-)
 
+diff --git a/arch/x86/entry/vsyscall/vsyscall_64.c b/arch/x86/entry/vsyscall/vsyscall_64.c
+index 174c2549939d..112178b401a1 100644
 --- a/arch/x86/entry/vsyscall/vsyscall_64.c
 +++ b/arch/x86/entry/vsyscall/vsyscall_64.c
-@@ -66,6 +66,11 @@ static int __init vsyscall_setup(char *s
+@@ -66,6 +66,11 @@ static int __init vsyscall_setup(char *str)
  }
  early_param("vsyscall", vsyscall_setup);
  
@@ -33,6 +38,8 @@ Acked-by: Hugh Dickins <hughd@google.com>
  static void warn_bad_vsyscall(const char *level, struct pt_regs *regs,
  			      const char *message)
  {
+diff --git a/arch/x86/include/asm/vsyscall.h b/arch/x86/include/asm/vsyscall.h
+index 6ba66ee79710..4865e10dbb55 100644
 --- a/arch/x86/include/asm/vsyscall.h
 +++ b/arch/x86/include/asm/vsyscall.h
 @@ -12,12 +12,14 @@ extern void map_vsyscall(void);
@@ -46,10 +53,12 @@ Acked-by: Hugh Dickins <hughd@google.com>
  {
  	return false;
  }
-+bool vsyscall_enabled(void) { return false; }
++static inline bool vsyscall_enabled(void) { return false; }
  #endif
  
  #endif /* _ASM_X86_VSYSCALL_H */
+diff --git a/arch/x86/mm/kaiser.c b/arch/x86/mm/kaiser.c
+index b0b3a69f1c7f..6a7a77929a8c 100644
 --- a/arch/x86/mm/kaiser.c
 +++ b/arch/x86/mm/kaiser.c
 @@ -20,6 +20,7 @@
@@ -60,7 +69,7 @@ Acked-by: Hugh Dickins <hughd@google.com>
  
  int kaiser_enabled __read_mostly = 1;
  EXPORT_SYMBOL(kaiser_enabled);	/* for inlined TLB flush functions */
-@@ -111,12 +112,13 @@ static inline unsigned long get_pa_from_
+@@ -111,12 +112,13 @@ static inline unsigned long get_pa_from_mapping(unsigned long vaddr)
   *
   * Returns a pointer to a PTE on success, or NULL on failure.
   */
@@ -75,7 +84,7 @@ Acked-by: Hugh Dickins <hughd@google.com>
  
  	if (pgd_none(*pgd)) {
  		WARN_ONCE(1, "All shadow pgds should have been populated");
-@@ -124,6 +126,17 @@ static pte_t *kaiser_pagetable_walk(unsi
+@@ -124,6 +126,17 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
  	}
  	BUILD_BUG_ON(pgd_large(*pgd) != 0);
  
@@ -93,25 +102,25 @@ Acked-by: Hugh Dickins <hughd@google.com>
  	pud = pud_offset(pgd, address);
  	/* The shadow page tables do not use large mappings: */
  	if (pud_large(*pud)) {
-@@ -136,7 +149,7 @@ static pte_t *kaiser_pagetable_walk(unsi
+@@ -136,7 +149,7 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
  			return NULL;
  		spin_lock(&shadow_table_allocation_lock);
- 		if (pud_none(*pud))
+ 		if (pud_none(*pud)) {
 -			set_pud(pud, __pud(_KERNPG_TABLE | __pa(new_pmd_page)));
 +			set_pud(pud, __pud(prot | __pa(new_pmd_page)));
- 		else
- 			free_page(new_pmd_page);
- 		spin_unlock(&shadow_table_allocation_lock);
-@@ -154,7 +167,7 @@ static pte_t *kaiser_pagetable_walk(unsi
+ 			__inc_zone_page_state(virt_to_page((void *)
+ 						new_pmd_page), NR_KAISERTABLE);
+ 		} else
+@@ -156,7 +169,7 @@ static pte_t *kaiser_pagetable_walk(unsigned long address)
  			return NULL;
  		spin_lock(&shadow_table_allocation_lock);
- 		if (pmd_none(*pmd))
+ 		if (pmd_none(*pmd)) {
 -			set_pmd(pmd, __pmd(_KERNPG_TABLE | __pa(new_pte_page)));
 +			set_pmd(pmd, __pmd(prot | __pa(new_pte_page)));
- 		else
- 			free_page(new_pte_page);
- 		spin_unlock(&shadow_table_allocation_lock);
-@@ -188,7 +201,7 @@ static int kaiser_add_user_map(const voi
+ 			__inc_zone_page_state(virt_to_page((void *)
+ 						new_pte_page), NR_KAISERTABLE);
+ 		} else
+@@ -192,7 +205,7 @@ static int kaiser_add_user_map(const void *__start_addr, unsigned long size,
  			ret = -EIO;
  			break;
  		}
@@ -120,7 +129,7 @@ Acked-by: Hugh Dickins <hughd@google.com>
  		if (!pte) {
  			ret = -ENOMEM;
  			break;
-@@ -313,6 +326,19 @@ void __init kaiser_init(void)
+@@ -319,6 +332,19 @@ void __init kaiser_init(void)
  
  	kaiser_init_all_pgds();
  
@@ -140,3 +149,6 @@ Acked-by: Hugh Dickins <hughd@google.com>
  	for_each_possible_cpu(cpu) {
  		void *percpu_vaddr = __per_cpu_user_mapped_start +
  				     per_cpu_offset(cpu);
+-- 
+2.15.1
+

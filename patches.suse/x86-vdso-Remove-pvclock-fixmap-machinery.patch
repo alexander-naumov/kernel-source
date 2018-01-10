@@ -21,12 +21,11 @@ Signed-off-by: Ingo Molnar <mingo@kernel.org>
 Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
 ---
  arch/x86/entry/vdso/vclock_gettime.c |    1 -
- arch/x86/entry/vdso/vma.c            |    1 +
  arch/x86/include/asm/fixmap.h        |    5 -----
  arch/x86/include/asm/pvclock.h       |    5 -----
  arch/x86/kernel/kvmclock.c           |    6 ------
  arch/x86/kernel/pvclock.c            |   24 ------------------------
- 6 files changed, 1 insertion(+), 41 deletions(-)
+ 5 files changed, 41 deletions(-)
 
 --- a/arch/x86/entry/vdso/vclock_gettime.c
 +++ b/arch/x86/entry/vdso/vclock_gettime.c
@@ -38,16 +37,6 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
  #include <asm/pvclock.h>
  
  notrace static long vdso_fallback_gettime(long clock, struct timespec *ts)
---- a/arch/x86/entry/vdso/vma.c
-+++ b/arch/x86/entry/vdso/vma.c
-@@ -12,6 +12,7 @@
- #include <linux/random.h>
- #include <linux/elf.h>
- #include <linux/cpu.h>
-+#include <asm/pvclock.h>
- #include <asm/vgtod.h>
- #include <asm/proto.h>
- #include <asm/vdso.h>
 --- a/arch/x86/include/asm/fixmap.h
 +++ b/arch/x86/include/asm/fixmap.h
 @@ -19,7 +19,6 @@
@@ -71,7 +60,7 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
  	FIX_EARLYCON_MEM_BASE,
 --- a/arch/x86/include/asm/pvclock.h
 +++ b/arch/x86/include/asm/pvclock.h
-@@ -100,10 +100,5 @@ struct pvclock_vsyscall_time_info {
+@@ -102,10 +102,5 @@ struct pvclock_vsyscall_time_info {
  } __attribute__((__aligned__(SMP_CACHE_BYTES)));
  
  #define PVTI_SIZE sizeof(struct pvclock_vsyscall_time_info)
@@ -106,7 +95,7 @@ Signed-off-by: Mike Galbraith <mgalbraith@suse.de>
  	kvm_clock.archdata.vclock_mode = VCLOCK_PVCLOCK;
 --- a/arch/x86/kernel/pvclock.c
 +++ b/arch/x86/kernel/pvclock.c
-@@ -140,27 +140,3 @@ void pvclock_read_wallclock(struct pvclo
+@@ -144,27 +144,3 @@ void pvclock_read_wallclock(struct pvclo
  
  	set_normalized_timespec(ts, now.tv_sec, now.tv_nsec);
  }

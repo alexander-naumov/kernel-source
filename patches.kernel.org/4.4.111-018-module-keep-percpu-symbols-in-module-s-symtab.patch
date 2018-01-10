@@ -1,10 +1,11 @@
-From e0224418516b4d8a6c2160574bac18447c354ef0 Mon Sep 17 00:00:00 2001
 From: Miroslav Benes <mbenes@suse.cz>
 Date: Thu, 26 Nov 2015 13:18:06 +1030
 Subject: [PATCH] module: keep percpu symbols in module's symtab
+Patch-mainline: 4.4.111
+References: bnc#1012382 bsc#962788
 Git-commit: e0224418516b4d8a6c2160574bac18447c354ef0
-Patch-mainline: v4.5-rc1
-References: bsc#962788
+
+commit e0224418516b4d8a6c2160574bac18447c354ef0 upstream.
 
 Currently, percpu symbols from .data..percpu ELF section of a module are
 not copied over and stored in final symtab array of struct module.
@@ -29,13 +30,17 @@ absolute.
 Signed-off-by: Miroslav Benes <mbenes@suse.cz>
 Signed-off-by: Rusty Russell <rusty@rustcorp.com.au>
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- kernel/module.c |   15 +++++++++++----
+ kernel/module.c | 15 +++++++++++----
  1 file changed, 11 insertions(+), 4 deletions(-)
 
+diff --git a/kernel/module.c b/kernel/module.c
+index b14a4f31221f..95e73c30fc03 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -2484,7 +2484,7 @@ static char elf_type(const Elf_Sym *sym,
+@@ -2404,7 +2404,7 @@ static char elf_type(const Elf_Sym *sym, const struct load_info *info)
  	}
  	if (sym->st_shndx == SHN_UNDEF)
  		return 'U';
@@ -44,7 +49,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  		return 'a';
  	if (sym->st_shndx >= SHN_LORESERVE)
  		return '?';
-@@ -2513,7 +2513,7 @@ static char elf_type(const Elf_Sym *sym,
+@@ -2433,7 +2433,7 @@ static char elf_type(const Elf_Sym *sym, const struct load_info *info)
  }
  
  static bool is_core_symbol(const Elf_Sym *src, const Elf_Shdr *sechdrs,
@@ -53,7 +58,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  {
  	const Elf_Shdr *sec;
  
-@@ -2522,6 +2522,11 @@ static bool is_core_symbol(const Elf_Sym
+@@ -2442,6 +2442,11 @@ static bool is_core_symbol(const Elf_Sym *src, const Elf_Shdr *sechdrs,
  	    || !src->st_name)
  		return false;
  
@@ -65,7 +70,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  	sec = sechdrs + src->st_shndx;
  	if (!(sec->sh_flags & SHF_ALLOC)
  #ifndef CONFIG_KALLSYMS_ALL
-@@ -2559,7 +2564,8 @@ static void layout_symtab(struct module
+@@ -2479,7 +2484,8 @@ static void layout_symtab(struct module *mod, struct load_info *info)
  	/* Compute total space required for the core symbols' strtab. */
  	for (ndst = i = 0; i < nsrc; i++) {
  		if (i == 0 ||
@@ -75,7 +80,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  			strtab_size += strlen(&info->strtab[src[i].st_name])+1;
  			ndst++;
  		}
-@@ -2617,7 +2623,8 @@ static void add_kallsyms(struct module *
+@@ -2537,7 +2543,8 @@ static void add_kallsyms(struct module *mod, const struct load_info *info)
  	src = mod->kallsyms->symtab;
  	for (ndst = i = 0; i < mod->kallsyms->num_symtab; i++) {
  		if (i == 0 ||
@@ -85,3 +90,6 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  			dst[ndst] = src[i];
  			dst[ndst++].st_name = s - mod->core_kallsyms.strtab;
  			s += strlcpy(s, &mod->kallsyms->strtab[src[i].st_name],
+-- 
+2.15.1
+

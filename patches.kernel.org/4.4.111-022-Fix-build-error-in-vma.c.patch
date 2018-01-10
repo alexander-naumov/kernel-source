@@ -1,0 +1,42 @@
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Date: Tue, 9 Jan 2018 10:24:02 +0100
+Subject: [PATCH] Fix build error in vma.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+References: bnc#1012382
+Patch-mainline: 4.4.111
+Git-commit: 516fa79e77f7c4490ded10e7e1c36758482bde5a
+
+This fixes the following much-reported build issue:
+
+arch/x86/entry/vdso/vma.c: In function ‘map_vdso’:
+arch/x86/entry/vdso/vma.c:175:9: error:
+        implicit declaration of function ‘pvclock_pvti_cpu0_va’
+
+on some arches and configurations.
+
+Thanks to Guenter for being persistent enough to get it fixed :)
+
+Reported-by: Guenter Roeck <linux@roeck-us.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/entry/vdso/vma.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/x86/entry/vdso/vma.c b/arch/x86/entry/vdso/vma.c
+index aa828191c654..b8f69e264ac4 100644
+--- a/arch/x86/entry/vdso/vma.c
++++ b/arch/x86/entry/vdso/vma.c
+@@ -12,6 +12,7 @@
+ #include <linux/random.h>
+ #include <linux/elf.h>
+ #include <linux/cpu.h>
++#include <asm/pvclock.h>
+ #include <asm/vgtod.h>
+ #include <asm/proto.h>
+ #include <asm/vdso.h>
+-- 
+2.15.1
+

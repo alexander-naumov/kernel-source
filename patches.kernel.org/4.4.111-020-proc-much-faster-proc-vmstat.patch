@@ -1,11 +1,11 @@
-From 43bb96a254cc1cf207012768140420e2abb01e9e Mon Sep 17 00:00:00 2001
 From: Alexey Dobriyan <adobriyan@gmail.com>
 Date: Fri, 7 Oct 2016 17:02:14 -0700
 Subject: [PATCH] proc: much faster /proc/vmstat
-
-References: bnc#971975 VM performance -- vmstat
-Patch-mainline: v4.9
+Patch-mainline: 4.4.111
+References: -- VM bnc#1012382 bnc#971975 performance vmstat
 Git-commit: 68ba0326b4e14988f9e0c24a6e12a85cf2acd1ca
+
+commit 68ba0326b4e14988f9e0c24a6e12a85cf2acd1ca upstream.
 
 Every current KDE system has process named ksysguardd polling files
 below once in several seconds:
@@ -82,15 +82,17 @@ Cc: Al Viro <viro@zeniv.linux.org.uk>
 Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
 Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
 Signed-off-by: Mel Gorman <mgorman@suse.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  mm/vmstat.c | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/mm/vmstat.c b/mm/vmstat.c
-index 9d3add27924c..f647dc2da9e4 100644
+index 324b7e90b4c5..5712cdaae964 100644
 --- a/mm/vmstat.c
 +++ b/mm/vmstat.c
-@@ -1313,7 +1313,9 @@ static int vmstat_show(struct seq_file *m, void *arg)
+@@ -1351,7 +1351,9 @@ static int vmstat_show(struct seq_file *m, void *arg)
  	unsigned long *l = arg;
  	unsigned long off = l - (unsigned long *)m->private;
  
@@ -101,3 +103,6 @@ index 9d3add27924c..f647dc2da9e4 100644
  	return 0;
  }
  
+-- 
+2.15.1
+
