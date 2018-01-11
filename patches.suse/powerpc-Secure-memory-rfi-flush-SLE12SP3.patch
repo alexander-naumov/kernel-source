@@ -34,7 +34,7 @@ Signed-off-by: Oliver O'Halloran <oohall@gmail.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/include/asm/exception-64e.h  |   6 ++
- arch/powerpc/include/asm/exception-64s.h  |  77 +++++++++++++++++-
+ arch/powerpc/include/asm/exception-64s.h  |  74 +++++++++++++++++-
  arch/powerpc/include/asm/feature-fixups.h |  16 ++++
  arch/powerpc/include/asm/paca.h           |  18 ++++
  arch/powerpc/include/asm/setup.h          |  13 +++
@@ -79,15 +79,12 @@ index 77f52b26dad6..c02eef2388a5 100644
  
  #define EX_R9		0
  #define EX_R10		8
-@@ -49,6 +50,80 @@
+@@ -49,6 +50,77 @@
  #define EX_CFAR		80
  #define EX_PPR		88	/* SMT thread status register (priority) */
  #define EX_CTR		96
-+#if defined(CONFIG_RELOCATABLE)
-+#define EX_SIZE		10	/* size in u64 units */
-+#else
-+#define EX_SIZE		9	/* size in u64 units */
-+#endif
++
++#define EX_SIZE		13	/* size in u64 units */
 +
 +/*
 + * The nop instructions allow us to insert one or more instructions to flush the
