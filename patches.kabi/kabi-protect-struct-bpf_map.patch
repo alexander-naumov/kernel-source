@@ -1,0 +1,28 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: protect struct bpf_map
+Patch-mainline: never, kabi
+References: kabi
+
+In patches.suse/bpf-prevent-out-of-bounds-speculation.patch, we added
+one bool to struct bpf_map. It indeed made the kABI checker to complain.
+
+Given this is only bpf-internal structure (bpf_register_map_type is not
+exported), let's ignore this change and hide it from the kABI checker.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/bpf.h |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -37,7 +37,9 @@ struct bpf_map {
+ 	u32 value_size;
+ 	u32 max_entries;
+ 	u32 pages;
++#ifndef __GENKSYMS__
+ 	bool unpriv_array;
++#endif
+ 	struct user_struct *user;
+ 	const struct bpf_map_ops *ops;
+ 	struct work_struct work;
