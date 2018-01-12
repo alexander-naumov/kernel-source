@@ -1,4 +1,4 @@
-From b440d8beada5e9b4e47df1706ff2ed7837c3c251 Mon Sep 17 00:00:00 2001
+From 1b3c4ee081ab29b13d598fe80b2a3975219a90fe Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Fri, 12 Jan 2018 19:08:46 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
@@ -33,8 +33,7 @@ Signed-off-by: Michael Neuling <mikey@neuling.org>
 Signed-off-by: Oliver O'Halloran <oohall@gmail.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
- arch/powerpc/include/asm/exception-64e.h  |   6 ++
- arch/powerpc/include/asm/exception-64s.h  |  72 +++++++++++++++-
+ arch/powerpc/include/asm/exception-64s.h  |  61 ++++++++++++--
  arch/powerpc/include/asm/feature-fixups.h |  16 ++++
  arch/powerpc/include/asm/paca.h           |  14 ++++
  arch/powerpc/include/asm/setup.h          |  13 +++
@@ -49,26 +48,10 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  arch/powerpc/lib/feature-fixups.c         |  42 ++++++++++
  arch/powerpc/platforms/powernv/setup.c    |  48 +++++++++++
  arch/powerpc/platforms/pseries/setup.c    |  35 ++++++++
- 16 files changed, 560 insertions(+), 26 deletions(-)
+ 15 files changed, 535 insertions(+), 34 deletions(-)
 
-diff --git a/arch/powerpc/include/asm/exception-64e.h b/arch/powerpc/include/asm/exception-64e.h
-index a703452d67b6..555e22d5e07f 100644
---- a/arch/powerpc/include/asm/exception-64e.h
-+++ b/arch/powerpc/include/asm/exception-64e.h
-@@ -209,5 +209,11 @@ exc_##label##_book3e:
- 	ori	r3,r3,vector_offset@l;		\
- 	mtspr	SPRN_IVOR##vector_number,r3;
- 
-+#define RFI_TO_KERNEL							\
-+	rfi
-+
-+#define RFI_TO_USER							\
-+	rfi
-+
- #endif /* _ASM_POWERPC_EXCEPTION_64E_H */
- 
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index c5d4a4a37de9..e82ee323473b 100644
+index 9bdec45bab85..26da9cd2c206 100644
 --- a/arch/powerpc/include/asm/exception-64s.h
 +++ b/arch/powerpc/include/asm/exception-64s.h
 @@ -34,6 +34,7 @@
@@ -79,7 +62,7 @@ index c5d4a4a37de9..e82ee323473b 100644
  
  /* PACA save area offsets (exgen, exmc, etc) */
  #define EX_R9		0
-@@ -53,6 +54,75 @@
+@@ -53,34 +54,76 @@
  
  #define EX_SIZE		13	/* size in u64 units */
  
@@ -107,55 +90,63 @@ index c5d4a4a37de9..e82ee323473b 100644
 +#define CHECK_TARGET_MSR_PR(srr_reg, expected_pr)
 +#endif
 +
-+#define RFI_TO_KERNEL							\
+ /* Macros for annotating the expected destination of (h)rfid */
+ 
+ #define RFI_TO_KERNEL							\
 +	CHECK_TARGET_MSR_PR(SPRN_SRR1, 0);				\
-+	rfid
-+
-+#define RFI_TO_USER							\
+ 	rfid
+ 
+ #define RFI_TO_USER							\
+-	rfid
 +	CHECK_TARGET_MSR_PR(SPRN_SRR1, 1);				\
 +	RFI_FLUSH_SLOT;							\
 +	rfid;								\
 +	b	rfi_flush_fallback
-+
-+#define RFI_TO_USER_OR_KERNEL						\
+ 
+ #define RFI_TO_USER_OR_KERNEL						\
+-	rfid
 +	RFI_FLUSH_SLOT;							\
 +	rfid;								\
 +	b	rfi_flush_fallback
-+
-+#define RFI_TO_GUEST							\
+ 
+ #define RFI_TO_GUEST							\
+-	rfid
 +	RFI_FLUSH_SLOT;							\
 +	rfid;								\
 +	b	rfi_flush_fallback
-+
-+#define HRFI_TO_KERNEL							\
+ 
+ #define HRFI_TO_KERNEL							\
 +	CHECK_TARGET_MSR_PR(SPRN_HSRR1, 0);				\
-+	hrfid
-+
-+#define HRFI_TO_USER							\
+ 	hrfid
+ 
+ #define HRFI_TO_USER							\
+-	hrfid
 +	CHECK_TARGET_MSR_PR(SPRN_HSRR1, 1);				\
 +	RFI_FLUSH_SLOT;							\
 +	hrfid;								\
 +	b	hrfi_flush_fallback
-+
-+#define HRFI_TO_USER_OR_KERNEL						\
+ 
+ #define HRFI_TO_USER_OR_KERNEL						\
+-	hrfid
 +	RFI_FLUSH_SLOT;							\
 +	hrfid;								\
 +	b	hrfi_flush_fallback
-+
-+#define HRFI_TO_GUEST							\
+ 
+ #define HRFI_TO_GUEST							\
+-	hrfid
 +	RFI_FLUSH_SLOT;							\
 +	hrfid;								\
 +	b	hrfi_flush_fallback
-+
-+#define HRFI_TO_UNKNOWN						\
+ 
+ #define HRFI_TO_UNKNOWN							\
+-	hrfid
 +	RFI_FLUSH_SLOT;							\
 +	hrfid;								\
 +	b	hrfi_flush_fallback
-+
+ 
  #ifdef CONFIG_RELOCATABLE
  #define __EXCEPTION_RELON_PROLOG_PSERIES_1(label, h)			\
- 	ld	r12,PACAKBASE(r13);	/* get high part of &label */	\
-@@ -194,7 +264,7 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
+@@ -223,7 +266,7 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
  	mtspr	SPRN_##h##SRR0,r12;					\
  	mfspr	r12,SPRN_##h##SRR1;	/* and SRR1 */			\
  	mtspr	SPRN_##h##SRR1,r10;					\
