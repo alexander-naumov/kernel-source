@@ -1,0 +1,74 @@
+From 877d70f664f24ad99f012e23aaf5699350abb116 Mon Sep 17 00:00:00 2001
+From: Nicholas Piggin <npiggin@gmail.com>
+Date: Sun, 21 May 2017 23:15:46 +1000
+Subject: [PATCH 02/16] powerpc/64s: Add EX_SIZE definition for paca exception
+ save areas
+
+References: bsc#1068032, bsc#1075087
+Patch-mainline: v4.13-rc1
+Git-commit: 8c3885141537966065e3d2b9be03e574ae381c79
+
+Rather than open-coding it 4 times.
+
+Signed-off-by: Nicholas Piggin <npiggin@gmail.com>
+[mpe: Move __ASSEMBLY__ guards into head-64.h where they're really needed]
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Acked-by: Michal Suchanek <msuchanek@suse.de>
+---
+ arch/powerpc/include/asm/exception-64s.h |  3 +++
+ arch/powerpc/include/asm/paca.h          | 10 +++++++---
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
+index 77f52b26dad6..c5d4a4a37de9 100644
+--- a/arch/powerpc/include/asm/exception-64s.h
++++ b/arch/powerpc/include/asm/exception-64s.h
+@@ -35,6 +35,7 @@
+  * implementations as possible.
+  */
+ 
++/* PACA save area offsets (exgen, exmc, etc) */
+ #define EX_R9		0
+ #define EX_R10		8
+ #define EX_R11		16
+@@ -50,6 +51,8 @@
+ #define EX_PPR		88	/* SMT thread status register (priority) */
+ #define EX_CTR		96
+ 
++#define EX_SIZE		13	/* size in u64 units */
++
+ #ifdef CONFIG_RELOCATABLE
+ #define __EXCEPTION_RELON_PROLOG_PSERIES_1(label, h)			\
+ 	ld	r12,PACAKBASE(r13);	/* get high part of &label */	\
+diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
+index 181e85347379..79356fbc17e0 100644
+--- a/arch/powerpc/include/asm/paca.h
++++ b/arch/powerpc/include/asm/paca.h
+@@ -20,7 +20,11 @@
+ #include <asm/lppaca.h>
+ #include <asm/mmu.h>
+ #include <asm/page.h>
++#ifdef CONFIG_PPC_BOOK3E
+ #include <asm/exception-64e.h>
++#else
++#include <asm/exception-64s.h>
++#endif
+ #ifdef CONFIG_KVM_BOOK3S_64_HANDLER
+ #include <asm/kvm_book3s_asm.h>
+ #endif
+@@ -95,9 +99,9 @@ struct paca_struct {
+ 	 * Now, starting in cacheline 2, the exception save areas
+ 	 */
+ 	/* used for most interrupts/exceptions */
+-	u64 exgen[13] __attribute__((aligned(0x80)));
+-	u64 exmc[13];		/* used for machine checks */
+-	u64 exslb[13];		/* used for SLB/segment table misses
++	u64 exgen[EX_SIZE] __attribute__((aligned(0x80)));
++	u64 exmc[EX_SIZE];		/* used for machine checks */
++	u64 exslb[EX_SIZE];		/* used for SLB/segment table misses
+  				 * on the linear mapping */
+ 	/* SLB related definitions */
+ 	u16 vmalloc_sllp;
+-- 
+2.13.6
+

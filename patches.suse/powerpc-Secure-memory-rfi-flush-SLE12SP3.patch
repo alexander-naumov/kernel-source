@@ -1,6 +1,6 @@
-From b3b43021cc31825e8179783259e5665300287076 Mon Sep 17 00:00:00 2001
+From b440d8beada5e9b4e47df1706ff2ed7837c3c251 Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
-Date: Tue, 9 Jan 2018 16:01:45 +0100
+Date: Fri, 12 Jan 2018 19:08:46 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
 
 References: bsc#1068032, bsc#1075087
@@ -34,9 +34,9 @@ Signed-off-by: Oliver O'Halloran <oohall@gmail.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/include/asm/exception-64e.h  |   6 ++
- arch/powerpc/include/asm/exception-64s.h  |  74 ++++++++++++++++-
+ arch/powerpc/include/asm/exception-64s.h  |  72 +++++++++++++++-
  arch/powerpc/include/asm/feature-fixups.h |  16 ++++
- arch/powerpc/include/asm/paca.h           |  18 ++++
+ arch/powerpc/include/asm/paca.h           |  14 ++++
  arch/powerpc/include/asm/setup.h          |  13 +++
  arch/powerpc/kernel/asm-offsets.c         |   5 ++
  arch/powerpc/kernel/entry_64.S            |  45 ++++++++--
@@ -49,7 +49,7 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  arch/powerpc/lib/feature-fixups.c         |  42 ++++++++++
  arch/powerpc/platforms/powernv/setup.c    |  48 +++++++++++
  arch/powerpc/platforms/pseries/setup.c    |  35 ++++++++
- 16 files changed, 566 insertions(+), 26 deletions(-)
+ 16 files changed, 560 insertions(+), 26 deletions(-)
 
 diff --git a/arch/powerpc/include/asm/exception-64e.h b/arch/powerpc/include/asm/exception-64e.h
 index a703452d67b6..555e22d5e07f 100644
@@ -68,7 +68,7 @@ index a703452d67b6..555e22d5e07f 100644
  #endif /* _ASM_POWERPC_EXCEPTION_64E_H */
  
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 77f52b26dad6..6f560e28ee04 100644
+index c5d4a4a37de9..e82ee323473b 100644
 --- a/arch/powerpc/include/asm/exception-64s.h
 +++ b/arch/powerpc/include/asm/exception-64s.h
 @@ -34,6 +34,7 @@
@@ -77,14 +77,12 @@ index 77f52b26dad6..6f560e28ee04 100644
   */
 +#include <asm/bug.h>
  
+ /* PACA save area offsets (exgen, exmc, etc) */
  #define EX_R9		0
- #define EX_R10		8
-@@ -50,6 +51,77 @@
- #define EX_PPR		88	/* SMT thread status register (priority) */
- #define EX_CTR		96
+@@ -53,6 +54,75 @@
  
-+#define EX_SIZE		13	/* size in u64 units */
-+
+ #define EX_SIZE		13	/* size in u64 units */
+ 
 +/*
 + * The nop instructions allow us to insert one or more instructions to flush the
 + * L1-D cache when return to userspace or a guest.
@@ -157,7 +155,7 @@ index 77f52b26dad6..6f560e28ee04 100644
  #ifdef CONFIG_RELOCATABLE
  #define __EXCEPTION_RELON_PROLOG_PSERIES_1(label, h)			\
  	ld	r12,PACAKBASE(r13);	/* get high part of &label */	\
-@@ -191,7 +263,7 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
+@@ -194,7 +264,7 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
  	mtspr	SPRN_##h##SRR0,r12;					\
  	mfspr	r12,SPRN_##h##SRR1;	/* and SRR1 */			\
  	mtspr	SPRN_##h##SRR1,r10;					\
@@ -192,22 +190,10 @@ index 9a67a38bf7b9..0bb20f4aef71 100644
 +
  #endif /* __ASM_POWERPC_FEATURE_FIXUPS_H */
 diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
-index 181e85347379..38fc18bcbb95 100644
+index 79356fbc17e0..a1396100ce66 100644
 --- a/arch/powerpc/include/asm/paca.h
 +++ b/arch/powerpc/include/asm/paca.h
-@@ -20,7 +20,11 @@
- #include <asm/lppaca.h>
- #include <asm/mmu.h>
- #include <asm/page.h>
-+#ifdef CONFIG_PPC_BOOK3E
- #include <asm/exception-64e.h>
-+#else
-+#include <asm/exception-64s.h>
-+#endif
- #ifdef CONFIG_KVM_BOOK3S_64_HANDLER
- #include <asm/kvm_book3s_asm.h>
- #endif
-@@ -193,6 +197,20 @@ struct paca_struct {
+@@ -197,6 +197,20 @@ struct paca_struct {
  #endif
  	struct kvmppc_host_state kvm_hstate;
  #endif
