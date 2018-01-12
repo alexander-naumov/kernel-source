@@ -23,7 +23,9 @@ import os
 import pygit2
 import sys
 
+import git_sort
 import lib
+import tag
 
 
 if __name__ == "__main__":
@@ -42,10 +44,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     repo_path = lib.repo_path()
-    if "GIT_DIR" not in os.environ:
-        # this is for the `git log` call in git_sort.py
-        os.environ["GIT_DIR"] = repo_path
     repo = pygit2.Repository(repo_path)
+    index = lib.git_sort.SortIndex(repo)
 
     if args.series is not None:
         args.series = os.path.abspath(args.series)
@@ -60,23 +60,26 @@ if __name__ == "__main__":
     try:
         before, inside, after = lib.split_series(lines)
     except lib.KSNotFound:
-        before = []
-        inside = lines
-        after = []
-
-    input_entries = []
-    for patch in [lib.firstword(line) for line in inside if
-                  lib.filter_patches(line)]:
-        entry = lib.InputEntry("\t%s\n" % (patch,))
-        try:
-            entry.from_patch(repo, patch)
-        except lib.KSError as err:
+        if args.series is None:
+            before = []
+            inside = lines
+            after = []
+        elif args.check:
+            # no sorted section
+            sys.exit(0)
+        else:
             print("Error: %s" % (err,), file=sys.stderr)
             sys.exit(1)
-        input_entries.append(entry)
+
     try:
-        sorted_entries = lib.series_sort(repo, input_entries)
-    except lib.KSException as err:
+        input_entries = lib.parse_inside(index, inside)
+    except lib.KSError as err:
+        print("Error: %s" % (err,), file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        sorted_entries = lib.series_sort(index, input_entries)
+    except lib.KSError as err:
         print("Error: %s" % (err,), file=sys.stderr)
         sys.exit(1)
 
@@ -86,11 +89,16 @@ if __name__ == "__main__":
         lib.series_footer(inside),
     ])
 
+    to_update = filter(lib.tag_needs_update, input_entries)
     if args.check:
+        result = 0
         if inside != new_inside:
-            sys.exit(2)
-        else:
-            sys.exit(0)
+            print("Input is not sorted.")
+            result = 2
+        if len(to_update):
+            print("Git-repo tags are outdated.")
+            result = 2
+        sys.exit(result)
     else:
         output = lib.flatten([
             before,
@@ -103,3 +111,8 @@ if __name__ == "__main__":
         else:
             f = sys.stdout
         f.writelines(output)
+        try:
+            lib.update_tags(index, to_update)
+        except lib.KSError as err:
+            print("Error: %s" % (err,), file=sys.stderr)
+            sys.exit(1)
