@@ -58,7 +58,7 @@ index ec5a16ceeb78..f703b1ffcb15 100644
 -static void pSeries_setup_rfi_flush(void)
 +void pseries_setup_rfi_flush(void)
  {
- 	unsigned long character, behaviour, rc;
+ 	struct h_cpu_char_result result;
  	enum l1d_flush_type types;
 @@ -600,7 +600,7 @@ static void __init pSeries_setup_arch(void)
  
