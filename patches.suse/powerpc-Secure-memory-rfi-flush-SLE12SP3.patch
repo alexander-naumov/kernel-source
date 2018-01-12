@@ -1,4 +1,4 @@
-From fb10325f42eda9d998ed2acd56ce130c37105013 Mon Sep 17 00:00:00 2001
+From 7a6e0274dabf6c602db675383a000f38a6587773 Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Fri, 12 Jan 2018 20:52:10 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
@@ -38,7 +38,7 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  arch/powerpc/include/asm/paca.h           |  14 ++++
  arch/powerpc/include/asm/setup.h          |  13 ++++
  arch/powerpc/kernel/asm-offsets.c         |   5 ++
- arch/powerpc/kernel/entry_64.S            |  26 +++++--
+ arch/powerpc/kernel/entry_64.S            |  14 ++--
  arch/powerpc/kernel/exceptions-64s.S      | 110 ++++++++++++++++++++++++++----
  arch/powerpc/kernel/setup_64.c            |  96 ++++++++++++++++++++++++++
  arch/powerpc/kernel/sysfs.c               |  42 ++++++++++++
@@ -48,7 +48,7 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  arch/powerpc/lib/feature-fixups.c         |  42 ++++++++++++
  arch/powerpc/platforms/powernv/setup.c    |  48 +++++++++++++
  arch/powerpc/platforms/pseries/setup.c    |  35 ++++++++++
- 15 files changed, 497 insertions(+), 32 deletions(-)
+ 15 files changed, 486 insertions(+), 31 deletions(-)
 
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
 index 9bdec45bab85..26da9cd2c206 100644
@@ -246,7 +246,7 @@ index 217eed73c958..40213b9d03d1 100644
  	DEFINE(PACAKEXECSTATE, offsetof(struct paca_struct, kexec_state));
  	DEFINE(PACA_DSCR_DEFAULT, offsetof(struct paca_struct, dscr_default));
 diff --git a/arch/powerpc/kernel/entry_64.S b/arch/powerpc/kernel/entry_64.S
-index 483b304ec6d4..f7a2e5a6eea2 100644
+index 1c8d27af8874..f7a2e5a6eea2 100644
 --- a/arch/powerpc/kernel/entry_64.S
 +++ b/arch/powerpc/kernel/entry_64.S
 @@ -37,6 +37,12 @@
@@ -262,32 +262,7 @@ index 483b304ec6d4..f7a2e5a6eea2 100644
  
  /*
   * System calls.
-@@ -226,13 +232,23 @@ END_FTR_SECTION_IFCLR(CPU_FTR_STCX_CHECKS_ADDRESS)
- 	ACCOUNT_CPU_USER_EXIT(r11, r12)
- 	HMT_MEDIUM_LOW_HAS_PPR
- 	ld	r13,GPR13(r1)	/* only restore r13 if returning to usermode */
-+	ld	r2,GPR2(r1)
-+	ld	r1,GPR1(r1)
-+	mtlr	r4
-+	mtcr	r5
-+	mtspr	SPRN_SRR0,r7
-+	mtspr	SPRN_SRR1,r8
-+	RFI_TO_USER
-+	b	.	/* prevent speculative execution */
-+
-+	/* exit to kernel */
- 1:	ld	r2,GPR2(r1)
- 	ld	r1,GPR1(r1)
- 	mtlr	r4
- 	mtcr	r5
- 	mtspr	SPRN_SRR0,r7
- 	mtspr	SPRN_SRR1,r8
--	RFI
-+	RFI_TO_KERNEL
- 	b	.	/* prevent speculative execution */
- 
- syscall_error:	
-@@ -355,7 +371,7 @@ tabort_syscall:
+@@ -365,7 +371,7 @@ tabort_syscall:
  	mtspr	SPRN_SRR0, r11
  	mtspr	SPRN_SRR1, r12
  
@@ -296,7 +271,7 @@ index 483b304ec6d4..f7a2e5a6eea2 100644
  	b	.	/* prevent speculative execution */
  #endif
  
-@@ -1092,7 +1108,7 @@ _GLOBAL(enter_rtas)
+@@ -1102,7 +1108,7 @@ _GLOBAL(enter_rtas)
  	
  	mtspr	SPRN_SRR0,r5
  	mtspr	SPRN_SRR1,r6
@@ -305,7 +280,7 @@ index 483b304ec6d4..f7a2e5a6eea2 100644
  	b	.	/* prevent speculative execution */
  
  rtas_return_loc:
-@@ -1117,7 +1133,7 @@ rtas_return_loc:
+@@ -1127,7 +1133,7 @@ rtas_return_loc:
  
  	mtspr	SPRN_SRR0,r3
  	mtspr	SPRN_SRR1,r4
@@ -314,7 +289,7 @@ index 483b304ec6d4..f7a2e5a6eea2 100644
  	b	.	/* prevent speculative execution */
  
  	.align	3
-@@ -1188,7 +1204,7 @@ _GLOBAL(enter_prom)
+@@ -1198,7 +1204,7 @@ _GLOBAL(enter_prom)
  	LOAD_REG_IMMEDIATE(r12, MSR_SF | MSR_ISF | MSR_LE)
  	andc	r11,r11,r12
  	mtsrr1	r11
