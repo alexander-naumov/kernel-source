@@ -1,4 +1,4 @@
-From e228eb80d52c7bf3082ae36c9957ee76d2fb6801 Mon Sep 17 00:00:00 2001
+From 6ec04c997b69134d5e69208c1b36d04272dcfacf Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Sat, 13 Jan 2018 18:28:28 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
@@ -33,10 +33,9 @@ Signed-off-by: Michael Neuling <mikey@neuling.org>
 Signed-off-by: Oliver O'Halloran <oohall@gmail.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
- arch/powerpc/include/asm/exception-64s.h | 19 +++++++++++++++
+ arch/powerpc/include/asm/exception-64s.h | 19 +++++++++++++++++++
  arch/powerpc/include/asm/paca.h          |  2 ++
- arch/powerpc/kernel/sysfs.c              | 42 ++++++++++++++++++++++++++++++++
- 3 files changed, 63 insertions(+)
+ 2 files changed, 21 insertions(+)
 
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
 index 57c5fe1c66ff..d9f7a6d8088d 100644
@@ -109,73 +108,6 @@ index e5a0fe7cebed..273252007d84 100644
  };
  
  extern struct paca_struct *paca;
-diff --git a/arch/powerpc/kernel/sysfs.c b/arch/powerpc/kernel/sysfs.c
-index 692873bff334..2266b1494756 100644
---- a/arch/powerpc/kernel/sysfs.c
-+++ b/arch/powerpc/kernel/sysfs.c
-@@ -18,6 +18,7 @@
- #include <asm/smp.h>
- #include <asm/pmc.h>
- #include <asm/firmware.h>
-+#include <asm/ppc_asm.h>
- 
- #include "cacheinfo.h"
- 
-@@ -496,6 +497,44 @@ static DEVICE_ATTR(spurr, 0400, show_spurr, NULL);
- static DEVICE_ATTR(purr, 0400, show_purr, store_purr);
- static DEVICE_ATTR(pir, 0400, show_pir, NULL);
- 
-+#ifdef CONFIG_PPC_BOOK3S_64
-+extern bool rfi_flush;
-+static ssize_t show_rfi_flush(struct device *dev,
-+		struct device_attribute *attr, char *buf)
-+{
-+	return sprintf(buf, "%d\n", rfi_flush ? 1 : 0);
-+}
-+
-+static ssize_t __used store_rfi_flush(struct device *dev,
-+		struct device_attribute *attr, const char *buf,
-+		size_t count)
-+{
-+	int val;
-+	int ret = 0;
-+
-+	ret = sscanf(buf, "%d", &val);
-+	if (ret != 1)
-+		return -EINVAL;
-+
-+	if (val == 1)
-+		rfi_flush_enable(true);
-+	else if (val == 0)
-+		rfi_flush_enable(false);
-+	else
-+		return -EINVAL;
-+
-+	return count;
-+}
-+
-+static DEVICE_ATTR(rfi_flush, 0600,
-+		show_rfi_flush, store_rfi_flush);
-+
-+static void sysfs_create_rfi_flush(void)
-+{
-+	device_create_file(cpu_subsys.dev_root, &dev_attr_rfi_flush);
-+}
-+#endif /* CONFIG_PPC_BOOK3S_64 */
-+
- /*
-  * This is the system wide DSCR register default value. Any
-  * change to this default value through the sysfs interface
-@@ -1058,6 +1097,9 @@ static int __init topology_init(void)
- 
- #ifdef CONFIG_PPC64
- 	sysfs_create_dscr_default();
-+#ifdef CONFIG_PPC_BOOK3S
-+	sysfs_create_rfi_flush();
-+#endif
- #endif /* CONFIG_PPC64 */
- 
- 	return 0;
 -- 
 2.13.6
 
