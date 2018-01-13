@@ -1,4 +1,4 @@
-From 4e7e0269d7cec8f61f09f2d1a55d5b93d1fde88e Mon Sep 17 00:00:00 2001
+From 709af9bf6c9382a079e109b03cd714a0eb5f3703 Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Fri, 12 Jan 2018 22:37:13 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
@@ -35,11 +35,10 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/include/asm/exception-64s.h | 19 +++++++++++++
  arch/powerpc/include/asm/paca.h          |  2 ++
- arch/powerpc/kernel/setup_64.c           | 27 ++++++++++++++++--
  arch/powerpc/kernel/sysfs.c              | 42 ++++++++++++++++++++++++++++
  arch/powerpc/platforms/powernv/setup.c   | 48 ++++++++++++++++++++++++++++++++
  arch/powerpc/platforms/pseries/setup.c   | 35 +++++++++++++++++++++++
- 6 files changed, 170 insertions(+), 3 deletions(-)
+ 5 files changed, 146 insertions(+)
 
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
 index 57c5fe1c66ff..d9f7a6d8088d 100644
@@ -112,51 +111,6 @@ index e5a0fe7cebed..273252007d84 100644
  };
  
  extern struct paca_struct *paca;
-diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index 7da9785cc2a7..a2331da1b0e9 100644
---- a/arch/powerpc/kernel/setup_64.c
-+++ b/arch/powerpc/kernel/setup_64.c
-@@ -851,8 +851,29 @@ early_initcall(disable_hardlockup_detector);
- #ifdef CONFIG_PPC_BOOK3S_64
- static enum l1d_flush_type enabled_flush_types;
- static void *l1d_flush_fallback_area;
-+static bool no_rfi_flush;
- bool rfi_flush;
- 
-+static int __init handle_no_rfi_flush(char *p)
-+{
-+	pr_info("rfi-flush: disabled on command line.");
-+	no_rfi_flush = true;
-+	return 0;
-+}
-+early_param("no_rfi_flush", handle_no_rfi_flush);
-+
-+/*
-+ * The RFI flush is not KPTI, but because users will see doco that says to use
-+ * nopti we hijack that option here to also disable the RFI flush.
-+ */
-+static int __init handle_no_pti(char *p)
-+{
-+	pr_info("rfi-flush: disabling due to 'nopti' on command line.\n");
-+	handle_no_rfi_flush(NULL);
-+	return 0;
-+}
-+early_param("nopti", handle_no_pti);
-+
- static void do_nothing(void *unused)
- {
- 	/*
-@@ -922,7 +943,7 @@ void __init setup_rfi_flush(enum l1d_flush_type types, bool enable)
- 		pr_info("rfi-flush: Using mttrig type flush\n");
- 
- 	enabled_flush_types = types;
--
--	rfi_flush_enable(enable);
-+	if (!no_rfi_flush)
-+		rfi_flush_enable(enable);
- }
--#endif /* CONFIG_PPC_BOOK3S_64 */
-+#endif
 diff --git a/arch/powerpc/kernel/sysfs.c b/arch/powerpc/kernel/sysfs.c
 index 692873bff334..2266b1494756 100644
 --- a/arch/powerpc/kernel/sysfs.c
