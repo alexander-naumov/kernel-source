@@ -1,4 +1,4 @@
-From 709af9bf6c9382a079e109b03cd714a0eb5f3703 Mon Sep 17 00:00:00 2001
+From 42310f07aa6cc6c5db2b64ad0f45d97819705b8c Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Fri, 12 Jan 2018 22:37:13 +0100
 Subject: [PATCH] powerpc: Secure memory rfi flush
@@ -35,10 +35,9 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/include/asm/exception-64s.h | 19 +++++++++++++
  arch/powerpc/include/asm/paca.h          |  2 ++
- arch/powerpc/kernel/sysfs.c              | 42 ++++++++++++++++++++++++++++
- arch/powerpc/platforms/powernv/setup.c   | 48 ++++++++++++++++++++++++++++++++
- arch/powerpc/platforms/pseries/setup.c   | 35 +++++++++++++++++++++++
- 5 files changed, 146 insertions(+)
+ arch/powerpc/kernel/sysfs.c              | 42 +++++++++++++++++++++++++++
+ arch/powerpc/platforms/powernv/setup.c   | 49 ++++++++++++++++++++++++++++++++
+ 4 files changed, 112 insertions(+)
 
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
 index 57c5fe1c66ff..d9f7a6d8088d 100644
@@ -179,16 +178,17 @@ index 692873bff334..2266b1494756 100644
  
  	return 0;
 diff --git a/arch/powerpc/platforms/powernv/setup.c b/arch/powerpc/platforms/powernv/setup.c
-index 900c7cb10275..4e04834a458d 100644
+index 900c7cb10275..fd5d000e2203 100644
 --- a/arch/powerpc/platforms/powernv/setup.c
 +++ b/arch/powerpc/platforms/powernv/setup.c
-@@ -35,13 +35,61 @@
+@@ -35,13 +35,62 @@
  #include <asm/opal.h>
  #include <asm/kexec.h>
  #include <asm/smp.h>
 +#include <asm/setup.h>
  
  #include "powernv.h"
+ 
 +static void pnv_setup_rfi_flush(void)
 +{
 +	struct device_node *np, *fw_features;
@@ -234,7 +234,7 @@ index 900c7cb10275..4e04834a458d 100644
 +
 +	setup_rfi_flush(type, enable > 0);
 +}
- 
++
  static void __init pnv_setup_arch(void)
  {
  	set_arch_panic_timeout(10, ARCH_PANIC_TIMEOUT);
@@ -243,59 +243,6 @@ index 900c7cb10275..4e04834a458d 100644
 +
  	/* Initialize SMP */
  	pnv_smp_init();
- 
-diff --git a/arch/powerpc/platforms/pseries/setup.c b/arch/powerpc/platforms/pseries/setup.c
-index 90ecb3f148df..c37bc4ce4ad6 100644
---- a/arch/powerpc/platforms/pseries/setup.c
-+++ b/arch/powerpc/platforms/pseries/setup.c
-@@ -545,6 +545,39 @@ static void __init find_and_init_phbs(void)
- 	of_pci_check_probe_only();
- }
- 
-+static void pSeries_setup_rfi_flush(void)
-+{
-+	struct h_cpu_char_result result;
-+	enum l1d_flush_type types;
-+	bool enable;
-+	long rc;
-+
-+	/* Enable by default */
-+	enable = true;
-+
-+	rc = plpar_get_cpu_characteristics(&result);
-+	if (rc == H_SUCCESS) {
-+		types = L1D_FLUSH_NONE;
-+
-+		if (result.character & H_CPU_CHAR_L1D_FLUSH_TRIG2)
-+			types |= L1D_FLUSH_MTTRIG;
-+		if (result.character & H_CPU_CHAR_L1D_FLUSH_ORI30)
-+			types |= L1D_FLUSH_ORI;
-+
-+		/* Use fallback if nothing set in hcall */
-+		if (types == L1D_FLUSH_NONE)
-+			types = L1D_FLUSH_FALLBACK;
-+
-+		if (!(result.behaviour & H_CPU_BEHAV_L1D_FLUSH_PR))
-+			enable = false;
-+	} else {
-+		/* Default to fallback if case hcall is not available */
-+		types = L1D_FLUSH_FALLBACK;
-+	}
-+
-+	setup_rfi_flush(types, enable);
-+}
-+
- static void __init pSeries_setup_arch(void)
- {
- 	set_arch_panic_timeout(10, ARCH_PANIC_TIMEOUT);
-@@ -561,6 +594,8 @@ static void __init pSeries_setup_arch(void)
- 
- 	fwnmi_init();
- 
-+	pSeries_setup_rfi_flush();
-+
- 	/* By default, only probe PCI (can be overriden by rtas_pci) */
- 	pci_add_flags(PCI_PROBE_ONLY);
  
 -- 
 2.13.6
