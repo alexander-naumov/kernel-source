@@ -33,61 +33,10 @@ Signed-off-by: Michael Neuling <mikey@neuling.org>
 Signed-off-by: Oliver O'Halloran <oohall@gmail.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
- arch/powerpc/include/asm/exception-64s.h | 19 +++++++++++++++++++
  arch/powerpc/include/asm/paca.h          |  2 ++
  2 files changed, 21 insertions(+)
 
-diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 57c5fe1c66ff..d9f7a6d8088d 100644
---- a/arch/powerpc/include/asm/exception-64s.h
-+++ b/arch/powerpc/include/asm/exception-64s.h
-@@ -34,6 +34,7 @@
-  * exception handlers (including pSeries LPAR) and iSeries LPAR
-  * implementations as possible.
-  */
-+#include <asm/bug.h>
- 
- /* PACA save area offsets (exgen, exmc, etc) */
- #define EX_R9		0
-@@ -65,10 +66,26 @@
- 	nop;								\
- 	nop
- 
-+#define DEBUG_RFI
-+
-+#ifdef DEBUG_RFI
-+#define CHECK_TARGET_MSR_PR(srr_reg, expected_pr)			\
-+	SET_SCRATCH0(r3);						\
-+	mfspr	r3,srr_reg;						\
-+	extrdi	r3,r3,1,63-MSR_PR_LG;					\
-+666:	tdnei	r3,expected_pr;						\
-+	EMIT_BUG_ENTRY 666b,__FILE__,__LINE__,0;			\
-+	GET_SCRATCH0(r3);
-+#else
-+#define CHECK_TARGET_MSR_PR(srr_reg, expected_pr)
-+#endif
-+
- #define RFI_TO_KERNEL							\
-+	CHECK_TARGET_MSR_PR(SPRN_SRR1, 0);				\
- 	rfid
- 
- #define RFI_TO_USER							\
-+	CHECK_TARGET_MSR_PR(SPRN_SRR1, 1);				\
- 	RFI_FLUSH_SLOT;							\
- 	rfid;								\
- 	b	rfi_flush_fallback
-@@ -84,9 +101,11 @@
- 	b	rfi_flush_fallback
- 
- #define HRFI_TO_KERNEL							\
-+	CHECK_TARGET_MSR_PR(SPRN_HSRR1, 0);				\
- 	hrfid
- 
- #define HRFI_TO_USER							\
-+	CHECK_TARGET_MSR_PR(SPRN_HSRR1, 1);				\
- 	RFI_FLUSH_SLOT;							\
- 	hrfid;								\
- 	b	hrfi_flush_fallback
+
 diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
 index e5a0fe7cebed..273252007d84 100644
 --- a/arch/powerpc/include/asm/paca.h
