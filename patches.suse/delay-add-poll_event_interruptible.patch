@@ -1,0 +1,40 @@
+From 4e958e88e79f092fcff654f2ac80c5c18225a6f8 Mon Sep 17 00:00:00 2001
+From: Michal Suchanek <msuchanek@suse.de>
+Date: Thu, 9 Nov 2017 12:12:36 +0100
+Subject: [PATCH 1/4] delay: add poll_event_interruptible
+
+References: bsc#1048585
+Patch-mainline: submitted, https://patchwork.kernel.org/patch/10112435/
+
+Add convenience macro for polling an event that does not have a
+waitqueue.
+
+Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+---
+ include/linux/delay.h | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/include/linux/delay.h b/include/linux/delay.h
+index a6ecb34cf547..013d01855011 100644
+--- a/include/linux/delay.h
++++ b/include/linux/delay.h
+@@ -52,4 +52,16 @@ static inline void ssleep(unsigned int seconds)
+ 	msleep(seconds * 1000);
+ }
+ 
++#define poll_event_interruptible(event, interval) ({ \
++	int ret = 0; \
++	while (!(event)) { \
++		if (signal_pending(current)) { \
++			ret = -ERESTARTSYS; \
++			break; \
++		} \
++		msleep_interruptible(interval); \
++	} \
++	ret; \
++})
++
+ #endif /* defined(_LINUX_DELAY_H) */
+-- 
+2.13.6
+
