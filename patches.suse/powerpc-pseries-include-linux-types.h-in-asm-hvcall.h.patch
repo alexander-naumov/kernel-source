@@ -1,0 +1,36 @@
+From f39974a72b7bd72a98b990b9dce3118a0e4835f3 Mon Sep 17 00:00:00 2001
+From: Michal Suchanek <msuchanek@suse.de>
+Date: Mon, 15 Jan 2018 13:58:08 +0100
+Subject: [PATCH] powerpc/pseries: include linux/types.h in asm/hvcall.h
+
+References: bsc#1068032, bsc#1075087
+Patch-mainline: no, development
+
+Commit 6e032b350cd1 ("powerpc/powernv: Check device-tree for RFI flush
+settings") uses u64 in asm/hvcall.h without including linux/types.h
+
+This breaks hvcall.h users that do not include the header themselves.
+
+Fixes: 6e032b350cd1 ("powerpc/powernv: Check device-tree for RFI flush
+    settings")
+
+Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+---
+ arch/powerpc/include/asm/hvcall.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/powerpc/include/asm/hvcall.h b/arch/powerpc/include/asm/hvcall.h
+index af62f2e99a27..c7b27cc6a90e 100644
+--- a/arch/powerpc/include/asm/hvcall.h
++++ b/arch/powerpc/include/asm/hvcall.h
+@@ -322,6 +322,7 @@
+ #define H_CPU_BEHAV_BNDS_CHK_SPEC_BAR	(1ull << 61) // IBM bit 2
+ 
+ #ifndef __ASSEMBLY__
++#include <linux/types.h>
+ 
+ /**
+  * plpar_hcall_norets: - Make a pseries hypervisor call with no return arguments
+-- 
+2.13.6
+
