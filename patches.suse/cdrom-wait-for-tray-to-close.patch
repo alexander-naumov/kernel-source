@@ -1,0 +1,69 @@
+From 085a5dd7981751c7d5184225070953fd8ce4b1d9 Mon Sep 17 00:00:00 2001
+From: Michal Suchanek <msuchanek@suse.de>
+Date: Thu, 2 Nov 2017 20:34:04 +0100
+Subject: [PATCH 3/4] cdrom: wait for tray to close
+
+References: bsc#1048585
+Patch-mainline: submitted, https://patchwork.kernel.org/patch/10112423/
+
+The scsi command to close tray only starts the motor and does not wait
+for the tray to close. Wait until the state chages from TRAY_OPEN so
+users do not race with the tray closing.
+
+This looks like inifinte wait but unless the drive is broken it either
+closes the tray within a few seconds or reports an error when it detects
+the tray is blocked. At worst the wait can be interrupted by user.
+
+Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+---
+ drivers/cdrom/cdrom.c | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/cdrom/cdrom.c b/drivers/cdrom/cdrom.c
+index 35eb6688cd8c..ebdd3044adb9 100644
+--- a/drivers/cdrom/cdrom.c
++++ b/drivers/cdrom/cdrom.c
+@@ -281,8 +281,9 @@
+ #include <linux/fcntl.h>
+ #include <linux/blkdev.h>
+ #include <linux/times.h>
+-
++#include <linux/delay.h>
+ #include <asm/uaccess.h>
++#include <linux/sched.h>
+ 
+ /* used to tell the module to turn on full debugging messages */
+ static bool debug;
+@@ -1032,6 +1033,18 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi, tracktype *tracks)
+ 	       tracks->cdi, tracks->xa);
+ }
+ 
++static int tray_close(struct cdrom_device_info *cdi)
++{
++	int ret;
++
++	ret = cdi->ops->tray_move(cdi, 0);
++	if (ret)
++		return ret;
++
++	return poll_event_interruptible(CDS_TRAY_OPEN !=
++			cdi->ops->drive_status(cdi, CDSL_CURRENT), 500);
++}
++
+ static
+ int open_for_common(struct cdrom_device_info *cdi, tracktype *tracks)
+ {
+@@ -1050,7 +1063,9 @@ int open_for_common(struct cdrom_device_info *cdi, tracktype *tracks)
+ 			if (CDROM_CAN(CDC_CLOSE_TRAY) &&
+ 			    cdi->options & CDO_AUTO_CLOSE) {
+ 				cd_dbg(CD_OPEN, "trying to close the tray\n");
+-				ret = cdo->tray_move(cdi, 0);
++				ret = tray_close(cdi);
++				if (ret == -ERESTARTSYS)
++					return ret;
+ 				if (ret) {
+ 					cd_dbg(CD_OPEN, "bummer. tried to close the tray but failed.\n");
+ 					/* Ignore the error from the low
+-- 
+2.13.6
+
