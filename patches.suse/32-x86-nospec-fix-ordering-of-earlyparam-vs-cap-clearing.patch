@@ -1,0 +1,85 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: x86/spectre_v2: fix ordering in IBRS initialization
+Patch-mainline: Not yet, under development
+References: bsc#1075994 bsc#1075091
+
+The current ordering is first checking nospec earlyparam and setting
+ibrp_state and ibrs_state to 0 and only after that the cpiod_edx(7) && BIT(26)
+(IBRS availability) is being checked in the CPUID (x86_spec_check()),
+overriding the setting that happened in nospec().
+
+Fix that by initializing both flags to -1 (which really means
+'unknown/uninitialized'), and make decisions in x86_spec_check() according
+to it, IOW enable the features unconditionally. if nospec() later decides
+that they should be disabled, it will apply the settings properly.
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/x86/kernel/cpu/spec_ctrl.c |   27 ++++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+--- a/arch/x86/kernel/cpu/spec_ctrl.c
++++ b/arch/x86/kernel/cpu/spec_ctrl.c
+@@ -10,9 +10,11 @@
+ 
+ /*
+  * Keep it open for more flags in case needed.
++ *
++ * -1 means "not touched by nospec() earlyparam"
+  */
+-static unsigned int ibrs_state = 0;
+-static unsigned int ibpb_state = 0;
++static int ibrs_state = -1;
++static int ibpb_state = -1;
+ 
+ unsigned int notrace x86_ibrs_enabled(void)
+ {
+@@ -55,28 +57,47 @@ EXPORT_SYMBOL_GPL(stuff_RSB);
+  */
+ void x86_spec_check(void)
+ {
++
++	if (ibrs_state == 0 || ibpb_state == 0) {
++		printk_once(KERN_INFO "IBRS/IBPB: disabled or not present\n");
++		return;
++	}
++
+ 	if (cpuid_edx(7) & BIT(26)) {
+ 		ibrs_state = 1;
+ 		ibpb_state = 1;
+ 
+ 		setup_force_cpu_cap(X86_FEATURE_SPEC_CTRL);
++
++		printk_once(KERN_INFO "IBRS/IBPB: Initialized\n");
+ 	}
+ 
+ 	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD) {
+ 		if (cpuid_ebx(0x80000008) & BIT(12)) {
+ 			ibpb_state = 1;
++			printk_once(KERN_INFO "IBPB: Initialized\n");
+ 		} else {
+ 			switch (boot_cpu_data.x86) {
+ 			case 0x10:
+ 			case 0x12:
+ 			case 0x16:
+-				pr_info_once("Disabling indirect branch predictor support\n");
++				printk_once(KERN_INFO
++					"IBPB: Disabling indirect branch predictor support\n");
+ 				msr_set_bit(MSR_F15H_IC_CFG, 14);
+ 				break;
+ 			}
+ 			ibpb_state = 0;
+ 		}
+ 	}
++
++	/*
++	 * make sure we always run with the flags set to zero when it's
++	 * either disabled or not-present
++	 */
++	if (ibpb_state == -1)
++		ibpb_state = 0;
++	if (ibrs_state == -1)
++		ibrs_state = 0;
+ }
+ EXPORT_SYMBOL_GPL(x86_spec_check);
+ 
