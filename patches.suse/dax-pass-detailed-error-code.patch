@@ -1,0 +1,92 @@
+From: Jan Kara <jack@suse.cz>
+Subject: dax: Pass detailed error code from __dax_fault()
+References: bsc#1072484
+Patch-mainline: No, code is substantially different upstream
+
+Ext4 needs to pass through error from its iomap handler to the page
+fault handler so that it can properly detect ENOSPC and force
+transaction commit and retry the fault (and block allocation). Add
+argument to dax_iomap_fault() for passing such error.
+
+This is inspired by upstream commit c0b246259792 "dax: Pass detailed
+error code from dax_iomap_fault()".
+
+Signed-off-by: Jan Kara <jack@suse.cz>
+
+---
+ fs/dax.c            |   23 ++++++++++++++++++-----
+ include/linux/dax.h |    1 +
+ 2 files changed, 19 insertions(+), 5 deletions(-)
+
+--- a/fs/dax.c
++++ b/fs/dax.c
+@@ -849,7 +849,7 @@ static int dax_insert_mapping(struct add
+ }
+ 
+ /**
+- * __dax_fault - handle a page fault on a DAX file
++ * __dax_fault2 - handle a page fault on a DAX file
+  * @vma: The virtual memory area where the fault occurred
+  * @vmf: The description of the fault
+  * @get_block: The filesystem method used to translate file offsets to blocks
+@@ -858,8 +858,8 @@ static int dax_insert_mapping(struct add
+  * fault handler for DAX files. __dax_fault() assumes the caller has done all
+  * the necessary locking for the page fault to proceed successfully.
+  */
+-int __dax_fault(struct vm_area_struct *vma, struct vm_fault *vmf,
+-			get_block_t get_block)
++int __dax_fault2(struct vm_area_struct *vma, struct vm_fault *vmf,
++		 int *map_errp, get_block_t get_block)
+ {
+ 	struct file *file = vma->vm_file;
+ 	struct address_space *mapping = file->f_mapping;
+@@ -895,8 +895,11 @@ int __dax_fault(struct vm_area_struct *v
+ 	error = get_block(inode, block, &bh, 0);
+ 	if (!error && (bh.b_size < PAGE_SIZE))
+ 		error = -EIO;		/* fs corruption? */
+-	if (error)
++	if (error) {
++		if (map_errp)
++			*map_errp = error;
+ 		goto unlock_entry;
++	}
+ 
+ 	if (vmf->cow_page) {
+ 		struct page *new_page = vmf->cow_page;
+@@ -922,8 +925,11 @@ int __dax_fault(struct vm_area_struct *v
+ 			major = VM_FAULT_MAJOR;
+ 			if (!error && (bh.b_size < PAGE_SIZE))
+ 				error = -EIO;
+-			if (error)
++			if (error) {
++				if (map_errp)
++					*map_errp = error;
+ 				goto unlock_entry;
++			}
+ 		} else {
+ 			return dax_load_hole(mapping, entry, vmf);
+ 		}
+@@ -942,6 +948,13 @@ int __dax_fault(struct vm_area_struct *v
+ 		return VM_FAULT_SIGBUS | major;
+ 	return VM_FAULT_NOPAGE | major;
+ }
++EXPORT_SYMBOL(__dax_fault2);
++
++int __dax_fault(struct vm_area_struct *vma, struct vm_fault *vmf,
++		get_block_t get_block)
++{
++	return __dax_fault2(vma, vmf, NULL, get_block);
++}
+ EXPORT_SYMBOL(__dax_fault);
+ 
+ /**
+--- a/include/linux/dax.h
++++ b/include/linux/dax.h
+@@ -16,6 +16,7 @@ int dax_zero_page_range(struct inode *,
+ int dax_truncate_page(struct inode *, loff_t from, get_block_t);
+ int dax_fault(struct vm_area_struct *, struct vm_fault *, get_block_t);
+ int __dax_fault(struct vm_area_struct *, struct vm_fault *, get_block_t);
++int __dax_fault2(struct vm_area_struct *, struct vm_fault *, int *, get_block_t);
+ int dax_delete_mapping_entry(struct address_space *mapping, pgoff_t index);
+ void dax_wake_mapping_entry_waiter(struct address_space *mapping,
+ 				   pgoff_t index, bool wake_all);
