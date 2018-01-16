@@ -25,7 +25,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 
 --- a/arch/x86/kernel/cpu/bugs.c
 +++ b/arch/x86/kernel/cpu/bugs.c
-@@ -19,14 +19,6 @@
+@@ -22,14 +22,6 @@
  
  void __init check_bugs(void)
  {
@@ -38,13 +38,13 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 -#endif
 -
  	identify_boot_cpu();
- #ifndef CONFIG_SMP
- 	pr_info("CPU: ");
+ 
+ 	if (!IS_ENABLED(CONFIG_SMP)) {
 --- a/arch/x86/kernel/cpu/common.c
 +++ b/arch/x86/kernel/cpu/common.c
-@@ -807,6 +807,14 @@ static void __init early_identify_cpu(st
+@@ -842,6 +842,14 @@ static void __init early_identify_cpu(st
+ 	setup_force_cpu_bug(X86_BUG_SPECTRE_V2);
  
- 	setup_force_cpu_cap(X86_FEATURE_ALWAYS);
  	fpu__init_system(c);
 +
 +#ifdef CONFIG_X86_32

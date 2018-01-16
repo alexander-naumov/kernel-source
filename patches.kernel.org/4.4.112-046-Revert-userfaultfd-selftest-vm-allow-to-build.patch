@@ -1,0 +1,48 @@
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Date: Sat, 13 Jan 2018 11:19:07 +0100
+Subject: [PATCH] Revert "userfaultfd: selftest: vm: allow to build in vm/
+ directory"
+References: bnc#1012382
+Patch-mainline: 4.4.112
+Git-commit: 46aa6a302b53f543f8e8b8e1714dc5e449ad36a6
+
+This reverts commit b5213e1e9f25ccde958aa6364815ee87fef91100 which was
+commit 46aa6a302b53f543f8e8b8e1714dc5e449ad36a6 upstream.
+
+This is being reverted because the affected commit this was trying to
+fix, a8ba798bc8ec ("selftests: enable O and KBUILD_OUTPUT"), was never
+backported to the 4.4-stable tree.
+
+Reported-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Cc: Andrea Arcangeli <aarcange@redhat.com>
+Cc: Mike Rapoport <rppt@linux.vnet.ibm.com>
+Cc: "Dr. David Alan Gilbert" <dgilbert@redhat.com>
+Cc: Mike Kravetz <mike.kravetz@oracle.com>
+Cc: Pavel Emelyanov <xemul@parallels.com>
+Cc: Hillf Danton <hillf.zj@alibaba-inc.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Sasha Levin <alexander.levin@verizon.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ tools/testing/selftests/vm/Makefile | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/tools/testing/selftests/vm/Makefile b/tools/testing/selftests/vm/Makefile
+index b5f08e8cab33..e4bb1de1d526 100644
+--- a/tools/testing/selftests/vm/Makefile
++++ b/tools/testing/selftests/vm/Makefile
+@@ -1,9 +1,5 @@
+ # Makefile for vm selftests
+ 
+-ifndef OUTPUT
+-  OUTPUT := $(shell pwd)
+-endif
+-
+ CFLAGS = -Wall -I ../../../../usr/include $(EXTRA_CFLAGS)
+ BINARIES = compaction_test
+ BINARIES += hugepage-mmap
+-- 
+2.15.1
+

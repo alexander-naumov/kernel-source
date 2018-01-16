@@ -1,0 +1,41 @@
+From: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Date: Thu, 11 Jan 2018 17:01:36 +0000
+Subject: [PATCH] xhci: Fix ring leak in failure path of
+ xhci_alloc_virt_device()
+References: bnc#1012382
+Patch-mainline: 4.4.112
+Git-commit: 3ae43090f13b7f6b6a8d4f4889727d2db4e81dd8
+
+This is a stable-only fix for the backport of commit 5d9b70f7d52e
+("xhci: Don't add a virt_dev to the devs array before it's fully
+allocated").
+
+In branches that predate commit c5628a2af83a ("xhci: remove endpoint
+ring cache") there is an additional failure path in
+xhci_alloc_virt_device() where ring cache allocation fails, in
+which case we need to free the ring allocated for endpoint 0.
+
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Cc: Mathias Nyman <mathias.nyman@intel.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/host/xhci-mem.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/host/xhci-mem.c b/drivers/usb/host/xhci-mem.c
+index f7481c4e2bc9..d9363713b7f1 100644
+--- a/drivers/usb/host/xhci-mem.c
++++ b/drivers/usb/host/xhci-mem.c
+@@ -1071,7 +1071,8 @@ int xhci_alloc_virt_device(struct xhci_hcd *xhci, int slot_id,
+ 
+ 	return 1;
+ fail:
+-
++	if (dev->eps[0].ring)
++		xhci_ring_free(xhci, dev->eps[0].ring);
+ 	if (dev->in_ctx)
+ 		xhci_free_container_ctx(xhci, dev->in_ctx);
+ 	if (dev->out_ctx)
+-- 
+2.15.1
+

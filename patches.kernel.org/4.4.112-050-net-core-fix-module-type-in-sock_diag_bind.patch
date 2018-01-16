@@ -1,0 +1,35 @@
+From: Andrii Vladyka <tulup@mail.ru>
+Date: Thu, 4 Jan 2018 13:09:17 +0200
+Subject: [PATCH] net: core: fix module type in sock_diag_bind
+References: bnc#1012382
+Patch-mainline: 4.4.112
+Git-commit: b8fd0823e0770c2d5fdbd865bccf0d5e058e5287
+
+[ Upstream commit b8fd0823e0770c2d5fdbd865bccf0d5e058e5287 ]
+
+Use AF_INET6 instead of AF_INET in IPv6-related code path
+
+Signed-off-by: Andrii Vladyka <tulup@mail.ru>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/core/sock_diag.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/core/sock_diag.c b/net/core/sock_diag.c
+index 0c1d58d43f67..a47f693f9f14 100644
+--- a/net/core/sock_diag.c
++++ b/net/core/sock_diag.c
+@@ -289,7 +289,7 @@ static int sock_diag_bind(struct net *net, int group)
+ 	case SKNLGRP_INET6_UDP_DESTROY:
+ 		if (!sock_diag_handlers[AF_INET6])
+ 			request_module("net-pf-%d-proto-%d-type-%d", PF_NETLINK,
+-				       NETLINK_SOCK_DIAG, AF_INET);
++				       NETLINK_SOCK_DIAG, AF_INET6);
+ 		break;
+ 	}
+ 	return 0;
+-- 
+2.15.1
+
