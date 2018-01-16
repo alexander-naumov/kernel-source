@@ -16,15 +16,15 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
-@@ -36,6 +36,7 @@
- #include <asm/smap.h>
+@@ -37,6 +37,7 @@
  #include <asm/pgtable_types.h>
  #include <asm/kaiser.h>
+ #include <asm/nospec-branch.h>
 +#include <asm/spec_ctrl.h>
  #include <linux/err.h>
  
  /* Avoid __ASSEMBLER__'ifying <linux/audit.h> just for this.  */
-@@ -173,6 +174,8 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
+@@ -174,6 +175,8 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
  	pushq	%r11				/* pt_regs->r11 */
  	sub	$(6*8), %rsp			/* pt_regs->bp, bx, r12-15 not saved */
  
@@ -33,7 +33,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	testl	$_TIF_WORK_SYSCALL_ENTRY, ASM_THREAD_INFO(TI_flags, %rsp, SIZEOF_PTREGS)
  	jnz	tracesys
  entry_SYSCALL_64_fastpath:
-@@ -211,6 +214,9 @@ entry_SYSCALL_64_fastpath:
+@@ -218,6 +221,9 @@ entry_SYSCALL_64_fastpath:
  
  	movq	RIP(%rsp), %rcx
  	movq	EFLAGS(%rsp), %r11
@@ -43,7 +43,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	RESTORE_C_REGS_EXCEPT_RCX_R11
  	/*
  	 * This opens a window where we have a user CR3, but are
-@@ -355,6 +361,8 @@ GLOBAL(int_ret_from_sys_call)
+@@ -367,6 +373,8 @@ GLOBAL(int_ret_from_sys_call)
  	 * perf profiles. Nothing jumps here.
  	 */
  syscall_return_via_sysret:
@@ -52,7 +52,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	/* rcx and r11 are already restored (see code above) */
  	RESTORE_C_REGS_EXCEPT_RCX_R11
  	/*
-@@ -369,6 +377,8 @@ syscall_return_via_sysret:
+@@ -381,6 +389,8 @@ syscall_return_via_sysret:
  	USERGS_SYSRET64
  
  opportunistic_sysret_failed:
@@ -61,7 +61,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	/*
  	 * This opens a window where we have a user CR3, but are
  	 * running in the kernel.  This makes using the CS
-@@ -536,6 +546,7 @@ END(irq_entries_start)
+@@ -548,6 +558,7 @@ END(irq_entries_start)
  	 */
  	SWAPGS
  	SWITCH_KERNEL_CR3
@@ -69,7 +69,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  	/*
  	 * We need to tell lockdep that IRQs are off.  We can't do this until
-@@ -593,6 +604,7 @@ GLOBAL(retint_user)
+@@ -605,6 +616,7 @@ GLOBAL(retint_user)
  	mov	%rsp,%rdi
  	call	prepare_exit_to_usermode
  	TRACE_IRQS_IRETQ
@@ -77,7 +77,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	SWITCH_USER_CR3
  	SWAPGS
  	jmp	restore_regs_and_iret
-@@ -1091,6 +1103,7 @@ ENTRY(paranoid_entry)
+@@ -1103,6 +1115,7 @@ ENTRY(paranoid_entry)
  	movq	%rax, %cr3
  2:
  #endif
@@ -85,7 +85,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	ret
  END(paranoid_entry)
  
-@@ -1113,6 +1126,7 @@ ENTRY(paranoid_exit)
+@@ -1125,6 +1138,7 @@ ENTRY(paranoid_exit)
  	DISABLE_INTERRUPTS(CLBR_NONE)
  	TRACE_IRQS_OFF_DEBUG
  	TRACE_IRQS_IRETQ_DEBUG
@@ -93,7 +93,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  #ifdef CONFIG_PAGE_TABLE_ISOLATION
  	/* No ALTERNATIVE for X86_FEATURE_KAISER: paranoid_entry sets %ebx */
  	testl	$2, %ebx			/* SWITCH_USER_CR3 needed? */
-@@ -1156,6 +1170,8 @@ ENTRY(error_entry)
+@@ -1168,6 +1182,8 @@ ENTRY(error_entry)
  	 */
  	SWAPGS
  
@@ -102,7 +102,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  .Lerror_entry_from_usermode_after_swapgs:
  	/*
  	 * We need to tell lockdep that IRQs are off.  We can't do this until
-@@ -1200,6 +1216,7 @@ ENTRY(error_entry)
+@@ -1212,6 +1228,7 @@ ENTRY(error_entry)
  	/* fall through */
  
  .Lerror_bad_iret:
@@ -110,7 +110,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	/*
  	 * We came from an IRET to user mode, so we have user gsbase.
  	 * Switch to kernel gsbase:
-@@ -1354,8 +1371,13 @@ ENTRY(nmi)
+@@ -1366,8 +1383,13 @@ ENTRY(nmi)
  	movq	%rax, %cr3
  2:
  #endif

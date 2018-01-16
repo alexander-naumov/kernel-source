@@ -20,6 +20,8 @@ kvmppc_clear_ref_hpte		PASS
 kvmppc_invalidate_hpte		PASS
 kvmppc_hv_find_lock_hpte	PASS
 
+stuff_RSB			PASS
+
 drivers/hv/*			PASS
 
 arch/s390/*			PASS

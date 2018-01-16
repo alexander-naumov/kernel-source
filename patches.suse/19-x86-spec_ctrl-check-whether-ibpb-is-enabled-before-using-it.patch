@@ -10,17 +10,15 @@ Carved out from a patch by Tim Chen <tim.c.chen@linux.intel.com>
 
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
- arch/x86/include/asm/spec_ctrl.h | 3 ++-
- arch/x86/kernel/cpu/spec_ctrl.c  | 7 +++++++
+ arch/x86/include/asm/spec_ctrl.h |    3 ++-
+ arch/x86/kernel/cpu/spec_ctrl.c  |    7 +++++++
  2 files changed, 9 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/include/asm/spec_ctrl.h b/arch/x86/include/asm/spec_ctrl.h
-index 372f68d6a6f7..384b3b8b79b3 100644
 --- a/arch/x86/include/asm/spec_ctrl.h
 +++ b/arch/x86/include/asm/spec_ctrl.h
-@@ -95,10 +95,11 @@ void x86_enable_ibrs(void);
+@@ -94,10 +94,11 @@
+ void x86_enable_ibrs(void);
  void x86_disable_ibrs(void);
- void stuff_RSB(void);
  unsigned int x86_ibrs_enabled(void);
 +unsigned int x86_ibpb_enabled(void);
  
@@ -31,11 +29,9 @@ index 372f68d6a6f7..384b3b8b79b3 100644
  		native_wrmsrl(MSR_IA32_PRED_CMD, FEATURE_SET_IBPB);
  }
  
-diff --git a/arch/x86/kernel/cpu/spec_ctrl.c b/arch/x86/kernel/cpu/spec_ctrl.c
-index 1475d51f9c4f..672c32da1b02 100644
 --- a/arch/x86/kernel/cpu/spec_ctrl.c
 +++ b/arch/x86/kernel/cpu/spec_ctrl.c
-@@ -12,6 +12,7 @@
+@@ -11,6 +11,7 @@
   * Keep it open for more flags in case needed.
   */
  static unsigned int ibrs_state = 0;
@@ -43,7 +39,7 @@ index 1475d51f9c4f..672c32da1b02 100644
  
  unsigned int notrace x86_ibrs_enabled(void)
  {
-@@ -19,6 +20,12 @@ unsigned int notrace x86_ibrs_enabled(void)
+@@ -18,6 +19,12 @@ unsigned int notrace x86_ibrs_enabled(vo
  }
  EXPORT_SYMBOL_GPL(x86_ibrs_enabled);
  
@@ -56,4 +52,3 @@ index 1475d51f9c4f..672c32da1b02 100644
  void x86_disable_ibrs(void)
  {
  	if (x86_ibrs_enabled())
-

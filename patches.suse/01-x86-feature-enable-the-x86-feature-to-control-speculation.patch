@@ -32,8 +32,8 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  #define X86_FEATURE_INTEL_PT	( 7*32+15) /* Intel Processor Trace */
 +#define X86_FEATURE_SPEC_CTRL	( 7*32+19) /* Control Speculation Control */
  
- /* Because the ALTERNATIVE scheme is for members of the X86_FEATURE club... */
- #define X86_FEATURE_KAISER	( 7*32+31) /* CONFIG_PAGE_TABLE_ISOLATION w/o nokaiser */
+ #define X86_FEATURE_RETPOLINE	( 7*32+29) /* Generic Retpoline mitigation for Spectre variant 2 */
+ #define X86_FEATURE_RETPOLINE_AMD ( 7*32+30) /* AMD Retpoline mitigation for Spectre variant 2 */
 --- a/arch/x86/include/asm/msr-index.h
 +++ b/arch/x86/include/asm/msr-index.h
 @@ -32,6 +32,9 @@
@@ -46,7 +46,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  #define MSR_IA32_PERFCTR0		0x000000c1
  #define MSR_IA32_PERFCTR1		0x000000c2
  #define MSR_FSB_FREQ			0x000000cd
-@@ -417,6 +420,8 @@
+@@ -420,6 +423,8 @@
  #define FEATURE_CONTROL_VMXON_ENABLED_INSIDE_SMX	(1<<1)
  #define FEATURE_CONTROL_VMXON_ENABLED_OUTSIDE_SMX	(1<<2)
  #define FEATURE_CONTROL_LMCE				(1<<20)
