@@ -11,14 +11,15 @@ non-zero risk is there.
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 
 ---
- arch/x86/include/asm/desc.h      |    4 ++++
- arch/x86/include/asm/processor.h |    4 ++++
- arch/x86/include/asm/tlbflush.h  |    2 ++
- arch/x86/kernel/cpu/common.c     |    4 ++++
- arch/x86/kernel/process.c        |    4 ++++
- include/linux/mmu_context.h      |    2 ++
- kernel/sched/core.c              |    4 ++++
- 7 files changed, 24 insertions(+)
+ arch/x86/include/asm/desc.h        |    4 ++++
+ arch/x86/include/asm/mmu_context.h |    1 +
+ arch/x86/include/asm/processor.h   |    4 ++++
+ arch/x86/include/asm/tlbflush.h    |    2 ++
+ arch/x86/kernel/cpu/common.c       |    4 ++++
+ arch/x86/kernel/process.c          |    4 ++++
+ include/linux/mmu_context.h        |    2 ++
+ kernel/sched/core.c                |    4 ++++
+ 8 files changed, 25 insertions(+)
 
 --- a/arch/x86/include/asm/desc.h
 +++ b/arch/x86/include/asm/desc.h
@@ -114,3 +115,13 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  #include <linux/interrupt.h>
  #include <linux/capability.h>
  #include <linux/completion.h>
+--- a/arch/x86/include/asm/mmu_context.h
++++ b/arch/x86/include/asm/mmu_context.h
+@@ -107,6 +107,7 @@ extern void switch_mm(struct mm_struct *
+ 
+ extern void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
+ 			       struct task_struct *tsk);
++#undef switch_mm_irqs_off /* XXX due to compile warning with GENKSYMS */
+ #define switch_mm_irqs_off switch_mm_irqs_off
+ 
+ #define activate_mm(prev, next)			\
