@@ -236,7 +236,7 @@ Obsoletes:      xf86-input-vmmouse < 13.1.0
 %define __find_requires %_sourcedir/find-requires %name %version-%release %my_builddir
 
 # Will modules not listed in supported.conf abort the kernel build (0/1)?
-%define supported_modules_check 0
+%define supported_modules_check 1
 
 %description
 @DESCRIPTION@
