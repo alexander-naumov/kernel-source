@@ -1,7 +1,7 @@
 From: Jiri Slaby <jslaby@suse.cz>
 Subject: Linux 4.4.76
 Patch-mainline: 4.4.76
-References: FATE#319965 bnc#1012382 bsc#1031717 bsc#1038846 bsc#1038847 bsc#1047343 bsc#1047653 bsc#964944 bsc#1018419
+References: FATE#319965 CVE-2017-18017 bnc#1012382 bsc#1031717 bsc#1038846 bsc#1038847 bsc#1047343 bsc#1047653 bsc#964944 bsc#1018419 bsc#1074488
 Git-commit: d4912215d1031e4fb3d1038d2e1857218dba0d0a
 Git-commit: f0367ee1d64d27fa08be2407df5c125442e885e3
 Git-commit: 34b0dadbdf698f9b277a31b2747b625b9a75ea1f
