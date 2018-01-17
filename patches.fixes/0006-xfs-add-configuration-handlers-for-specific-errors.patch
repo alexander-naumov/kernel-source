@@ -1,0 +1,84 @@
+From ca7545677724eadd5ab88f6885f09a6633ec53af Mon Sep 17 00:00:00 2001
+From: Carlos Maiolino <cmaiolino@redhat.com>
+Date: Wed, 18 May 2016 11:09:28 +1000
+Patch-mainline: v4.7-rc1
+Git-commit: e0a431b3a3cc3d0a4c38ccfca8c7320fde40efb6
+References: bsc#1068569
+Subject: [PATCH 6/7] xfs: add configuration handlers for specific errors
+
+now most of the infrastructure is in place, we can start adding
+support for configuring specific errors such as ENODEV, ENOSPC, EIO,
+etc. Add these error configurations and configure them all to have
+appropriate behaviours. That is, all will be configured to retry
+forever by default, except for ENODEV, which is an unrecoverable
+error, so it will be configured to not retry on error
+
+Signed-off-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Carlos Maiolino <cmaiolino@redhat.com>
+Reviewed-by: Brian Foster <bfoster@redhat.com>
+Signed-off-by: Dave Chinner <david@fromorbit.com>
+Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
+---
+ fs/xfs/xfs_mount.h |  3 +++
+ fs/xfs/xfs_sysfs.c | 22 +++++++++++++++++++++-
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/fs/xfs/xfs_mount.h b/fs/xfs/xfs_mount.h
+index b30ca623376d..8f9a2e44b293 100644
+--- a/fs/xfs/xfs_mount.h
++++ b/fs/xfs/xfs_mount.h
+@@ -49,6 +49,9 @@ enum {
+ };
+ enum {
+ 	XFS_ERR_DEFAULT,
++	XFS_ERR_EIO,
++	XFS_ERR_ENOSPC,
++	XFS_ERR_ENODEV,
+ 	XFS_ERR_ERRNO_MAX,
+ };
+ 
+diff --git a/fs/xfs/xfs_sysfs.c b/fs/xfs/xfs_sysfs.c
+index 676cff5ecb00..b710a055f3bb 100644
+--- a/fs/xfs/xfs_sysfs.c
++++ b/fs/xfs/xfs_sysfs.c
+@@ -387,9 +387,20 @@ struct xfs_error_init {
+ 
+ static const struct xfs_error_init xfs_error_meta_init[XFS_ERR_ERRNO_MAX] = {
+ 	{ .name = "default",
+-	  .max_retries = -1,
++	  .max_retries = XFS_ERR_RETRY_FOREVER,
+ 	  .retry_timeout = 0,
+ 	},
++	{ .name = "EIO",
++	  .max_retries = XFS_ERR_RETRY_FOREVER,
++	  .retry_timeout = 0,
++	},
++	{ .name = "ENOSPC",
++	  .max_retries = XFS_ERR_RETRY_FOREVER,
++	  .retry_timeout = 0,
++	},
++	{ .name = "ENODEV",
++	  .max_retries = 0,
++	},
+ };
+ 
+ static int
+@@ -487,6 +498,15 @@ xfs_error_get_cfg(
+ 	struct xfs_error_cfg	*cfg;
+ 
+ 	switch (error) {
++	case EIO:
++		cfg = &mp->m_error_cfg[error_class][XFS_ERR_EIO];
++		break;
++	case ENOSPC:
++		cfg = &mp->m_error_cfg[error_class][XFS_ERR_ENOSPC];
++		break;
++	case ENODEV:
++		cfg = &mp->m_error_cfg[error_class][XFS_ERR_ENODEV];
++		break;
+ 	default:
+ 		cfg = &mp->m_error_cfg[error_class][XFS_ERR_DEFAULT];
+ 		break;
+-- 
+2.15.0
+

@@ -1,0 +1,125 @@
+From 06ea71d2879bebd854e59bf272f5e6018a54957e Mon Sep 17 00:00:00 2001
+From: Carlos Maiolino <cmaiolino@redhat.com>
+Date: Wed, 18 May 2016 11:06:44 +1000
+Patch-mainline: v4.7-rc1
+Git-commit: ef6a50fbb1bba7951aa23adcfb40e99ca72dc51c
+References: bsc#1068569
+Subject: [PATCH 4/7] xfs: introduce table-based init for error behaviors
+
+Before we start expanding the number of error classes and errors we
+can configure behaviour for, we need a simple and clear way to
+define the default behaviour that we initialized each mount with.
+Introduce a table based method for keeping the initial configuration
+in, and apply that to the existing initialization code.
+
+Signed-off-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Carlos Maiolino <cmaiolino@redhat.com>
+Reviewed-by: Brian Foster <bfoster@redhat.com>
+Signed-off-by: Dave Chinner <david@fromorbit.com>
+Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
+---
+ fs/xfs/xfs_sysfs.c | 72 +++++++++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 60 insertions(+), 12 deletions(-)
+
+diff --git a/fs/xfs/xfs_sysfs.c b/fs/xfs/xfs_sysfs.c
+index 20a3f9a96937..74991804b09f 100644
+--- a/fs/xfs/xfs_sysfs.c
++++ b/fs/xfs/xfs_sysfs.c
+@@ -304,11 +304,67 @@ struct kobj_type xfs_error_ktype = {
+ 	.release = xfs_sysfs_release,
+ };
+ 
++/*
++ * Error initialization tables. These need to be ordered in the same
++ * order as the enums used to index the array. All class init tables need to
++ * define a "default" behaviour as the first entry, all other entries can be
++ * empty.
++ */
++struct xfs_error_init {
++	char		*name;
++	int		max_retries;
++};
++
++static const struct xfs_error_init xfs_error_meta_init[XFS_ERR_ERRNO_MAX] = {
++	{ .name = "default",
++	  .max_retries = -1,
++	},
++};
++
++static int
++xfs_error_sysfs_init_class(
++	struct xfs_mount	*mp,
++	int			class,
++	const char		*parent_name,
++	struct xfs_kobj		*parent_kobj,
++	const struct xfs_error_init init[])
++{
++	struct xfs_error_cfg	*cfg;
++	int			error;
++	int			i;
++
++	ASSERT(class < XFS_ERR_CLASS_MAX);
++
++	error = xfs_sysfs_init(parent_kobj, &xfs_error_ktype,
++				&mp->m_error_kobj, parent_name);
++	if (error)
++		return error;
++
++	for (i = 0; i < XFS_ERR_ERRNO_MAX; i++) {
++		cfg = &mp->m_error_cfg[class][i];
++		error = xfs_sysfs_init(&cfg->kobj, &xfs_error_cfg_ktype,
++					parent_kobj, init[i].name);
++		if (error)
++			goto out_error;
++
++		cfg->max_retries = init[i].max_retries;
++	}
++	return 0;
++
++out_error:
++	/* unwind the entries that succeeded */
++	for (i--; i >= 0; i--) {
++		cfg = &mp->m_error_cfg[class][i];
++		xfs_sysfs_del(&cfg->kobj);
++	}
++	xfs_sysfs_del(parent_kobj);
++	return error;
++}
++
+ int
+ xfs_error_sysfs_init(
+ 	struct xfs_mount	*mp)
+ {
+-	struct xfs_error_cfg	*cfg;
+ 	int			error;
+ 
+ 	/* .../xfs/<dev>/error/ */
+@@ -318,22 +374,14 @@ xfs_error_sysfs_init(
+ 		return error;
+ 
+ 	/* .../xfs/<dev>/error/metadata/ */
+-	error = xfs_sysfs_init(&mp->m_error_meta_kobj, &xfs_error_ktype,
+-				&mp->m_error_kobj, "metadata");
++	error = xfs_error_sysfs_init_class(mp, XFS_ERR_METADATA,
++				"metadata", &mp->m_error_meta_kobj,
++				xfs_error_meta_init);
+ 	if (error)
+ 		goto out_error;
+ 
+-	cfg = &mp->m_error_cfg[XFS_ERR_METADATA][XFS_ERR_DEFAULT];
+-	error = xfs_sysfs_init(&cfg->kobj, &xfs_error_cfg_ktype,
+-				&mp->m_error_meta_kobj, "default");
+-	if (error)
+-		goto out_error_meta;
+-	cfg->max_retries = -1;
+-
+ 	return 0;
+ 
+-out_error_meta:
+-	xfs_sysfs_del(&mp->m_error_meta_kobj);
+ out_error:
+ 	xfs_sysfs_del(&mp->m_error_kobj);
+ 	return error;
+-- 
+2.15.0
+
