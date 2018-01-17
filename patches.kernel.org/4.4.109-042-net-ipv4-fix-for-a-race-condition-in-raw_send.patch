@@ -1,7 +1,7 @@
 From: Mohamed Ghannam <simo.ghannam@gmail.com>
 Date: Sun, 10 Dec 2017 03:50:58 +0000
 Subject: [PATCH] net: ipv4: fix for a race condition in raw_sendmsg
-References: bnc#1012382
+References: CVE-2017-17712 bnc#1012382 bsc#1073229
 Patch-mainline: 4.4.109
 Git-commit: 8f659a03a0ba9289b9aeb9b4470e6fb263d6f483
 
