@@ -1,0 +1,55 @@
+From: Jan Kara <jack@suse.cz>
+Subject: ext4: Fix ENOSPC handling in DAX page fault handle
+References: bsc#1072484
+Patch-mainline: v4.16-rc1
+Git-commit: 22446423108f3687167c9fdc080e6f21dd784d18
+
+When allocation of underlying block for a page fault fails, we fail the
+fault with SIGBUS. However we may well hit ENOSPC just due to lots of
+free blocks being held by the running / committing transaction. So
+propagate the error from ext4_iomap_begin() and implement do standard
+allocation retry loop in ext4_dax_huge_fault().
+
+Reviewed-by: Ross Zwisler <ross.zwisler@linux.intel.com>
+Signed-off-by: Jan Kara <jack@suse.cz>
+
+---
+ fs/ext4/file.c |    9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+--- a/fs/ext4/file.c
++++ b/fs/ext4/file.c
+@@ -195,7 +195,8 @@ out:
+ #ifdef CONFIG_FS_DAX
+ static int ext4_dax_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+ {
+-	int result;
++	int result, error = 0;
++	int retries = 0;
+ 	handle_t *handle = NULL;
+ 	struct inode *inode = file_inode(vma->vm_file);
+ 	struct super_block *sb = inode->i_sb;
+@@ -205,6 +206,7 @@ static int ext4_dax_fault(struct vm_area
+ 		sb_start_pagefault(sb);
+ 		file_update_time(vma->vm_file);
+ 		down_read(&EXT4_I(inode)->i_mmap_sem);
++retry:
+ 		handle = ext4_journal_start_sb(sb, EXT4_HT_WRITE_PAGE,
+ 						EXT4_DATA_TRANS_BLOCKS(sb));
+ 	} else
+@@ -213,11 +215,14 @@ static int ext4_dax_fault(struct vm_area
+ 	if (IS_ERR(handle))
+ 		result = VM_FAULT_SIGBUS;
+ 	else
+-		result = __dax_fault(vma, vmf, ext4_dax_get_block);
++		result = __dax_fault2(vma, vmf, &error, ext4_dax_get_block);
+ 
+ 	if (write) {
+ 		if (!IS_ERR(handle))
+ 			ext4_journal_stop(handle);
++		if ((result & VM_FAULT_ERROR) && error == -ENOSPC &&
++		    ext4_should_retry_alloc(sb, &retries))
++			goto retry;
+ 		up_read(&EXT4_I(inode)->i_mmap_sem);
+ 		sb_end_pagefault(sb);
+ 	} else
