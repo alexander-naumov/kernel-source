@@ -1,0 +1,38 @@
+From: Jeff Mahoney <jeffm@suse.com>
+Date: Thu, 22 Jun 2017 09:51:47 -0400
+Subject: btrfs: account for pinned bytes in should_alloc_chunk
+Git-commit: f44d2287d2879f50b921e909b2377d6dcba3e251
+Patch-mainline: v4.14-rc3
+References: bsc#1066842
+
+In a heavy write scenario, we can end up with a large number of pinned bytes.
+This can translate into (very) premature ENOSPC because pinned bytes
+must be accounted for when allowing a reservation but aren't accounted for
+when deciding whether to create a new chunk.
+
+This patch adds the accounting to should_alloc_chunk so that we can
+create the chunk.
+
+Signed-off-by: Jeff Mahoney <jeffm@suse.com>
+Signed-off-by: David Sterba <dsterba@suse.com>
+Acked-by: Nikolay Borisov <nborisov@suse.com>
+---
+ fs/btrfs/extent-tree.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/btrfs/extent-tree.c b/fs/btrfs/extent-tree.c
+index b29834844b09..7da6bf5f282f 100644
+--- a/fs/btrfs/extent-tree.c
++++ b/fs/btrfs/extent-tree.c
+@@ -4356,7 +4356,7 @@ static int should_alloc_chunk(struct btrfs_root *root,
+ {
+ 	struct btrfs_block_rsv *global_rsv = &root->fs_info->global_block_rsv;
+ 	u64 num_bytes = sinfo->total_bytes - sinfo->bytes_readonly;
+-	u64 num_allocated = sinfo->bytes_used + sinfo->bytes_reserved;
++	u64 num_allocated = sinfo->bytes_used + sinfo->bytes_reserved + sinfo->bytes_pinned;
+ 	u64 thresh;
+ 
+ 	if (force == CHUNK_ALLOC_FORCE)
+-- 
+2.7.4
+
