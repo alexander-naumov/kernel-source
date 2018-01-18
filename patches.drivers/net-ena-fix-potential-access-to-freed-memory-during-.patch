@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Thu, 9 Feb 2017 15:21:33 +0200
 Subject: net/ena: fix potential access to freed memory during device reset
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: 3f6159dbfc24c5e61fb5deb9b69e0abb934609bb
 References: bsc#1026509
 

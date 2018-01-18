@@ -2,8 +2,7 @@ From: Sathya Perla <sathya.perla@broadcom.com>
 Date: Wed, 27 Jul 2016 05:26:16 -0400
 Subject: [PATCH] be2net: do not remove vids from driver table if
  be_vid_config() fails.
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.9-rc1
 Git-commit: 0aff1fbfe72e47412e3213648e972c339af30e4e
 References: bsc#963844 FATE#320192
 

@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Thu, 9 Feb 2017 15:21:30 +0200
 Subject: net/ena: fix RSS default hash configuration
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: 422e21e7619bb8751aa1cd32a9b671b1baaf3d18
 References: bsc#1026509
 

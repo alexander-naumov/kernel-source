@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Thu, 9 Feb 2017 15:21:35 +0200
 Subject: net/ena: use READ_ONCE to access completion descriptors
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: a8496eb81342393e4c8280a5ec27e1872a3fb9fd
 References: bsc#1026509
 

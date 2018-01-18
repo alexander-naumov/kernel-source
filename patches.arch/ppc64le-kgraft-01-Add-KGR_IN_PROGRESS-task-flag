@@ -1,8 +1,7 @@
 From: Josh Poimboeuf <jpoimboe@redhat.com>
 Subject: powerpc: introduce TIF_KGR_IN_PROGRESS thread flag
 Git-commit: a768f78429fd9b0b07f5795dd62f31a519fc1bae
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/jikos/livepatching.git/
+Patch-mainline: v4.12-rc1
 References: FATE#322421
 
  livepatch/powerpc: add TIF_PATCH_PENDING thread flag

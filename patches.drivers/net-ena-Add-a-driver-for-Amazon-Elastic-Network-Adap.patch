@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Wed, 10 Aug 2016 14:03:22 +0300
 Subject: net: ena: Add a driver for Amazon Elastic Network Adapters (ENA)
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.9-rc1
 Git-commit: 1738cd3ed342294360d6a74d4e58800004bff854
 References: bsc#974585 FATE#320332
 

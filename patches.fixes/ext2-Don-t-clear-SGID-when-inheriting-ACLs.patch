@@ -3,8 +3,7 @@ From: Jan Kara <jack@suse.cz>
 Date: Wed, 21 Jun 2017 14:34:15 +0200
 Subject: [PATCH 02/11] ext2: Don't clear SGID when inheriting ACLs
 Git-commit: a992f2d38e4ce17b8c7d1f7f67b2de0eebdea069
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/jack/linux-fs.git
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.13-rc2
 References: bsc#1030552
 
 When new directory 'DIR1' is created in a directory 'DIR0' with SGID bit

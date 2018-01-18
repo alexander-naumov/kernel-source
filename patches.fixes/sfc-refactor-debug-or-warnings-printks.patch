@@ -1,8 +1,7 @@
 From: Jon Cooper <jcooper@solarflare.com>
 Date: Fri, 27 Jan 2017 15:02:39 +0000
 Subject: sfc: refactor debug-or-warnings printks
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: 34e7aefb2a15f3180635e5730f01f5ce4a0734ec
 References: bsc#1019168
 

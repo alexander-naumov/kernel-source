@@ -1,9 +1,8 @@
 From: Ben Gamari <ben@smart-cactus.org>
 Subject: Input: ALPS - allow touchsticks to report pressure
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.9-rc1
 References: bsc#987703
 Git-commit: 7ad8a1067dfc3bf74ad2daef013ea4f3df1841a7
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dtor/input.git
 
 The SS5 hardware can report this.
 

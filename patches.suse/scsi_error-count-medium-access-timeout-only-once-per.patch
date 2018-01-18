@@ -2,9 +2,8 @@ From: Hannes Reinecke <hare@suse.de>
 Date: Fri, 23 Sep 2016 08:29:16 +0200
 Subject: scsi_error: count medium access timeout only once per EH run
 References: bsc#993832, bsc#1032345
-Patch-Mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.12-rc1
 Git-commit: 7a38dc0bfb4cc39ed57e120e2224673f3d4d200f
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/mkp/scsi.git
 
 The current medium access timeout counter will be increased for
 each command, so if there are enough failed commands we'll hit

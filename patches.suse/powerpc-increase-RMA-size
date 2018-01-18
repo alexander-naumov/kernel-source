@@ -3,9 +3,8 @@ From: Sukadev Bhattiprolu <sukadev@linux.vnet.ibm.com>
 Date: Mon, 27 Mar 2017 19:43:14 -0400
 Subject: [PATCH] powerpc/prom: Increase minimum RMA size to 512MB
 
-Patch-mainline: queued, next-20170411
+Patch-mainline: v4.12-rc1
 Git-commit: 687da8fce1682c9f1e87530e731189863c588265
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
 References: bsc#984530
 
 When booting very large systems with a large initrd, we run out of

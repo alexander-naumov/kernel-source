@@ -1,8 +1,7 @@
 From: Maor Dickman <maord@mellanox.com>
 Date: Thu, 18 May 2017 15:15:08 +0300
 Subject: net/mlx5e: Fix timestamping capabilities reporting
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net.git
+Patch-mainline: v4.12-rc7
 Git-commit: f0b381178b01b831f9907d72f467d6443afdea67
 References: bsc#966170 bsc#1015342
 

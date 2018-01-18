@@ -1,8 +1,7 @@
 From: Sriharsha Basavapatna <sriharsha.basavapatna@broadcom.com>
 Date: Wed, 27 Jul 2016 05:26:17 -0400
 Subject: [PATCH] be2net: Avoid unnecessary firmware updates of multicast list
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.9-rc1
 Git-commit: 92fbb1df83ec17f62a46b23507ebb3f06ca10cd3
 References: bsc#963844 FATE#320192
 

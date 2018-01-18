@@ -2,8 +2,7 @@ From f775ff7d89f33fc9ba63f6f70df3bcc98c2d9828 Mon Sep 17 00:00:00 2001
 From: Alexander Graf <agraf@suse.de>
 Date: Thu, 27 Apr 2017 18:34:00 +0200
 Subject: [PATCH] ceph: fix file open flags on ppc64
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://github.com/ceph/ceph-client
+Patch-mainline: v4.12-rc1
 Git-commit: f775ff7d89f33fc9ba63f6f70df3bcc98c2d9828
 References: bsc#1022266
 

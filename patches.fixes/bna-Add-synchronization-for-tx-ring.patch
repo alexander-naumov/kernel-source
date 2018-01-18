@@ -1,8 +1,7 @@
 From: Benjamin Poirier <bpoirier@suse.com>
 Date: Mon, 7 Nov 2016 17:57:56 +0800
 Subject: bna: Add synchronization for tx ring.
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net.git
+Patch-mainline: v4.9-rc6
 Git-commit: d667f78514c656a6a8bf0b3d6134a7fe5cd4d317
 References: bsc#993739
 

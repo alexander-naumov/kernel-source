@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:41 -0500
 Subject: [PATCH] scsi: ipr: Fix SATA EH hang
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: ef97d8ae12eb20d81bea5d16a0c1e33dcbe44492
 
 This patch fixes a hang that can occur in ATA EH with ipr. With ipr's

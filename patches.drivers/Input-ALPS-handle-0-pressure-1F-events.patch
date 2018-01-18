@@ -1,9 +1,8 @@
 From: Ben Gamari <ben@smart-cactus.org>
 Subject: Input: ALPS - handle 0-pressure 1F events
 References: bsc#987703
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.9-rc1
 Git-commit: a831776323e7c532ef9c88d0d62512ae15d78415
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dtor/input.git
 
 While a button is held SS5 hardware will give us single-finger packets
 with x, y, and pressure equal to zero. This causes annoying jumps in

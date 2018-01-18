@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Thu, 9 Feb 2017 15:21:32 +0200
 Subject: net/ena: refactor ena_get_stats64 to be atomic context safe
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: d81db24056132fe8b83e2fba337e9ea76675e68d
 References: bsc#1026509
 

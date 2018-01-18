@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:42 -0500
 Subject: [PATCH] scsi: ipr: Driver version 2.6.4
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: 16a20b52d1b0c900ea2e7363cf6e10267a445002
 
 Bump driver version

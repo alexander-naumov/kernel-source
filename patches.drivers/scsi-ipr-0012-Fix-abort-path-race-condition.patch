@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:39 -0500
 Subject: [PATCH] scsi: ipr: Fix abort path race condition
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: 439ae285b9d9da12343e3d51a0dff1b473a6a6ac
 
 This fixes a race condition in the error handlomg paths of ipr. While a

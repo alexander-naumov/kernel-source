@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:37 -0500
 Subject: [PATCH] scsi: ipr: Remove redundant initialization
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: 960e96480ee2bff4f09472c64e25f1850bf06470
 
 Removes some code in __ipr_eh_dev_reset which was modifying the ipr_cmd

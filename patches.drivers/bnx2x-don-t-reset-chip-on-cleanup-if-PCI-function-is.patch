@@ -1,8 +1,7 @@
 From: "Guilherme G. Piccoli" <gpiccoli@linux.vnet.ibm.com>
 Date: Wed, 31 Aug 2016 12:11:57 -0300
 Subject: [PATCH] bnx2x: don't reset chip on cleanup if PCI function is offline
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net.git
+Patch-mainline: v4.8-rc7
 Git-commit: b44e108b6f322eb5f20aa6eba39b468a1ffc10ff
 References: bsc#997253
 

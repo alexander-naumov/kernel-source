@@ -4,9 +4,8 @@ Date: Mon, 22 Aug 2016 13:32:47 +0100
 Subject: [PATCH] sched/cputime: Improve scalability by not accounting thread
  group tasks pending runtime
 
-Patch-mainline: queued in tip and expected in 4.8
+Patch-mainline: v4.9-rc1
 References: bsc#985874
-Git-repo: http://git.kernel.org/tip
 Git-commit: a1eb1411b4e4251db02179e39d234c2ee5192c72
 
 Commit:

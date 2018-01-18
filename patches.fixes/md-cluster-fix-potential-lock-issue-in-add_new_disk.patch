@@ -2,8 +2,7 @@ From ade324536d377a63428ab82dc796d6b5a78f8959 Mon Sep 17 00:00:00 2001
 From: Guoqing Jiang <gqjiang@suse.com>
 Date: Sat, 27 May 2017 11:37:42 +0800
 Subject: [PATCH] md-cluster: fix potential lock issue in add_new_disk
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/shli/md.git
+Patch-mainline: v4.12-rc4
 Git-commit: 2dffdc0724004f38f5e39907747b53e4b0d80e59
 References: bsc#1041087
 

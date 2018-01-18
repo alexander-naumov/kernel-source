@@ -3,8 +3,7 @@ From: Michal Marek <mmarek@suse.com>
 Date: Tue, 22 Nov 2016 22:34:30 +0100
 Subject: [PATCH 2/6] arm: Use full path in KBUILD_IMAGE definition
 Git-commit: 152e6744ebfc8fa6cc9fff4ba36271f5f1ba2821
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-kbuild.git
+Patch-mainline: v4.12-rc1
 References: bsc#1010032
 
 The KBUILD_IMAGE variable is used by the rpm and deb-pkg targets, which

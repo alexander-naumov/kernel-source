@@ -2,8 +2,7 @@ From: "Ewan D. Milne" <emilne@redhat.com>
 Date: Wed, 31 May 2017 11:01:25 -0400
 Subject: [PATCH] scsi: Add STARGET_CREATE_REMOVE state to scsi_target_state
 Git-commit: f9279c968c257ee39b0d7bd2571a4d231a67bcc1
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/mkp/scsi.git
-Patch-Mainline: queued in maintainers subsystem repo
+Patch-mainline: v4.13-rc1
 References: bsc#1013887
 
 The addition of the STARGET_REMOVE state had the side effect of

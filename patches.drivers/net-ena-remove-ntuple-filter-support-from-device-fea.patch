@@ -1,8 +1,7 @@
 From: Netanel Belgazal <netanel@annapurnalabs.com>
 Date: Thu, 9 Feb 2017 15:21:27 +0200
 Subject: net/ena: remove ntuple filter support from device feature list
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: fdeea0ad87fd05e5fcb5e7b6643eabc34f29405a
 References: bsc#1026509
 

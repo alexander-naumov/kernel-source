@@ -1,9 +1,8 @@
 From: Ben Gamari <ben@smart-cactus.org>
 Subject: Input: ALPS - add touchstick support for SS5 hardware
 References: bsc#987703
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.9-rc1
 Git-commit: 4777ac220c430173e297237b896932ed5fd8aaf3
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dtor/input.git
 
 Add touchstick support for the so-called SS5 hardware, which uses a
 variant of the SS4 protocol.

@@ -1,8 +1,7 @@
 From: Ursula Braun <ubraun@linux.vnet.ibm.com>
 Subject: qeth: fix L3 next-hop im xmit qeth hdr
-Patch-mainline: Queued in subsystem maintainers repo
+Patch-mainline: v4.13-rc5
 Git-commit: ec2c6726322f0d270bab477e4904bf9496f70ee5
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net.gi
 References: bnc#1052773, LTC#157374
 
 Description:  qeth: fix L3 next-hop im xmit qeth hdr

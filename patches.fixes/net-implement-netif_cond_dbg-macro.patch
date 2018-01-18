@@ -1,8 +1,7 @@
 From: Edward Cree <ecree@solarflare.com>
 Date: Fri, 27 Jan 2017 15:02:26 +0000
 Subject: net: implement netif_cond_dbg macro
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: f617f27653c4d9f5b2aa43d567ac0405df889944
 References: bsc#1019168
 

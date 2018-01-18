@@ -1,8 +1,7 @@
 From: Naveen N. Rao <naveen.n.rao@linux.vnet.ibm.com>
 Subject: powerpc/ftrace: Pass the correct stack pointer for DYNAMIC_FTRACE_WITH_REGS
 Git-commit: a4979a7e71eb8da976cbe4a0a1fa50636e76b04f
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/powerpc/linux.git
+Patch-mainline: v4.12-rc7
 References: FATE#322421
 
  powerpc/ftrace: Pass the correct stack pointer for DYNAMIC_FTRACE_WITH_REGS

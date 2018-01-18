@@ -1,9 +1,8 @@
 From: Ben Gamari <ben@smart-cactus.org>
 Subject: Input: ALPS - set DualPoint flag for 74 03 28 devices
 References: bsc#987703
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.9-rc1
 Git-commit: aeaa881f9b17823028b464893b89c42db797b717
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/dtor/input.git
 
 Here we introduce logic in alps_identify to set the ALPS_DUALPOINT flag
 for touchpad hardware responding to E7 report with 73 03 28, as is found

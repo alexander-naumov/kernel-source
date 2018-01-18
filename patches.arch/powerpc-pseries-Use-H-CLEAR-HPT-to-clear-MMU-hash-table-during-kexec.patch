@@ -3,9 +3,8 @@ From: Anton Blanchard <anton@samba.org>
 Date: Sat, 1 Oct 2016 20:41:56 +1000
 Subject: [PATCH] powerpc/pseries: Use H_CLEAR_HPT to clear MMU hash table
  during kexec
-Patch-mainline: queued
+Patch-mainline: v4.10-rc1
 Git-commit: 5246adec59458b5d325b8e1462ea9ef3ead7f6ae
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
 References: bsc#1003813
 
 An hcall was recently added that does exactly what we need during kexec

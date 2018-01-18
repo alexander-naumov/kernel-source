@@ -2,8 +2,7 @@ From 91197a9230e852eeefdb79b1bddc3cd9505d4248 Mon Sep 17 00:00:00 2001
 From: Takashi Iwai <tiwai@suse.de>
 Date: Mon, 28 Nov 2016 16:26:40 +0100
 Subject: [PATCH] ASoC: Intel: atom: Make some messages to debug level
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/tiwai/sound.git
-Patch-mainline: Queued in subsystem maintainer repository
+Patch-mainline: v4.10-rc1
 Git-commit: 91197a9230e852eeefdb79b1bddc3cd9505d4248
 References: bsc#1010690
 

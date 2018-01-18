@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:39 -0500
 Subject: [PATCH] scsi: ipr: Error path locking fixes
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: f646f325a829d73abc708088d2b67cd11b775fdf
 
 This patch closes up some potential race conditions observed in the

@@ -3,8 +3,7 @@ From: "Michael S. Tsirkin" <mst@redhat.com>
 Date: Fri, 21 Apr 2017 12:27:17 +0200
 Subject: [PATCH] kvm: better MWAIT emulation for guests
 Git-commit: 668fffa3f838edfcb1679f842f7ef1afa61c3e9a
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/virt/kvm/kvm.git
+Patch-mainline: v4.12-rc1
 References: bsc#1031142
 
 Guests that are heavy on futexes end up IPI'ing each other a lot. That

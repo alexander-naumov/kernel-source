@@ -4,8 +4,7 @@ Date: Fri, 6 Jan 2017 19:12:53 -0800
 Subject: [PATCH 15/36] net: remove useless memset's in drivers get_stats64
 
 Git-commit: 5944701df90d9577658e2354cc27c4ceaeca30fe
-Patch-mainline: Queued
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.11-rc1
 References: bsc#1019351
 
 In dev_get_stats() the statistic structure storage has already been

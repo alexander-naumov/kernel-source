@@ -4,8 +4,7 @@ Date: Wed, 15 Mar 2017 16:58:36 -0500
 Subject: [PATCH] scsi: ipr: Fix missed EH wakeup
 
 References: bsc#1031555, fate#321595
-Patch-mainline: queued, next-20170328
-Git-repo: https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+Patch-mainline: v4.12-rc1
 Git-commit: 66a0d59cdd12546ddf01d229de28b07ccf6d637f
 
 Following a command abort or device reset, ipr's EH handlers wait for

@@ -2,8 +2,7 @@ From 4a8b3a682be9addff7dbd16371fa8c34103b5c31 Mon Sep 17 00:00:00 2001
 From: Pierre-Louis Bossart <pierre-louis.bossart@linux.intel.com>
 Date: Fri, 16 Dec 2016 10:55:49 -0600
 Subject: [PATCH] ASoC: Intel: bytcr_rt5640: fallback mechanism if MCLK is not enabled
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound.git
+Patch-mainline: v4.10-rc4
 Git-commit: 4a8b3a682be9addff7dbd16371fa8c34103b5c31
 References: bsc#1010690
 

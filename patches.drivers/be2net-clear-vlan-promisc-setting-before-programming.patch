@@ -2,8 +2,7 @@ From: Somnath Kotur <somnath.kotur@emulex.com>
 Date: Wed, 27 Jul 2016 05:26:15 -0400
 Subject: [PATCH] be2net: clear vlan-promisc setting before programming the
  vlan list
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.9-rc1
 Git-commit: 841f60fcc4e7986a4ef3f83a289ab47076872e42
 References: bsc#963844 FATE#320192
 

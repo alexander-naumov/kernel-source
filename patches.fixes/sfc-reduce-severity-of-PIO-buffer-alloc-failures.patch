@@ -1,8 +1,7 @@
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pila=C5=99?= <tpilar@solarflare.com>
 Date: Wed, 25 Jan 2017 13:48:17 +0000
 Subject: sfc: reduce severity of PIO buffer alloc failures
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git
+Patch-mainline: v4.11-rc1
 Git-commit: 6eacfb54ea1825a3f1062bbfd71669b594168646
 References: bsc#1019168
 

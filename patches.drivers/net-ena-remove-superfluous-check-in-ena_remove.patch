@@ -1,8 +1,7 @@
 From: Lino Sanfilippo <LinoSanfilippo@gmx.de>
 Date: Sat, 18 Feb 2017 12:19:41 +0100
 Subject: net: ena: remove superfluous check in ena_remove()
-Patch-mainline: Queued in subsystem maintainer repository
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
+Patch-mainline: v4.11-rc1
 Git-commit: 90a6c997bd8bb836809eda5efb6406d8c58c0924
 References: bsc#1026509
 
