@@ -16,7 +16,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 
 --- a/arch/x86/kvm/svm.c
 +++ b/arch/x86/kvm/svm.c
-@@ -140,6 +140,8 @@ struct vcpu_svm {
+@@ -141,6 +141,8 @@ struct vcpu_svm {
  
  	u64 next_rip;
  
@@ -25,7 +25,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	u64 host_user_msrs[NR_HOST_SAVE_USER_MSRS];
  	struct {
  		u16 fs;
-@@ -3065,6 +3067,9 @@ static int svm_get_msr(struct kvm_vcpu *
+@@ -3068,6 +3070,9 @@ static int svm_get_msr(struct kvm_vcpu *
  	case MSR_VM_CR:
  		msr_info->data = svm->nested.vm_cr_msr;
  		break;
@@ -35,7 +35,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	case MSR_IA32_UCODE_REV:
  		msr_info->data = 0x01000065;
  		break;
-@@ -3203,6 +3208,9 @@ static int svm_set_msr(struct kvm_vcpu *
+@@ -3206,6 +3211,9 @@ static int svm_set_msr(struct kvm_vcpu *
  	case MSR_VM_IGNNE:
  		vcpu_unimpl(vcpu, "unimplemented wrmsr: 0x%x data 0x%llx\n", ecx, data);
  		break;
@@ -45,7 +45,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	default:
  		return kvm_set_msr_common(vcpu, msr);
  	}
-@@ -3837,6 +3845,9 @@ static void svm_vcpu_run(struct kvm_vcpu
+@@ -3840,6 +3848,9 @@ static void svm_vcpu_run(struct kvm_vcpu
  
  	local_irq_enable();
  
@@ -55,7 +55,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  	asm volatile (
  		"push %%" _ASM_BP "; \n\t"
  		"mov %c[rbx](%[svm]), %%" _ASM_BX " \n\t"
-@@ -3910,6 +3921,12 @@ static void svm_vcpu_run(struct kvm_vcpu
+@@ -3932,6 +3943,12 @@ static void svm_vcpu_run(struct kvm_vcpu
  #endif
  		);
  
@@ -65,6 +65,6 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
 +			wrmsrl(MSR_IA32_SPEC_CTRL, FEATURE_ENABLE_IBRS);
 +	}
 +
- #ifdef CONFIG_X86_64
- 	wrmsrl(MSR_GS_BASE, svm->host.gs_base);
- #else
+ 	/* Eliminate branch target predictions from guest mode */
+ 	vmexit_fill_RSB();
+ 

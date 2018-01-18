@@ -10,13 +10,11 @@ Carved out from a patch by Tim Chen <tim.c.chen@linux.intel.com>
 
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
- arch/x86/include/asm/spec_ctrl.h | 37 +++++++++++++++++++++++++++++++++++++
- arch/x86/kernel/cpu/spec_ctrl.c  | 15 +++++++++++++--
- arch/x86/kvm/vmx.c               |  2 +-
+ arch/x86/include/asm/spec_ctrl.h |   37 +++++++++++++++++++++++++++++++++++++
+ arch/x86/kernel/cpu/spec_ctrl.c  |   15 +++++++++++++--
+ arch/x86/kvm/vmx.c               |    2 +-
  3 files changed, 51 insertions(+), 3 deletions(-)
 
-diff --git a/arch/x86/include/asm/spec_ctrl.h b/arch/x86/include/asm/spec_ctrl.h
-index fa904b1e6dba..372f68d6a6f7 100644
 --- a/arch/x86/include/asm/spec_ctrl.h
 +++ b/arch/x86/include/asm/spec_ctrl.h
 @@ -17,27 +17,55 @@
@@ -91,19 +89,17 @@ index fa904b1e6dba..372f68d6a6f7 100644
  .Lend_\@:
  .endm
  
-@@ -58,6 +94,7 @@
+@@ -57,6 +93,7 @@
+ #else /* __ASSEMBLY__ */
  void x86_enable_ibrs(void);
  void x86_disable_ibrs(void);
- void stuff_RSB(void);
 +unsigned int x86_ibrs_enabled(void);
  
  static inline void x86_ibp_barrier(void)
  {
-diff --git a/arch/x86/kernel/cpu/spec_ctrl.c b/arch/x86/kernel/cpu/spec_ctrl.c
-index 3bb4dba93b7f..1475d51f9c4f 100644
 --- a/arch/x86/kernel/cpu/spec_ctrl.c
 +++ b/arch/x86/kernel/cpu/spec_ctrl.c
-@@ -8,16 +8,27 @@
+@@ -7,16 +7,27 @@
  #include <asm/processor.h>
  #include <asm/spec_ctrl.h>
  
@@ -133,11 +129,9 @@ index 3bb4dba93b7f..1475d51f9c4f 100644
  		native_wrmsrl(MSR_IA32_SPEC_CTRL, FEATURE_ENABLE_IBRS);
  }
  EXPORT_SYMBOL_GPL(x86_enable_ibrs);
-diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
-index 55c65cf29412..d0072861b385 100644
 --- a/arch/x86/kvm/vmx.c
 +++ b/arch/x86/kvm/vmx.c
-@@ -8655,7 +8655,7 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
+@@ -8610,7 +8610,7 @@ static void __noclone vmx_vcpu_run(struc
  
  	atomic_switch_perf_msrs(vmx);
  
@@ -146,4 +140,3 @@ index 55c65cf29412..d0072861b385 100644
  		add_atomic_switch_msr(vmx, MSR_IA32_SPEC_CTRL,
  				      vmx->spec_ctrl, FEATURE_ENABLE_IBRS);
  
-
