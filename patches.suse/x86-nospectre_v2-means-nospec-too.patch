@@ -1,0 +1,55 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: x86/spectre_v2: nospectre_v2 means nospec too
+Patch-mainline: Never, SUSE specific
+References: bsc#1075994 bsc#1075091
+
+In patch patches.suse/21-x86-spec-add-nospec-chicken-bit.patch, we add
+"nospec" kernel parameter to disable spectre. Retpolines in 4.4.113 add
+"nospectre_v2". Make sure the latter disables also the former.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/include/asm/spec_ctrl.h |    1 +
+ arch/x86/kernel/cpu/bugs.c       |    2 ++
+ arch/x86/kernel/cpu/spec_ctrl.c  |    2 +-
+ 3 files changed, 4 insertions(+), 1 deletion(-)
+
+--- a/arch/x86/include/asm/spec_ctrl.h
++++ b/arch/x86/include/asm/spec_ctrl.h
+@@ -96,6 +96,7 @@ void x86_disable_ibrs(void);
+ unsigned int x86_ibrs_enabled(void);
+ unsigned int x86_ibpb_enabled(void);
+ void x86_spec_check(void);
++int nospec(char *str);
+ 
+ static inline void x86_ibp_barrier(void)
+ {
+--- a/arch/x86/kernel/cpu/bugs.c
++++ b/arch/x86/kernel/cpu/bugs.c
+@@ -12,6 +12,7 @@
+ #include <linux/cpu.h>
+ 
+ #include <asm/nospec-branch.h>
++#include <asm/spec_ctrl.h>
+ #include <asm/cmdline.h>
+ #include <asm/bugs.h>
+ #include <asm/processor.h>
+@@ -150,6 +151,7 @@ static enum spectre_v2_mitigation_cmd __
+ 	if (!cmdline_find_option_bool(boot_command_line, "nospectre_v2"))
+ 		return SPECTRE_V2_CMD_AUTO;
+ disable:
++	nospec("");
+ 	spec2_print_if_insecure("disabled on command line.");
+ 	return SPECTRE_V2_CMD_NONE;
+ }
+--- a/arch/x86/kernel/cpu/spec_ctrl.c
++++ b/arch/x86/kernel/cpu/spec_ctrl.c
+@@ -85,7 +85,7 @@ void x86_spec_check(void)
+ }
+ EXPORT_SYMBOL_GPL(x86_spec_check);
+ 
+-static int __init nospec(char *str)
++int __init nospec(char *str)
+ {
+ 	setup_clear_cpu_cap(X86_FEATURE_SPEC_CTRL);
+ 	ibrs_state = 0;
