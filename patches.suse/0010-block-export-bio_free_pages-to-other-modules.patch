@@ -1,0 +1,210 @@
+From 491221f88d00651e449c9caf7415b6453c8a77b7 Mon Sep 17 00:00:00 2001
+From: Guoqing Jiang <gqjiang@suse.com>
+Date: Thu, 22 Sep 2016 03:10:01 -0400
+Subject: [PATCH] block: export bio_free_pages to other modules
+Git-commit: 491221f88d00651e449c9caf7415b6453c8a77b7
+Patch-mainline: v4.9-rc1
+References: bsc#1076110
+
+bio_free_pages is introduced in commit 1dfa0f68c040
+("block: add a helper to free bio bounce buffer pages"),
+we can reuse the func in other modules after it was
+imported.
+
+Cc: Christoph Hellwig <hch@infradead.org>
+Cc: Jens Axboe <axboe@fb.com>
+Cc: Mike Snitzer <snitzer@redhat.com>
+Cc: Shaohua Li <shli@fb.com>
+Signed-off-by: Guoqing Jiang <gqjiang@suse.com>
+Acked-by: Kent Overstreet <kent.overstreet@gmail.com>
+Signed-off-by: Jens Axboe <axboe@fb.com>
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ block/bio.c                   | 3 ++-
+ drivers/md/bcache/btree.c     | 6 +-----
+ drivers/md/bcache/debug.c     | 6 ++----
+ drivers/md/bcache/movinggc.c  | 5 +----
+ drivers/md/bcache/request.c   | 9 ++-------
+ drivers/md/bcache/writeback.c | 5 +----
+ drivers/md/dm-log-writes.c    | 6 +-----
+ drivers/md/raid1.c            | 8 ++------
+ include/linux/bio.h           | 1 +
+ 9 files changed, 13 insertions(+), 36 deletions(-)
+
+diff --git a/block/bio.c b/block/bio.c
+index a6d279e1ea9e..db85c5753a76 100644
+--- a/block/bio.c
++++ b/block/bio.c
+@@ -1068,7 +1068,7 @@ static int bio_copy_to_iter(struct bio *bio, struct iov_iter iter)
+ 	return 0;
+ }
+ 
+-static void bio_free_pages(struct bio *bio)
++void bio_free_pages(struct bio *bio)
+ {
+ 	struct bio_vec *bvec;
+ 	int i;
+@@ -1076,6 +1076,7 @@ static void bio_free_pages(struct bio *bio)
+ 	bio_for_each_segment_all(bvec, bio, i)
+ 		__free_page(bvec->bv_page);
+ }
++EXPORT_SYMBOL(bio_free_pages);
+ 
+ /**
+  *	bio_uncopy_user	-	finish previously mapped bio
+diff --git a/drivers/md/bcache/btree.c b/drivers/md/bcache/btree.c
+index 76f7534d1dd1..81d3db40cd7b 100644
+--- a/drivers/md/bcache/btree.c
++++ b/drivers/md/bcache/btree.c
+@@ -361,12 +361,8 @@ static void __btree_node_write_done(struct closure *cl)
+ static void btree_node_write_done(struct closure *cl)
+ {
+ 	struct btree *b = container_of(cl, struct btree, io);
+-	struct bio_vec *bv;
+-	int n;
+-
+-	bio_for_each_segment_all(bv, b->bio, n)
+-		__free_page(bv->bv_page);
+ 
++	bio_free_pages(b->bio);
+ 	__btree_node_write_done(cl);
+ }
+ 
+diff --git a/drivers/md/bcache/debug.c b/drivers/md/bcache/debug.c
+index c28df164701e..333a1e5f6ae6 100644
+--- a/drivers/md/bcache/debug.c
++++ b/drivers/md/bcache/debug.c
+@@ -107,9 +107,8 @@ void bch_data_verify(struct cached_dev *dc, struct bio *bio)
+ {
+ 	char name[BDEVNAME_SIZE];
+ 	struct bio *check;
+-	struct bio_vec bv, *bv2;
++	struct bio_vec bv;
+ 	struct bvec_iter iter;
+-	int i;
+ 
+ 	check = bio_clone(bio, GFP_NOIO);
+ 	if (!check)
+@@ -136,8 +135,7 @@ void bch_data_verify(struct cached_dev *dc, struct bio *bio)
+ 		kunmap_atomic(p1);
+ 	}
+ 
+-	bio_for_each_segment_all(bv2, check, i)
+-		__free_page(bv2->bv_page);
++	bio_free_pages(check);
+ out_put:
+ 	bio_put(check);
+ }
+diff --git a/drivers/md/bcache/movinggc.c b/drivers/md/bcache/movinggc.c
+index 1881319f2298..5c4bddecfaf0 100644
+--- a/drivers/md/bcache/movinggc.c
++++ b/drivers/md/bcache/movinggc.c
+@@ -44,11 +44,8 @@ static void write_moving_finish(struct closure *cl)
+ {
+ 	struct moving_io *io = container_of(cl, struct moving_io, cl);
+ 	struct bio *bio = &io->bio.bio;
+-	struct bio_vec *bv;
+-	int i;
+ 
+-	bio_for_each_segment_all(bv, bio, i)
+-		__free_page(bv->bv_page);
++	bio_free_pages(bio);
+ 
+ 	if (io->op.replace_collision)
+ 		trace_bcache_gc_copy_collision(&io->w->key);
+diff --git a/drivers/md/bcache/request.c b/drivers/md/bcache/request.c
+index 4b177fe11ebb..40ffe5e424b3 100644
+--- a/drivers/md/bcache/request.c
++++ b/drivers/md/bcache/request.c
+@@ -694,13 +694,8 @@ static void cached_dev_cache_miss_done(struct closure *cl)
+ 	if (s->iop.replace_collision)
+ 		bch_mark_cache_miss_collision(s->iop.c, s->d);
+ 
+-	if (s->iop.bio) {
+-		int i;
+-		struct bio_vec *bv;
+-
+-		bio_for_each_segment_all(bv, s->iop.bio, i)
+-			__free_page(bv->bv_page);
+-	}
++	if (s->iop.bio)
++		bio_free_pages(s->iop.bio);
+ 
+ 	cached_dev_bio_complete(cl);
+ }
+diff --git a/drivers/md/bcache/writeback.c b/drivers/md/bcache/writeback.c
+index d9fd2a62e5f6..e51644e503a5 100644
+--- a/drivers/md/bcache/writeback.c
++++ b/drivers/md/bcache/writeback.c
+@@ -128,11 +128,8 @@ static void write_dirty_finish(struct closure *cl)
+ 	struct dirty_io *io = container_of(cl, struct dirty_io, cl);
+ 	struct keybuf_key *w = io->bio.bi_private;
+ 	struct cached_dev *dc = io->dc;
+-	struct bio_vec *bv;
+-	int i;
+ 
+-	bio_for_each_segment_all(bv, &io->bio, i)
+-		__free_page(bv->bv_page);
++	bio_free_pages(&io->bio);
+ 
+ 	/* This is kind of a dumb way of signalling errors. */
+ 	if (KEY_DIRTY(&w->key)) {
+diff --git a/drivers/md/dm-log-writes.c b/drivers/md/dm-log-writes.c
+index 4ab68033f9d1..b52404159ccf 100644
+--- a/drivers/md/dm-log-writes.c
++++ b/drivers/md/dm-log-writes.c
+@@ -149,8 +149,6 @@ static void put_io_block(struct log_writes_c *lc)
+ static void log_end_io(struct bio *bio)
+ {
+ 	struct log_writes_c *lc = bio->bi_private;
+-	struct bio_vec *bvec;
+-	int i;
+ 
+ 	if (bio->bi_error) {
+ 		unsigned long flags;
+@@ -161,9 +159,7 @@ static void log_end_io(struct bio *bio)
+ 		spin_unlock_irqrestore(&lc->blocks_lock, flags);
+ 	}
+ 
+-	bio_for_each_segment_all(bvec, bio, i)
+-		__free_page(bvec->bv_page);
+-
++	bio_free_pages(bio);
+ 	put_io_block(lc);
+ 	bio_put(bio);
+ }
+diff --git a/drivers/md/raid1.c b/drivers/md/raid1.c
+index 21dc00eb1989..1961d827dbd1 100644
+--- a/drivers/md/raid1.c
++++ b/drivers/md/raid1.c
+@@ -145,12 +145,8 @@ static void * r1buf_pool_alloc(gfp_t gfp_flags, void *data)
+ 	return r1_bio;
+ 
+ out_free_pages:
+-	while (--j >= 0) {
+-		struct bio_vec *bv;
+-
+-		bio_for_each_segment_all(bv, r1_bio->bios[j], i)
+-			__free_page(bv->bv_page);
+-	}
++	while (--j >= 0)
++		bio_free_pages(r1_bio->bios[j]);
+ 
+ out_free_bio:
+ 	while (++j < pi->raid_disks)
+diff --git a/include/linux/bio.h b/include/linux/bio.h
+index e00721a2dce1..97cb48f03dc7 100644
+--- a/include/linux/bio.h
++++ b/include/linux/bio.h
+@@ -459,6 +459,7 @@ static inline void bio_flush_dcache_pages(struct bio *bi)
+ 
+ extern void bio_copy_data(struct bio *dst, struct bio *src);
+ extern int bio_alloc_pages(struct bio *bio, gfp_t gfp);
++extern void bio_free_pages(struct bio *bio);
+ 
+ extern struct bio *bio_copy_user_iov(struct request_queue *,
+ 				     struct rq_map_data *,
+-- 
+2.15.1
+
