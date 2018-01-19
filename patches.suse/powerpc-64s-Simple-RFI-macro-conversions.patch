@@ -13,8 +13,6 @@ where there is a single well known destination context, and it's
 simply a matter of substituting the instruction for the appropriate
 macro.
 
-NOTE: needs closer review - taken from original backport
-
 Signed-off-by: Nicholas Piggin <npiggin@gmail.com>
 Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
@@ -246,7 +244,7 @@ index 16c4d88ba27d..53efd6d709b0 100644
  
  	/* And get back into the code */
 -	RFI
-+	RFI_TO_GUEST
++	RFI_TO_KERNEL
  #endif
  
  /*
