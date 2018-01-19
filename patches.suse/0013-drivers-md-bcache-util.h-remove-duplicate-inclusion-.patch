@@ -1,0 +1,31 @@
+From f4b7ac68f438fa8521bbbf421f194ff10b0a7577 Mon Sep 17 00:00:00 2001
+From: Masanari Iida <standby24x7@gmail.com>
+Date: Thu, 9 Mar 2017 16:17:03 -0800
+Subject: [PATCH] drivers/md/bcache/util.h: remove duplicate inclusion of
+ blkdev.h
+Git-commit: f4b7ac68f438fa8521bbbf421f194ff10b0a7577
+Patch-mainline: v4.11-rc2
+References: bsc#1076110
+
+Link: http://lkml.kernel.org/r/20170226060230.11555-1-standby24x7@gmail.com
+Signed-off-by: Masanari Iida <standby24x7@gmail.com>
+Acked-by: Coly Li <colyli@suse.de>
+Cc: Kent Overstreet <kent.overstreet@gmail.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ drivers/md/bcache/util.h |    1 -
+ 1 file changed, 1 deletion(-)
+
+--- a/drivers/md/bcache/util.h
++++ b/drivers/md/bcache/util.h
+@@ -4,7 +4,6 @@
+ 
+ #include <linux/blkdev.h>
+ #include <linux/errno.h>
+-#include <linux/blkdev.h>
+ #include <linux/kernel.h>
+ #include <linux/llist.h>
+ #include <linux/ratelimit.h>
