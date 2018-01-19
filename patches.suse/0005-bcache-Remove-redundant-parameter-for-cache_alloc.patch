@@ -1,0 +1,45 @@
+From c50d4d5dd367f996393f1d33f5a3a3048bb414f8 Mon Sep 17 00:00:00 2001
+From: Yijing Wang <wangyijing@huawei.com>
+Date: Mon, 4 Jul 2016 09:23:25 +0800
+Subject: [PATCH] bcache: Remove redundant parameter for cache_alloc()
+Git-commit: c50d4d5dd367f996393f1d33f5a3a3048bb414f8
+Patch-mainline: v4.8-rc1
+References: bsc#1076110
+
+Cache_sb is not used in cache_alloc, and we have copied
+sb info to cache->sb already, remove it.
+
+Reviewed-by: Coly Li <colyli@suse.de>
+Signed-off-by: Yijing Wang <wangyijing@huawei.com>
+Signed-off-by: Jens Axboe <axboe@fb.com>
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ drivers/md/bcache/super.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/md/bcache/super.c b/drivers/md/bcache/super.c
+index d542438b18df..c3138f6fc783 100644
+--- a/drivers/md/bcache/super.c
++++ b/drivers/md/bcache/super.c
+@@ -1806,7 +1806,7 @@ void bch_cache_release(struct kobject *kobj)
+ 	module_put(THIS_MODULE);
+ }
+ 
+-static int cache_alloc(struct cache_sb *sb, struct cache *ca)
++static int cache_alloc(struct cache *ca)
+ {
+ 	size_t free;
+ 	struct bucket *b;
+@@ -1861,7 +1861,7 @@ static int register_cache(struct cache_sb *sb, struct page *sb_page,
+ 	if (blk_queue_discard(bdev_get_queue(ca->bdev)))
+ 		ca->discard = CACHE_DISCARD(&ca->sb);
+ 
+-	ret = cache_alloc(sb, ca);
++	ret = cache_alloc(ca);
+ 	if (ret != 0)
+ 		goto err;
+ 
+-- 
+2.15.1
+
