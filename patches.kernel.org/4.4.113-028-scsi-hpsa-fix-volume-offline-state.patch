@@ -1,0 +1,38 @@
+From: Tomas Henzl <thenzl@redhat.com>
+Date: Mon, 20 Mar 2017 16:42:48 +0100
+Subject: [PATCH] scsi: hpsa: fix volume offline state
+Patch-mainline: 4.4.113
+References: FATE#321928 bnc#1012382 bsc#1022600 bsc#1028971
+Git-commit: eb94588dabec82e012281608949a860f64752914
+
+commit eb94588dabec82e012281608949a860f64752914 upstream.
+
+In a previous patch a hpsa_scsi_dev_t.volume_offline update line has
+been removed, so let us put it back..
+
+Fixes: 85b29008d8 (hpsa: update check for logical volume status)
+Signed-off-by: Tomas Henzl <thenzl@redhat.com>
+Acked-by: Don Brace <don.brace@microsemi.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+Cc: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/scsi/hpsa.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/scsi/hpsa.c b/drivers/scsi/hpsa.c
+index 0c87f341fed4..910b795fc5eb 100644
+--- a/drivers/scsi/hpsa.c
++++ b/drivers/scsi/hpsa.c
+@@ -3638,6 +3638,7 @@ static int hpsa_update_device_info(struct ctlr_info *h,
+ 		if (h->fw_support & MISC_FW_RAID_OFFLOAD_BASIC)
+ 			hpsa_get_ioaccel_status(h, scsi3addr, this_device);
+ 		volume_offline = hpsa_volume_offline(h, scsi3addr);
++		this_device->volume_offline = volume_offline;
+ 		if (volume_offline == HPSA_LV_FAILED) {
+ 			rc = HPSA_LV_FAILED;
+ 			dev_err(&h->pdev->dev,
+-- 
+2.16.0
+
