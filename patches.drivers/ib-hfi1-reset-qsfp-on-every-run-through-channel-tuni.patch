@@ -1,0 +1,39 @@
+From: Easwar Hariharan <easwar.hariharan@intel.com>
+Subject: IB/hfi1: Reset QSFP on every run through channel tuning
+Git-commit: b5e710195492f682d93097cddac13e594d39a946
+Patch-mainline: v4.8
+References: git-fixes
+Acked-by: Jiri Bohac <jbohac@suse.cz>
+
+Active QSFP cables were reset only every alternate iteration of the
+channel tuning algorithm instead of every iteration due to incorrect
+reset of the flag that controlled QSFP reset, resulting in using stale
+QSFP status in the channel tuning algorithm.
+
+Fixes: 8ebd4cf1852a ("Add active and optical cable support")
+Reviewed-by: Dean Luick <dean.luick@intel.com>
+Signed-off-by: Easwar Hariharan <easwar.hariharan@intel.com>
+Signed-off-by: Dennis Dalessandro <dennis.dalessandro@intel.com>
+Signed-off-by: Doug Ledford <dledford@redhat.com>
+
+---
+ drivers/staging/rdma/hfi1/platform.c |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+--- a/drivers/staging/rdma/hfi1/platform.c
++++ b/drivers/staging/rdma/hfi1/platform.c
+@@ -639,9 +639,13 @@ static int tune_active_qsfp(struct hfi1_
+ 	if (ret)
+ 		goto bail_unlock;
+ 
++	/*
++	 * We'll change the QSFP memory contents from here on out, thus we set a
++	 * flag here to remind ourselves to reset the QSFP module. This prevents
++	 * reuse of stale settings established in our previous pass through.
++	 */
+ 	if (ppd->qsfp_info.reset_needed) {
+ 		reset_qsfp(ppd);
+-		ppd->qsfp_info.reset_needed = 0;
+ 		refresh_qsfp_cache(ppd, &ppd->qsfp_info);
+ 	} else {
+ 		ppd->qsfp_info.reset_needed = 1;
