@@ -1,0 +1,103 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: [PATCH] x86/retpolines/spec_ctrl: disable IBRS on !SKL if retpolines are active
+Patch-mainline: Not yet, under development
+References: bsc#1068032
+
+SKL is the only arch for which retpolines are not sufficient to mitigate spectre v2, and
+IBRS is still needed there.
+
+Disable IBRS in case it'd be "normally" enabled, but we have retpolines active and are
+running on !SKL architecture.
+
+This patch "decouples" IBRS and IBPB semantics in a sense that IBPB can be set
+independently (when running on !SKL with retpolines), but SKL always implies
+IBRS+IBPB.
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/x86/include/asm/spec_ctrl.h |    1 +
+ arch/x86/kernel/cpu/bugs.c       |   13 +++++++++++--
+ arch/x86/kernel/cpu/spec_ctrl.c  |   16 +++++++++++-----
+ 3 files changed, 23 insertions(+), 7 deletions(-)
+
+--- a/arch/x86/include/asm/spec_ctrl.h
++++ b/arch/x86/include/asm/spec_ctrl.h
+@@ -91,6 +91,7 @@
+ .endm
+ 
+ #else /* __ASSEMBLY__ */
++extern int ibrs_state;
+ void x86_enable_ibrs(void);
+ void x86_disable_ibrs(void);
+ unsigned int x86_ibrs_enabled(void);
+--- a/arch/x86/kernel/cpu/bugs.c
++++ b/arch/x86/kernel/cpu/bugs.c
+@@ -250,6 +250,11 @@ retpoline_auto:
+ 		setup_force_cpu_cap(X86_FEATURE_RSB_CTXSW);
+ 		pr_info("Filling RSB on context switch\n");
+ 	}
++
++	if (!is_skylake_era() && x86_ibrs_enabled()) {
++		pr_info("Retpolines enabled, force-disabling IBRS due to !SKL-era core\n");
++		ibrs_state = 0;
++	}
+ }
+ 
+ #undef pr_fmt
+@@ -278,9 +283,13 @@ ssize_t cpu_show_spectre_v2(struct devic
+ {
+ 	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V2))
+ 		return sprintf(buf, "Not affected\n");
+-	if (boot_cpu_has(X86_FEATURE_SPEC_CTRL))
++	if (boot_cpu_has(X86_FEATURE_SPEC_CTRL) && x86_ibrs_enabled()) {
+ 		return sprintf(buf, "Mitigation: IBRS+IBPB\n");
++	}
+ 
+-	return sprintf(buf, "%s\n", spectre_v2_strings[spectre_v2_enabled]);
++	if (x86_ibpb_enabled())
++		return sprintf(buf, "%s + IBPB\n", spectre_v2_strings[spectre_v2_enabled]);
++	else
++		return sprintf(buf, "%s\n", spectre_v2_strings[spectre_v2_enabled]);
+ }
+ #endif
+--- a/arch/x86/kernel/cpu/spec_ctrl.c
++++ b/arch/x86/kernel/cpu/spec_ctrl.c
+@@ -11,8 +11,11 @@
+  * Keep it open for more flags in case needed.
+  *
+  * -1 means "not touched by nospec() earlyparam"
++ *
++ * If IBRS is set, IBPB is always set. IBPB can be set independently
++ * on IBRS state (SKL).
+  */
+-static int ibrs_state = -1;
++int ibrs_state = -1;
+ static int ibpb_state = -1;
+ 
+ unsigned int notrace x86_ibrs_enabled(void)
+@@ -51,18 +54,21 @@ EXPORT_SYMBOL_GPL(x86_enable_ibrs);
+ void x86_spec_check(void)
+ {
+ 
+-	if (ibrs_state == 0 || ibpb_state == 0) {
++	if (ibpb_state == 0) {
+ 		printk_once(KERN_INFO "IBRS/IBPB: disabled\n");
+ 		return;
+ 	}
+ 
+ 	if (cpuid_edx(7) & BIT(26)) {
+-		ibrs_state = 1;
++		if (ibrs_state == -1) {
++			/* noone force-disabled IBRS */
++			ibrs_state = 1;
++			printk_once(KERN_INFO "IBRS: initialized\n");
++		}
++		printk_once(KERN_INFO "IBPB: initialized\n");
+ 		ibpb_state = 1;
+ 
+ 		setup_force_cpu_cap(X86_FEATURE_SPEC_CTRL);
+-
+-		printk_once(KERN_INFO "IBRS/IBPB: Initialized\n");
+ 	}
+ 
+ 	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD) {
