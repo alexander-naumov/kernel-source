@@ -12,27 +12,17 @@ In x86 case, it is either lfence or mfence, based on
 processor type. ARM and others can define it according
 to their needs.
 
+[js] x86 support removed, this is left here only for other arrches to be
+     sorted out later.
+
 Suggested-by: Arjan van de Ven <arjan@linux.intel.com>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Tim Chen <tim.c.chen@linux.intel.com>
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- arch/x86/include/asm/barrier.h |    3 +++
- include/asm-generic/barrier.h  |    4 ++++
- 2 files changed, 7 insertions(+)
+ include/asm-generic/barrier.h |    4 ++++
+ 1 file changed, 4 insertions(+)
 
---- a/arch/x86/include/asm/barrier.h
-+++ b/arch/x86/include/asm/barrier.h
-@@ -24,6 +24,9 @@
- #define wmb()	asm volatile("sfence" ::: "memory")
- #endif
- 
-+#define gmb() alternative_2("", "mfence", X86_FEATURE_MFENCE_RDTSC, \
-+				       "lfence", X86_FEATURE_LFENCE_RDTSC);
-+
- #ifdef CONFIG_X86_PPRO_FENCE
- #define dma_rmb()	rmb()
- #else
 --- a/include/asm-generic/barrier.h
 +++ b/include/asm-generic/barrier.h
 @@ -42,6 +42,10 @@
