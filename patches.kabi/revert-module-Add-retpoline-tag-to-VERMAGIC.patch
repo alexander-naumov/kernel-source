@@ -1,0 +1,40 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Wed, 24 Jan 2018 14:01:47 +0100
+Subject: Revert "module: Add retpoline tag to VERMAGIC"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit 1782af2835fe6fbff6265a53fb85847fb9c58137, upstream
+commit 6cfb521ac0d5b97470883ff9b7facae264b7ab12. This would kill kABI
+and no already built KMP could be loaded.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/vermagic.h | 8 +-------
+ 1 file changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
+index a3d04934aa96..6f8fbcf10dfb 100644
+--- a/include/linux/vermagic.h
++++ b/include/linux/vermagic.h
+@@ -24,16 +24,10 @@
+ #ifndef MODULE_ARCH_VERMAGIC
+ #define MODULE_ARCH_VERMAGIC ""
+ #endif
+-#ifdef RETPOLINE
+-#define MODULE_VERMAGIC_RETPOLINE "retpoline "
+-#else
+-#define MODULE_VERMAGIC_RETPOLINE ""
+-#endif
+ 
+ #define VERMAGIC_STRING 						\
+ 	UTS_RELEASE " "							\
+ 	MODULE_VERMAGIC_SMP MODULE_VERMAGIC_PREEMPT 			\
+ 	MODULE_VERMAGIC_MODULE_UNLOAD MODULE_VERMAGIC_MODVERSIONS	\
+-	MODULE_ARCH_VERMAGIC						\
+-	MODULE_VERMAGIC_RETPOLINE
++	MODULE_ARCH_VERMAGIC
+ 
+-- 
+2.16.0
+
