@@ -1,7 +1,7 @@
-From fd6e440f20b1a4304553775fc55938848ff617c9 Mon Sep 17 00:00:00 2001
+From 63224f834ba1c56c28e844d9a60a898b62f87cb7 Mon Sep 17 00:00:00 2001
 From: Michael Ellerman <mpe@ellerman.id.au>
 Date: Tue, 16 Jan 2018 21:20:05 +1100
-Subject: [PATCH] powerpc/64s: Wire up cpu_show_meltdown()
+Subject: [PATCH 19/19] powerpc/64s: Wire up cpu_show_meltdown()
 
 References: bsc#1068032
 Patch-mainline: v4.15-rc9
@@ -40,10 +40,10 @@ index d0fa61dfcddd..b048ab0bf983 100644
  	select GENERIC_STRNCPY_FROM_USER
  	select GENERIC_STRNLEN_USER
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index d1e49c893c85..90b7c06bf8fd 100644
+index c2f8965c71dc..f6753400187f 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
-@@ -967,4 +967,12 @@ static __init int rfi_flush_debugfs_init(void)
+@@ -990,4 +990,12 @@ static __init int rfi_flush_debugfs_init(void)
  }
  device_initcall(rfi_flush_debugfs_init);
  #endif

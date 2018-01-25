@@ -1,7 +1,7 @@
-From f7b5ebea148f8333ed0bbca8d1d64ca8ffb8d0f9 Mon Sep 17 00:00:00 2001
+From 64900cbee1a8466207552c0764f54c8e03c210dc Mon Sep 17 00:00:00 2001
 From: Ram Pai <linuxram@us.ibm.com>
 Date: Fri, 12 Jan 2018 12:25:21 -0600
-Subject: [PATCH 10/16] powerpc/rfi-flush: Move RFI flush fields out of the
+Subject: [PATCH 10/19] powerpc/rfi-flush: Move RFI flush fields out of the
  paca (unbreak kABI)
 
 References: bsc#1068032, bsc#1075087
@@ -28,7 +28,7 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  5 files changed, 64 insertions(+), 21 deletions(-)
 
 diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
-index e5a0fe7cebed..5dcc8c0416f7 100644
+index 57294f9ead29..bb7e04d9b737 100644
 --- a/arch/powerpc/include/asm/paca.h
 +++ b/arch/powerpc/include/asm/paca.h
 @@ -48,6 +48,23 @@ extern unsigned int debug_smp_processor_id(void); /* from linux/smp.h */
@@ -70,7 +70,7 @@ index e5a0fe7cebed..5dcc8c0416f7 100644
  	/*
  	 * Now, starting in cacheline 2, the exception save areas
  	 */
-@@ -197,16 +222,6 @@ struct paca_struct {
+@@ -196,16 +221,6 @@ struct paca_struct {
  #endif
  	struct kvmppc_host_state kvm_hstate;
  #endif
@@ -88,10 +88,10 @@ index e5a0fe7cebed..5dcc8c0416f7 100644
  
  extern struct paca_struct *paca;
 diff --git a/arch/powerpc/kernel/asm-offsets.c b/arch/powerpc/kernel/asm-offsets.c
-index 40213b9d03d1..786a4a3fb425 100644
+index 498eade91cf6..9b8e0d877efa 100644
 --- a/arch/powerpc/kernel/asm-offsets.c
 +++ b/arch/powerpc/kernel/asm-offsets.c
-@@ -243,17 +243,18 @@ int main(void)
+@@ -242,17 +242,18 @@ int main(void)
  	DEFINE(LPPACA_DTLIDX, offsetof(struct lppaca, dtl_idx));
  	DEFINE(LPPACA_YIELDCOUNT, offsetof(struct lppaca, yield_count));
  	DEFINE(PACA_DTL_RIDX, offsetof(struct paca_struct, dtl_ridx));
@@ -136,7 +136,7 @@ index 18eba158fd02..dc551dc41f3b 100644
  	std	r10,PACA_EXRFI+EX_R10(r13)
  	std	r11,PACA_EXRFI+EX_R11(r13)
 diff --git a/arch/powerpc/kernel/paca.c b/arch/powerpc/kernel/paca.c
-index 3085a2ff2e6d..8be590359967 100644
+index 01ea0edf0579..8719a14c8ab5 100644
 --- a/arch/powerpc/kernel/paca.c
 +++ b/arch/powerpc/kernel/paca.c
 @@ -147,6 +147,15 @@ static void __init allocate_slb_shadows(int nr_cpus, int limit) { }
@@ -216,10 +216,10 @@ index 3085a2ff2e6d..8be590359967 100644
  	free_lppacas();
  }
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index 7da9785cc2a7..9a595ea33d51 100644
+index ff2ca2b74757..c984ec69f419 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
-@@ -892,6 +892,7 @@ static void init_fallback_flush(void)
+@@ -883,6 +883,7 @@ static void init_fallback_flush(void)
  	memset(l1d_flush_fallback_area, 0, l1d_size * 2);
  
  	for_each_possible_cpu(cpu) {
@@ -227,7 +227,7 @@ index 7da9785cc2a7..9a595ea33d51 100644
  		/*
  		 * The fallback flush is currently coded for 8-way
  		 * associativity. Different associativity is possible, but it
-@@ -902,9 +903,9 @@ static void init_fallback_flush(void)
+@@ -893,9 +894,9 @@ static void init_fallback_flush(void)
  		 */
  		u64 c = l1d_size / 8;
  

@@ -1,7 +1,7 @@
-From b8d897d73ad349ecd9ac438ecf3bd2af70085024 Mon Sep 17 00:00:00 2001
+From 9197c3833f6c2fcbf54dadba0a77c05e33853b16 Mon Sep 17 00:00:00 2001
 From: Nicholas Piggin <npiggin@gmail.com>
 Date: Wed, 10 Jan 2018 03:07:15 +1100
-Subject: [PATCH 05/16] powerpc/64s: Simple RFI macro conversions
+Subject: [PATCH 05/19] powerpc/64s: Simple RFI macro conversions
 
 References: bsc#1068032, bsc#1075087
 Patch-mainline: v4.15-rc8
@@ -236,7 +236,7 @@ index 2e9742b89b40..5b1fa8585613 100644
  
  secondary_too_late:
 diff --git a/arch/powerpc/kvm/book3s_rmhandlers.S b/arch/powerpc/kvm/book3s_rmhandlers.S
-index 16c4d88ba27d..53efd6d709b0 100644
+index 16c4d88ba27d..def7a0706c1c 100644
 --- a/arch/powerpc/kvm/book3s_rmhandlers.S
 +++ b/arch/powerpc/kvm/book3s_rmhandlers.S
 @@ -141,7 +141,7 @@ kvmppc_handler_skip_ins:

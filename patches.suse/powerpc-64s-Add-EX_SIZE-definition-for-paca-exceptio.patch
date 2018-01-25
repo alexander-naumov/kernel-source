@@ -1,7 +1,7 @@
-From 877d70f664f24ad99f012e23aaf5699350abb116 Mon Sep 17 00:00:00 2001
+From 372cdd229428efc7333d3e779312b7f520a88571 Mon Sep 17 00:00:00 2001
 From: Nicholas Piggin <npiggin@gmail.com>
 Date: Sun, 21 May 2017 23:15:46 +1000
-Subject: [PATCH 02/16] powerpc/64s: Add EX_SIZE definition for paca exception
+Subject: [PATCH 02/19] powerpc/64s: Add EX_SIZE definition for paca exception
  save areas
 
 References: bsc#1068032, bsc#1075087
@@ -41,7 +41,7 @@ index 77f52b26dad6..c5d4a4a37de9 100644
  #define __EXCEPTION_RELON_PROLOG_PSERIES_1(label, h)			\
  	ld	r12,PACAKBASE(r13);	/* get high part of &label */	\
 diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
-index 181e85347379..79356fbc17e0 100644
+index 70bd4381f8e6..401a61571c2e 100644
 --- a/arch/powerpc/include/asm/paca.h
 +++ b/arch/powerpc/include/asm/paca.h
 @@ -20,7 +20,11 @@
