@@ -1,0 +1,102 @@
+From c438d0e93ed067b91e9cf862c24015dc4809ac26 Mon Sep 17 00:00:00 2001
+From: Laura Abbott <labbott@redhat.com>
+Date: Tue, 9 Aug 2016 18:25:26 -0700
+Subject: [PATCH 10/40] arm64: Handle el1 synchronous instruction aborts
+ cleanly
+
+Git-commit: 9adeb8e72dbfe976709df01e259ed556ee60e779
+Patch-mainline: v4.8-rc2
+References: bsc#1068032
+
+Executing from a non-executable area gives an ugly message:
+
+lkdtm: Performing direct entry EXEC_RODATA
+lkdtm: attempting ok execution at ffff0000084c0e08
+lkdtm: attempting bad execution at ffff000008880700
+Bad mode in Synchronous Abort handler detected on CPU2, code 0x8400000e -- IABT (current EL)
+CPU: 2 PID: 998 Comm: sh Not tainted 4.7.0-rc2+ #13
+Hardware name: linux,dummy-virt (DT)
+task: ffff800077e35780 ti: ffff800077970000 task.ti: ffff800077970000
+PC is at lkdtm_rodata_do_nothing+0x0/0x8
+LR is at execute_location+0x74/0x88
+
+The 'IABT (current EL)' indicates the error but it's a bit cryptic
+without knowledge of the ARM ARM. There is also no indication of the
+specific address which triggered the fault. The increase in kernel
+page permissions makes hitting this case more likely as well.
+Handling the case in the vectors gives a much more familiar looking
+error message:
+
+lkdtm: Performing direct entry EXEC_RODATA
+lkdtm: attempting ok execution at ffff0000084c0840
+lkdtm: attempting bad execution at ffff000008880680
+Unable to handle kernel paging request at virtual address ffff000008880680
+pgd = ffff8000089b2000
+[ffff000008880680] *pgd=00000000489b4003, *pud=0000000048904003, *pmd=0000000000000000
+Internal error: Oops: 8400000e [#1] PREEMPT SMP
+Modules linked in:
+CPU: 1 PID: 997 Comm: sh Not tainted 4.7.0-rc1+ #24
+Hardware name: linux,dummy-virt (DT)
+task: ffff800077f9f080 ti: ffff800008a1c000 task.ti: ffff800008a1c000
+PC is at lkdtm_rodata_do_nothing+0x0/0x8
+LR is at execute_location+0x74/0x88
+
+Acked-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+[mb: drop is_permission_fault hunks]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/kernel/entry.S |    7 +++++++
+ arch/arm64/mm/fault.c     |    8 +++++++-
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -362,6 +362,8 @@ el1_sync:
+ 	lsr	x24, x1, #ESR_ELx_EC_SHIFT	// exception class
+ 	cmp	x24, #ESR_ELx_EC_DABT_CUR	// data abort in EL1
+ 	b.eq	el1_da
++	cmp	x24, #ESR_ELx_EC_IABT_CUR	// instruction abort in EL1
++	b.eq	el1_ia
+ 	cmp	x24, #ESR_ELx_EC_SYS64		// configurable trap
+ 	b.eq	el1_undef
+ 	cmp	x24, #ESR_ELx_EC_SP_ALIGN	// stack alignment exception
+@@ -373,6 +375,11 @@ el1_sync:
+ 	cmp	x24, #ESR_ELx_EC_BREAKPT_CUR	// debug exception in EL1
+ 	b.ge	el1_dbg
+ 	b	el1_inv
++
++el1_ia:
++	/*
++	 * Fall through to the Data abort case
++	 */
+ el1_da:
+ 	/*
+ 	 * Data abort handling
+--- a/arch/arm64/mm/fault.c
++++ b/arch/arm64/mm/fault.c
+@@ -133,6 +133,11 @@ int ptep_set_access_flags(struct vm_area
+ }
+ #endif
+ 
++static bool is_el1_instruction_abort(unsigned int esr)
++{
++	return ESR_ELx_EC(esr) == ESR_ELx_EC_IABT_CUR;
++}
++
+ /*
+  * The kernel tried to access some page that wasn't present.
+  */
+@@ -141,8 +146,9 @@ static void __do_kernel_fault(struct mm_
+ {
+ 	/*
+ 	 * Are we prepared to handle this kernel fault?
++	 * We are almost certainly not prepared to handle instruction faults.
+ 	 */
+-	if (fixup_exception(regs))
++	if (!is_el1_instruction_abort(esr) && fixup_exception(regs))
+ 		return;
+ 
+ 	/*
