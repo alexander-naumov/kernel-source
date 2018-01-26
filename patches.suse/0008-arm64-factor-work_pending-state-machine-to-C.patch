@@ -1,0 +1,114 @@
+From 666d6f94f0cb396be540325594711f35061c65db Mon Sep 17 00:00:00 2001
+From: Chris Metcalf <cmetcalf@mellanox.com>
+Date: Thu, 14 Jul 2016 16:48:14 -0400
+Subject: [PATCH 07/28] arm64: factor work_pending state machine to C
+
+Git-commit: 421dd6fa6709ebee4f888ed89da5c103c77caee1
+Patch-mainline: v4.9-rc1
+References: bsc#1068032
+
+Currently ret_fast_syscall, work_pending, and ret_to_user form an ad-hoc
+state machine that can be difficult to reason about due to duplicated
+code and a large number of branch targets.
+
+This patch factors the common logic out into the existing
+do_notify_resume function, converting the code to C in the process,
+making the code more legible.
+
+This patch tries to closely mirror the existing behaviour while using
+the usual C control flow primitives. As local_irq_{disable,enable} may
+be instrumented, we balance exception entry (where we will almost most
+likely enable IRQs) with a call to trace_hardirqs_on just before the
+return to userspace.
+
+Signed-off-by: Chris Metcalf <cmetcalf@mellanox.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+---
+ arch/arm64/kernel/entry.S  | 12 ++++--------
+ arch/arm64/kernel/signal.c | 36 ++++++++++++++++++++++++++----------
+ 2 files changed, 30 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 70bd8b8e8ce6..3aec005405b3 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -778,18 +778,13 @@ ret_fast_syscall_trace:
+  * Ok, we need to do extra processing, enter the slow path.
+  */
+ work_pending:
+-	tbnz	x1, #TIF_NEED_RESCHED, work_resched
+-	/* TIF_SIGPENDING, TIF_NOTIFY_RESUME or TIF_FOREIGN_FPSTATE case */
+ 	mov	x0, sp				// 'regs'
+-	enable_irq				// enable interrupts for do_notify_resume()
+ 	bl	do_notify_resume
+-	b	ret_to_user
+-work_resched:
+ #ifdef CONFIG_TRACE_IRQFLAGS
+-	bl	trace_hardirqs_off		// the IRQs are off here, inform the tracing code
++	bl	trace_hardirqs_on		// enabled while in userspace
+ #endif
+-	bl	schedule
+-
++	ldr	x1, [tsk, #TI_FLAGS]		// re-check for single-step
++	b	finish_ret_to_user
+ /*
+  * "slow" syscall return path.
+  */
+@@ -798,6 +793,7 @@ ret_to_user:
+ 	ldr	x1, [tsk, #TI_FLAGS]
+ 	and	x2, x1, #_TIF_WORK_MASK
+ 	cbnz	x2, work_pending
++finish_ret_to_user:
+ 	enable_step_tsk x1, x2
+ 	kernel_exit 0
+ ENDPROC(ret_to_user)
+diff --git a/arch/arm64/kernel/signal.c b/arch/arm64/kernel/signal.c
+index a8eafdbc7cb8..404dd67080b9 100644
+--- a/arch/arm64/kernel/signal.c
++++ b/arch/arm64/kernel/signal.c
+@@ -402,15 +402,31 @@ static void do_signal(struct pt_regs *regs)
+ asmlinkage void do_notify_resume(struct pt_regs *regs,
+ 				 unsigned int thread_flags)
+ {
+-	if (thread_flags & _TIF_SIGPENDING)
+-		do_signal(regs);
+-
+-	if (thread_flags & _TIF_NOTIFY_RESUME) {
+-		clear_thread_flag(TIF_NOTIFY_RESUME);
+-		tracehook_notify_resume(regs);
+-	}
+-
+-	if (thread_flags & _TIF_FOREIGN_FPSTATE)
+-		fpsimd_restore_current_state();
++	/*
++	 * The assembly code enters us with IRQs off, but it hasn't
++	 * informed the tracing code of that for efficiency reasons.
++	 * Update the trace code with the current status.
++	 */
++	trace_hardirqs_off();
++	do {
++		if (thread_flags & _TIF_NEED_RESCHED) {
++			schedule();
++		} else {
++			local_irq_enable();
++
++			if (thread_flags & _TIF_SIGPENDING)
++				do_signal(regs);
++
++			if (thread_flags & _TIF_NOTIFY_RESUME) {
++				clear_thread_flag(TIF_NOTIFY_RESUME);
++				tracehook_notify_resume(regs);
++			}
++
++			if (thread_flags & _TIF_FOREIGN_FPSTATE)
++				fpsimd_restore_current_state();
++		}
+ 
++		local_irq_disable();
++		thread_flags = READ_ONCE(current_thread_info()->flags);
++	} while (thread_flags & _TIF_WORK_MASK);
+ }
+-- 
+2.11.0
+
