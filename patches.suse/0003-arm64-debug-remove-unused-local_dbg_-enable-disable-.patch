@@ -1,0 +1,38 @@
+From 6db554fac9357741dc397281de848d2253ad5d67 Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Tue, 19 Jul 2016 15:07:40 +0100
+Subject: [PATCH 02/28] arm64: debug: remove unused local_dbg_{enable, disable}
+ macros
+
+Git-commit: 2572214170fb95370be21915c0397f4b6a27e7e3
+Patch-mainline: v4.8-rc1
+References: bsc#1068032
+
+The debug enable/disable macros are not used anywhere in the kernel, so
+remove them from irqflags.h
+
+Reported-by: Robin Murphy <robin.murphy@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Acked-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+---
+ arch/arm64/include/asm/irqflags.h | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/arch/arm64/include/asm/irqflags.h b/arch/arm64/include/asm/irqflags.h
+index 11cc941bd107..8c581281fa12 100644
+--- a/arch/arm64/include/asm/irqflags.h
++++ b/arch/arm64/include/asm/irqflags.h
+@@ -110,8 +110,5 @@ static inline int arch_irqs_disabled_flags(unsigned long flags)
+ 		: : "r" (flags) : "memory");				\
+ 	} while (0)
+ 
+-#define local_dbg_enable()	asm("msr	daifclr, #8" : : : "memory")
+-#define local_dbg_disable()	asm("msr	daifset, #8" : : : "memory")
+-
+ #endif
+ #endif
+-- 
+2.11.0
+
