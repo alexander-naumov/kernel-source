@@ -1,0 +1,70 @@
+From 90cade5f60646396efbccf0a160d72267d8aa36f Mon Sep 17 00:00:00 2001
+From: Catalin Marinas <catalin.marinas@arm.com>
+Date: Fri, 1 Jul 2016 15:48:55 +0100
+Subject: [PATCH 05/40] arm64: Factor out TTBR0_EL1 post-update workaround into
+ a specific asm macro
+
+Git-commit: f33bcf03e6079668da6bf4eec4a7dcf9289131d0
+Patch-mainline: v4.10-rc1
+References: bsc#1068032
+
+This patch takes the errata workaround code out of cpu_do_switch_mm into
+a dedicated post_ttbr0_update_workaround macro which will be reused in a
+subsequent patch.
+
+Cc: Will Deacon <will.deacon@arm.com>
+Cc: James Morse <james.morse@arm.com>
+Cc: Kees Cook <keescook@chromium.org>
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+[mb: add cpufeature.h include to fix linker problem]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/assembler.h |   14 ++++++++++++++
+ arch/arm64/mm/proc.S               |    6 +-----
+ 2 files changed, 15 insertions(+), 5 deletions(-)
+
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -23,6 +23,7 @@
+ #ifndef __ASM_ASSEMBLER_H
+ #define __ASM_ASSEMBLER_H
+ 
++#include <asm/cpufeature.h>
+ #include <asm/ptrace.h>
+ #include <asm/thread_info.h>
+ 
+@@ -213,4 +214,17 @@ lr	.req	x30		// link register
+ 	.size	__pi_##x, . - x;	\
+ 	ENDPROC(x)
+ 
++/*
++ * Errata workaround post TTBR0_EL1 update.
++ */
++	.macro	post_ttbr0_update_workaround
++#ifdef CONFIG_CAVIUM_ERRATUM_27456
++alternative_if ARM64_WORKAROUND_CAVIUM_27456
++	ic	iallu
++	dsb	nsh
++	isb
++alternative_else_nop_endif
++#endif
++	.endm
++
+ #endif	/* __ASM_ASSEMBLER_H */
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -139,11 +139,7 @@ ENTRY(cpu_do_switch_mm)
+ 	bfi	x0, x1, #48, #16		// set the ASID
+ 	msr	ttbr0_el1, x0			// set TTBR0
+ 	isb
+-alternative_if ARM64_WORKAROUND_CAVIUM_27456
+-	ic	iallu
+-	dsb	nsh
+-	isb
+-alternative_else_nop_endif
++	post_ttbr0_update_workaround
+ 	ret
+ ENDPROC(cpu_do_switch_mm)
+ 
