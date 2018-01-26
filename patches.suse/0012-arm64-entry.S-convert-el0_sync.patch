@@ -1,0 +1,131 @@
+From 6d9d6aa51b75d0fd2c0bbfa14300a1ffab01166f Mon Sep 17 00:00:00 2001
+From: James Morse <james.morse@arm.com>
+Date: Thu, 2 Nov 2017 12:12:40 +0000
+Subject: [PATCH 11/28] arm64: entry.S convert el0_sync
+
+Git-commit: 746647c75afb5a1706426c2563ff02884a15530d
+Patch-mainline: v4.15-rc1
+References: bsc#1068032
+
+el0_sync also unmasks exceptions on a case-by-case basis, debug exceptions
+are enabled, unless this was a debug exception. Irqs are unmasked for
+some exception types but not for others.
+
+el0_dbg should run with everything masked to prevent us taking a debug
+exception from do_debug_exception. For the other cases we can unmask
+everything. This changes the behaviour of fpsimd_{acc,exc} and el0_inv
+which previously ran with irqs masked.
+
+This patch removed the last user of enable_dbg_and_irq, remove it.
+
+Signed-off-by: James Morse <james.morse@arm.com>
+Reviewed-by: Julien Thierry <julien.thierry@arm.com>
+Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+---
+ arch/arm64/include/asm/assembler.h |    9 ---------
+ arch/arm64/kernel/entry.S          |   22 +++++++++-------------
+ 2 files changed, 9 insertions(+), 22 deletions(-)
+
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -105,15 +105,6 @@
+ 	.endm
+ 
+ /*
+- * Enable both debug exceptions and interrupts. This is likely to be
+- * faster than two daifclr operations, since writes to this register
+- * are self-synchronising.
+- */
+-	.macro	enable_dbg_and_irq
+-	msr	daifclr, #(8 | 2)
+-	.endm
+-
+-/*
+  * NOP sequence
+  */
+ 	.macro	nops, num
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -584,8 +584,7 @@ el0_da:
+ 	 * Data abort handling
+ 	 */
+ 	mrs	x26, far_el1
+-	// enable interrupts before calling the main handler
+-	enable_dbg_and_irq
++	enable_daif
+ 	ct_user_exit
+ 	clear_address_tag x0, x26
+ 	mov	x1, x25
+@@ -597,8 +596,7 @@ el0_ia:
+ 	 * Instruction abort handling
+ 	 */
+ 	mrs	x26, far_el1
+-	// enable interrupts before calling the main handler
+-	enable_dbg_and_irq
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, x26
+ 	mov	x1, x25
+@@ -609,7 +607,7 @@ el0_fpsimd_acc:
+ 	/*
+ 	 * Floating Point or Advanced SIMD access
+ 	 */
+-	enable_dbg
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, x25
+ 	mov	x1, sp
+@@ -619,7 +617,7 @@ el0_fpsimd_exc:
+ 	/*
+ 	 * Floating Point or Advanced SIMD exception
+ 	 */
+-	enable_dbg
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, x25
+ 	mov	x1, sp
+@@ -630,8 +628,7 @@ el0_sp_pc:
+ 	 * Stack or PC alignment exception handling
+ 	 */
+ 	mrs	x26, far_el1
+-	// enable interrupts before calling the main handler
+-	enable_dbg_and_irq
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, x26
+ 	mov	x1, x25
+@@ -642,8 +639,7 @@ el0_undef:
+ 	/*
+ 	 * Undefined instruction
+ 	 */
+-	// enable interrupts before calling the main handler
+-	enable_dbg_and_irq
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, sp
+ 	bl	do_undefinstr
+@@ -657,11 +653,11 @@ el0_dbg:
+ 	mov	x1, x25
+ 	mov	x2, sp
+ 	bl	do_debug_exception
+-	enable_dbg
++	enable_daif
+ 	ct_user_exit
+ 	b	ret_to_user
+ el0_inv:
+-	enable_dbg
++	enable_daif
+ 	ct_user_exit
+ 	mov	x0, sp
+ 	mov	x1, #BAD_SYNC
+@@ -806,7 +802,7 @@ el0_svc:
+ 	mov	sc_nr, #__NR_syscalls
+ el0_svc_naked:					// compat entry point
+ 	stp	x0, scno, [sp, #S_ORIG_X0]	// save the original x0 and syscall number
+-	enable_dbg_and_irq
++	enable_daif
+ 	ct_user_exit 1
+ 
+ 	ldr	x16, [tsk, #TI_FLAGS]		// check for syscall hooks
