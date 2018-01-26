@@ -1,0 +1,25 @@
+From: Matthias Brugger <mbrugger@suse.com>
+Date: Mon, 26 Jan 2018 17:32:32 +0000
+Subject: arm64: Fix compilation
+
+Patch-mainline: Never, SUSE interal to fix compilation
+References: bsc#1068032
+
+Fix the compilation by including asm/percpu.h
+
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/mmu.h |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/arch/arm64/include/asm/mmu.h
++++ b/arch/arm64/include/asm/mmu.h
+@@ -22,6 +22,8 @@
+ 
+ #ifndef __ASSEMBLY__
+ 
++#include <asm/percpu.h>
++
+ typedef struct {
+ 	atomic64_t	id;
+ 	void		*vdso;
