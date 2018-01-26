@@ -1,0 +1,121 @@
+From df32b164fcfe6f88f2b06f74e3ef3bf895c1af2c Mon Sep 17 00:00:00 2001
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 16 Aug 2016 21:02:32 +0200
+Subject: [PATCH 06/40] arm64: head.S: get rid of x25 and x26 with 'global'
+ scope
+
+Git-commit: aea73abb90265110ed59281e370289316fd689f3
+Patch-mainline: v4.9-rc1
+References: bsc#1068032
+
+Currently, x25 and x26 hold the physical addresses of idmap_pg_dir
+and swapper_pg_dir, respectively, when running early boot code. But
+having registers with 'global' scope in files that contain different
+sections with different lifetimes, and that are called by different
+CPUs at different times is a bit messy, especially since stashing the
+values does not buy us anything in terms of code size or clarity.
+
+So simply replace each reference to x25 or x26 with an adrp instruction
+referring to idmap_pg_dir or swapper_pg_dir directly.
+
+Acked-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+[mb: drop sleep.S hunks as we miss cabe1c81ea5b ("arm64: Change cpu_resume() to enable mmu early then access sleep_sp by va")
+]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/kernel/head.S |   28 +++++++++++++---------------
+ 1 file changed, 13 insertions(+), 15 deletions(-)
+
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -212,7 +212,7 @@ ENTRY(stext)
+ 	bl	el2_setup			// Drop to EL1, w20=cpu_boot_mode
+ 	adrp	x24, __PHYS_OFFSET
+ 	bl	set_cpu_boot_mode_flag
+-	bl	__create_page_tables		// x25=TTBR0, x26=TTBR1
++	bl	__create_page_tables
+ 	/*
+ 	 * The following calls CPU setup code, see arch/arm64/mm/proc.S for
+ 	 * details.
+@@ -309,23 +309,21 @@ ENDPROC(preserve_boot_args)
+  *     been enabled
+  */
+ __create_page_tables:
+-	adrp	x25, idmap_pg_dir
+-	adrp	x26, swapper_pg_dir
+ 	mov	x27, lr
+ 
+ 	/*
+ 	 * Invalidate the idmap and swapper page tables to avoid potential
+ 	 * dirty cache lines being evicted.
+ 	 */
+-	mov	x0, x25
+-	add	x1, x26, #SWAPPER_DIR_SIZE
++	adrp	x0, idmap_pg_dir
++	adrp	x1, swapper_pg_dir + SWAPPER_DIR_SIZE
+ 	bl	__inval_cache_range
+ 
+ 	/*
+ 	 * Clear the idmap and swapper page tables.
+ 	 */
+-	mov	x0, x25
+-	add	x6, x26, #SWAPPER_DIR_SIZE
++	adrp	x0, idmap_pg_dir
++	adrp	x6, swapper_pg_dir + SWAPPER_DIR_SIZE
+ 1:	stp	xzr, xzr, [x0], #16
+ 	stp	xzr, xzr, [x0], #16
+ 	stp	xzr, xzr, [x0], #16
+@@ -338,7 +336,7 @@ __create_page_tables:
+ 	/*
+ 	 * Create the identity mapping.
+ 	 */
+-	mov	x0, x25				// idmap_pg_dir
++	adrp	x0, idmap_pg_dir
+ 	adrp	x3, __idmap_text_start		// __pa(__idmap_text_start)
+ 
+ #ifndef CONFIG_ARM64_VA_BITS_48
+@@ -388,7 +386,7 @@ __create_page_tables:
+ 	/*
+ 	 * Map the kernel image (starting with PHYS_OFFSET).
+ 	 */
+-	mov	x0, x26				// swapper_pg_dir
++	adrp	x0, swapper_pg_dir
+ 	mov	x5, #PAGE_OFFSET
+ 	create_pgd_entry x0, x5, x3, x6
+ 	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
+@@ -400,8 +398,8 @@ __create_page_tables:
+ 	 * accesses (MMU disabled), invalidate the idmap and swapper page
+ 	 * tables again to remove any speculatively loaded cache lines.
+ 	 */
+-	mov	x0, x25
+-	add	x1, x26, #SWAPPER_DIR_SIZE
++	adrp	x0, idmap_pg_dir
++	adrp	x1, swapper_pg_dir + SWAPPER_DIR_SIZE
+ 	dmb	sy
+ 	bl	__inval_cache_range
+ 
+@@ -602,8 +600,6 @@ ENTRY(secondary_startup)
+ 	/*
+ 	 * Common entry point for secondary CPUs.
+ 	 */
+-	adrp	x25, idmap_pg_dir
+-	adrp	x26, swapper_pg_dir
+ 	bl	__cpu_setup			// initialise processor
+ 
+ 	ldr	x21, =secondary_data
+@@ -637,8 +633,10 @@ __enable_mmu:
+ 	b.ne	__no_granule_support
+ 	ldr	x5, =vectors
+ 	msr	vbar_el1, x5
+-	msr	ttbr0_el1, x25			// load TTBR0
+-	msr	ttbr1_el1, x26			// load TTBR1
++	adrp	x1, idmap_pg_dir
++	adrp	x2, swapper_pg_dir
++	msr	ttbr0_el1, x1			// load TTBR0
++	msr	ttbr1_el1, x2			// load TTBR1
+ 	isb
+ 	msr	sctlr_el1, x0
+ 	isb
