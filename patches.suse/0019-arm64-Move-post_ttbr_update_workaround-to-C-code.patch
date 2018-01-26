@@ -1,0 +1,98 @@
+From 0691fe79db04007a4b16e67b7fb8d017f2eba604 Mon Sep 17 00:00:00 2001
+From: Marc Zyngier <marc.zyngier@arm.com>
+Date: Mon, 8 Jan 2018 17:32:31 +0000
+Subject: [PATCH 19/28] arm64: Move post_ttbr_update_workaround to C code
+
+Git-commit: 95e3de3590e3f2358bb13f013911bc1bfa5d3f53
+Patch-mainline: Queued
+Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+References: bsc#1068032
+
+We will soon need to invoke a CPU-specific function pointer after changing
+page tables, so move post_ttbr_update_workaround out into C code to make
+this possible.
+
+Signed-off-by: Marc Zyngier <marc.zyngier@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+[mb: include asm/alternative.h]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/assembler.h |   13 -------------
+ arch/arm64/kernel/entry.S          |    2 +-
+ arch/arm64/mm/context.c            |   10 ++++++++++
+ arch/arm64/mm/proc.S               |    3 +--
+ 4 files changed, 12 insertions(+), 16 deletions(-)
+
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -242,19 +242,6 @@ lr	.req	x30		// link register
+ 	mrs	\rd, sp_el0
+ 	.endm
+ 
+-/*
+- * Errata workaround post TTBRx_EL1 update.
+- */
+-	.macro	post_ttbr_update_workaround
+-#ifdef CONFIG_CAVIUM_ERRATUM_27456
+-alternative_if ARM64_WORKAROUND_CAVIUM_27456
+-	ic	iallu
+-	dsb	nsh
+-	isb
+-alternative_else_nop_endif
+-#endif
+-	.endm
+-
+ 	/*
+ 	 * mov_q - move an immediate constant into a 64-bit register using
+ 	 *         between 2 and 4 movz/movk instructions (depending on the
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -219,7 +219,7 @@ alternative_else_nop_endif
+ 	 * Cavium erratum 27456 (broadcast TLBI instructions may cause I-cache
+ 	 * corruption).
+ 	 */
+-	post_ttbr_update_workaround
++	bl	post_ttbr_update_workaround
+ 	.endif
+ 1:
+ 	.if	\el != 0
+--- a/arch/arm64/mm/context.c
++++ b/arch/arm64/mm/context.c
+@@ -22,6 +22,7 @@
+ #include <linux/slab.h>
+ #include <linux/mm.h>
+ 
++#include <asm/alternative.h>
+ #include <asm/cpufeature.h>
+ #include <asm/mmu_context.h>
+ #include <asm/tlbflush.h>
+@@ -199,6 +200,15 @@ switch_mm_fastpath:
+ 		cpu_switch_mm(mm->pgd, mm);
+ }
+ 
++/* Errata workaround post TTBRx_EL1 update. */
++asmlinkage void post_ttbr_update_workaround(void)
++{
++	asm(ALTERNATIVE("nop; nop; nop",
++			"ic iallu; dsb nsh; isb",
++			ARM64_WORKAROUND_CAVIUM_27456,
++			CONFIG_CAVIUM_ERRATUM_27456));
++}
++
+ static int asids_init(void)
+ {
+ 	int fld = cpuid_feature_extract_field(read_cpuid(ID_AA64MMFR0_EL1), 4);
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -142,8 +142,7 @@ ENTRY(cpu_do_switch_mm)
+ 	isb
+ 	msr	ttbr0_el1, x0			// now update TTBR0
+ 	isb
+-	post_ttbr_update_workaround
+-	ret
++	b	post_ttbr_update_workaround	// Back to C code...
+ ENDPROC(cpu_do_switch_mm)
+ 
+ 	.pushsection ".idmap.text", "ax"
