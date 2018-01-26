@@ -1,0 +1,85 @@
+From 02cab386b4c902f30d945c687628423615e7368e Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Thu, 10 Aug 2017 12:56:18 +0100
+Subject: [PATCH 14/40] arm64: mm: Use non-global mappings for kernel space
+
+Git-commit: e046eb0c9bf26d94be9e4592c00c7a78b0fa9bfd
+Patch-mainline: Queued
+Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+References: bsc#1068032
+
+In preparation for unmapping the kernel whilst running in userspace,
+make the kernel mappings non-global so we can avoid expensive TLB
+invalidation on kernel exit to userspace.
+
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+Tested-by: Laura Abbott <labbott@redhat.com>
+Tested-by: Shanker Donthineni <shankerd@codeaurora.org>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+[mb: ignore PAGE_HYP_EXEC and PAGE_HYP_RO]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/kernel-pgtable.h |   12 ++++++++++--
+ arch/arm64/include/asm/pgtable.h        |   15 ++++++++++++---
+ 2 files changed, 22 insertions(+), 5 deletions(-)
+
+--- a/arch/arm64/include/asm/kernel-pgtable.h
++++ b/arch/arm64/include/asm/kernel-pgtable.h
+@@ -77,8 +77,16 @@
+ /*
+  * Initial memory map attributes.
+  */
+-#define SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
+-#define SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
++#define _SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
++#define _SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
++
++#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
++#define SWAPPER_PTE_FLAGS	(_SWAPPER_PTE_FLAGS | PTE_NG)
++#define SWAPPER_PMD_FLAGS	(_SWAPPER_PMD_FLAGS | PMD_SECT_NG)
++#else
++#define SWAPPER_PTE_FLAGS	_SWAPPER_PTE_FLAGS
++#define SWAPPER_PMD_FLAGS	_SWAPPER_PMD_FLAGS
++#endif
+ 
+ #if ARM64_SWAPPER_USES_SECTION_MAPS
+ #define SWAPPER_MM_MMUFLAGS	(PMD_ATTRINDX(MT_NORMAL) | SWAPPER_PMD_FLAGS)
+--- a/arch/arm64/include/asm/pgtable.h
++++ b/arch/arm64/include/asm/pgtable.h
+@@ -67,8 +67,16 @@ extern void __pmd_error(const char *file
+ extern void __pud_error(const char *file, int line, unsigned long val);
+ extern void __pgd_error(const char *file, int line, unsigned long val);
+ 
+-#define PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
+-#define PROT_SECT_DEFAULT	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
++#define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
++#define _PROT_SECT_DEFAULT	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
++
++#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
++#define PROT_DEFAULT		(_PROT_DEFAULT | PTE_NG)
++#define PROT_SECT_DEFAULT	(_PROT_SECT_DEFAULT | PMD_SECT_NG)
++#else
++#define PROT_DEFAULT		_PROT_DEFAULT
++#define PROT_SECT_DEFAULT	_PROT_SECT_DEFAULT
++#endif /* CONFIG_UNMAP_KERNEL_AT_EL0 */
+ 
+ #define PROT_DEVICE_nGnRnE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_DIRTY | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRnE))
+ #define PROT_DEVICE_nGnRE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_DIRTY | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRE))
+@@ -81,6 +89,7 @@ extern void __pgd_error(const char *file
+ #define PROT_SECT_NORMAL_EXEC	(PROT_SECT_DEFAULT | PMD_SECT_UXN | PMD_ATTRINDX(MT_NORMAL))
+ 
+ #define _PAGE_DEFAULT		(PROT_DEFAULT | PTE_ATTRINDX(MT_NORMAL))
++#define _HYP_PAGE_DEFAULT	(_PAGE_DEFAULT & ~PTE_NG)
+ 
+ #define PAGE_KERNEL		__pgprot(_PAGE_DEFAULT | PTE_PXN | PTE_UXN | PTE_DIRTY | PTE_WRITE)
+ #define PAGE_KERNEL_RO		__pgprot(_PAGE_DEFAULT | PTE_PXN | PTE_UXN | PTE_DIRTY | PTE_RDONLY)
+@@ -88,7 +97,7 @@ extern void __pgd_error(const char *file
+ #define PAGE_KERNEL_EXEC	__pgprot(_PAGE_DEFAULT | PTE_UXN | PTE_DIRTY | PTE_WRITE)
+ #define PAGE_KERNEL_EXEC_CONT	__pgprot(_PAGE_DEFAULT | PTE_UXN | PTE_DIRTY | PTE_WRITE | PTE_CONT)
+ 
+-#define PAGE_HYP		__pgprot(_PAGE_DEFAULT | PTE_HYP)
++#define PAGE_HYP		__pgprot(_HYP_PAGE_DEFAULT | PTE_HYP)
+ #define PAGE_HYP_DEVICE		__pgprot(PROT_DEVICE_nGnRE | PTE_HYP)
+ 
+ #define PAGE_S2			__pgprot(PROT_DEFAULT | PTE_S2_MEMATTR(MT_S2_NORMAL) | PTE_S2_RDONLY)
