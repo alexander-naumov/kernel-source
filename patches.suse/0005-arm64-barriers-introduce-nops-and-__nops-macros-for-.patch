@@ -1,0 +1,51 @@
+From: Will Deacon <will.deacon@arm.com>
+Date: Tue, 6 Sep 2016 16:40:23 +0100
+Subject: arm64: barriers: introduce nops and __nops macros for NOP sequences
+Git-commit: f99a250cb6a3b301b101b4c0f5fcb80593bba6dc
+Patch-mainline: v4.9-rc1
+References: bsc#1068032
+
+NOP sequences tend to get used for padding out alternative sections
+and uarch-specific pipeline flushes in errata workarounds.
+
+This patch adds macros for generating these sequences as both inline
+asm blocks, but also as strings suitable for embedding in other asm
+blocks directly.
+
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/assembler.h |    9 +++++++++
+ arch/arm64/include/asm/barrier.h   |    3 +++
+ 2 files changed, 12 insertions(+)
+
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -88,6 +88,15 @@
+ 	.endm
+ 
+ /*
++ * NOP sequence
++ */
++	.macro	nops, num
++	.rept	\num
++	nop
++	.endr
++	.endm
++
++/*
+  * SMP data memory barrier
+  */
+ 	.macro	smp_dmb, opt
+--- a/arch/arm64/include/asm/barrier.h
++++ b/arch/arm64/include/asm/barrier.h
+@@ -20,6 +20,9 @@
+ 
+ #ifndef __ASSEMBLY__
+ 
++#define __nops(n)	".rept	" #n "\nnop\n.endr\n"
++#define nops(n)		asm volatile(__nops(n))
++
+ #define sev()		asm volatile("sev" : : : "memory")
+ #define wfe()		asm volatile("wfe" : : : "memory")
+ #define wfi()		asm volatile("wfi" : : : "memory")
