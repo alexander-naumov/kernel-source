@@ -1,0 +1,111 @@
+From: Suzuki K Poulose <suzuki.poulose@arm.com>
+Date: Tue, 8 Nov 2016 13:56:20 +0000
+Subject: arm64: Add hypervisor safe helper for checking constant capabilities
+Git-commit: a4023f682739439b434165b54af7cb3676a4766e
+Patch-mainline: v4.10-rc1
+References: bsc#1068032
+
+The hypervisor may not have full access to the kernel data structures
+and hence cannot safely use cpus_have_cap() helper for checking the
+system capability. Add a safe helper for hypervisors to check a constant
+system capability, which *doesn't* fall back to checking the bitmap
+maintained by the kernel. With this, make the cpus_have_cap() only
+check the bitmask and force constant cap checks to use the new API
+for quicker checks.
+
+Cc: Robert Ritcher <rritcher@cavium.com>
+Cc: Tirumalesh Chalamarla <tchalamarla@cavium.com>
+Signed-off-by: Suzuki K Poulose <suzuki.poulose@arm.com>
+Reviewed-by: Will Deacon <will.deacon@arm.com>
+Reviewed-by: Marc Zyngier <marc.zyngier@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+[mb: drop hunks for ARM64_HAS_32BIT_EL0, cpufeature_pan_not_uao and ARM64_HAS_UAO]
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/cpufeature.h |   17 +++++++++++------
+ drivers/irqchip/irq-gic-v3.c        |   13 +------------
+ 2 files changed, 12 insertions(+), 18 deletions(-)
+
+--- a/arch/arm64/include/asm/cpufeature.h
++++ b/arch/arm64/include/asm/cpufeature.h
+@@ -9,8 +9,6 @@
+ #ifndef __ASM_CPUFEATURE_H
+ #define __ASM_CPUFEATURE_H
+ 
+-#include <linux/jump_label.h>
+-
+ #include <asm/hwcap.h>
+ #include <asm/sysreg.h>
+ 
+@@ -40,6 +38,8 @@
+ 
+ #ifndef __ASSEMBLY__
+ 
++#include <linux/bug.h>
++#include <linux/jump_label.h>
+ #include <linux/kernel.h>
+ 
+ /* CPU feature register tracking */
+@@ -106,14 +106,19 @@ static inline bool cpu_have_feature(unsi
+ 	return elf_hwcap & (1UL << num);
+ }
+ 
++/* System capability check for constant caps */
++static inline bool cpus_have_const_cap(int num)
++{
++	if (num >= ARM64_NCAPS)
++		return false;
++	return static_branch_unlikely(&cpu_hwcap_keys[num]);
++}
++
+ static inline bool cpus_have_cap(unsigned int num)
+ {
+ 	if (num >= ARM64_NCAPS)
+ 		return false;
+-	if (__builtin_constant_p(num))
+-		return static_branch_unlikely(&cpu_hwcap_keys[num]);
+-	else
+-		return test_bit(num, cpu_hwcaps);
++	return test_bit(num, cpu_hwcaps);
+ }
+ 
+ static inline void cpus_set_cap(unsigned int num)
+--- a/drivers/irqchip/irq-gic-v3.c
++++ b/drivers/irqchip/irq-gic-v3.c
+@@ -122,11 +122,10 @@ static void gic_redist_wait_for_rwp(void
+ }
+ 
+ #ifdef CONFIG_ARM64
+-static DEFINE_STATIC_KEY_FALSE(is_cavium_thunderx);
+ 
+ static u64 __maybe_unused gic_read_iar(void)
+ {
+-	if (static_branch_unlikely(&is_cavium_thunderx))
++	if (cpus_have_const_cap(ARM64_WORKAROUND_CAVIUM_23154))
+ 		return gic_read_iar_cavium_thunderx();
+ 	else
+ 		return gic_read_iar_common();
+@@ -851,14 +850,6 @@ static const struct irq_domain_ops gic_i
+ 	.free = gic_irq_domain_free,
+ };
+ 
+-static void gicv3_enable_quirks(void)
+-{
+-#ifdef CONFIG_ARM64
+-	if (cpus_have_cap(ARM64_WORKAROUND_CAVIUM_23154))
+-		static_branch_enable(&is_cavium_thunderx);
+-#endif
+-}
+-
+ static int __init gic_init_bases(void __iomem *dist_base,
+ 				 struct redist_region *rdist_regs,
+ 				 u32 nr_redist_regions,
+@@ -881,8 +872,6 @@ static int __init gic_init_bases(void __
+ 	gic_data.nr_redist_regions = nr_redist_regions;
+ 	gic_data.redist_stride = redist_stride;
+ 
+-	gicv3_enable_quirks();
+-
+ 	/*
+ 	 * Find out how many interrupts are supported.
+ 	 * The GIC only supports up to 1020 interrupt sources (SGI+PPI+SPI)
