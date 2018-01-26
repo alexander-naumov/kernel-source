@@ -1,0 +1,44 @@
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Thu, 8 Sep 2016 13:55:34 +0100
+Subject: arm64: sysreg: allow write_sysreg to use XZR
+Git-commit: 7aff4a2dd3db4e519c636f43aa863078e3b30d0f
+Patch-mainline: v4.9-rc1
+References: bsc#1068032
+
+Currently write_sysreg has to allocate a temporary register to write
+zero to a system register, which is unfortunate given that the MSR
+instruction accepts XZR as an operand.
+
+Allow XZR to be used when appropriate by fiddling with the assembly
+constraints.
+
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Cc: Suzuki K Poulose <suzuki.poulose@arm.com>
+Reviewed-by: Robin Murphy <robin.murphy@arm.com>
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/sysreg.h |    8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+--- a/arch/arm64/include/asm/sysreg.h
++++ b/arch/arm64/include/asm/sysreg.h
+@@ -247,10 +247,14 @@ static inline void config_sctlr_el1(u32
+ 	__val;							\
+ })
+ 
++/*
++ * The "Z" constraint normally means a zero immediate, but when combined with
++ * the "%x0" template means XZR.
++ */
+ #define write_sysreg(v, r) do {					\
+ 	u64 __val = (u64)v;					\
+-	asm volatile("msr " __stringify(r) ", %0"		\
+-		     : : "r" (__val));				\
++	asm volatile("msr " __stringify(r) ", %x0"		\
++		     : : "rZ" (__val));				\
+ } while (0)
+ 
+ #endif
