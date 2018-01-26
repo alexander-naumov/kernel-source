@@ -1,0 +1,38 @@
+From: Kevin Hao <haokexin@gmail.com>
+Date: Sat, 23 Jul 2016 14:42:37 +0530
+Subject: jump_label: Make it possible for arches to invoke jump_label_init()
+ earlier
+Git-commit: e3f91083facb792dc8d8fd0a59639e4d6e7c0c8f
+Patch-mainline: v4.8-rc1
+References: bsc#1068032
+
+Some arches (powerpc at least) would like to invoke jump_label_init()
+much earlier in boot. So check static_key_initialized in order to make
+sure this function runs only once.
+
+LGTM-by: Ingo (http://marc.info/?l=linux-kernel&m=144049104329961&w=2)
+Signed-off-by: Kevin Hao <haokexin@gmail.com>
+Signed-off-by: Aneesh Kumar K.V <aneesh.kumar@linux.vnet.ibm.com>
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ kernel/jump_label.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/kernel/jump_label.c b/kernel/jump_label.c
+index 0dbea887d625..2d693be967df 100644
+--- a/kernel/jump_label.c
++++ b/kernel/jump_label.c
+@@ -235,6 +235,9 @@ void __init jump_label_init(void)
+ 	struct static_key *key = NULL;
+ 	struct jump_entry *iter;
+ 
++	if (static_key_initialized)
++		return;
++
+ 	jump_label_lock();
+ 	jump_label_sort_entries(iter_start, iter_stop);
+ 
+-- 
+2.15.0
+
