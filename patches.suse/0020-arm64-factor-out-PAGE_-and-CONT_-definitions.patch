@@ -1,0 +1,114 @@
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Fri, 14 Jul 2017 19:43:56 +0100
+Subject: arm64: factor out PAGE_* and CONT_* definitions
+Git-commit: b6531456ba279bb7cea5dd2e7b3ec6a3ed0f4668
+Patch-mainline: v4.14-rc1
+References: bsc#1068032
+
+Some headers rely on PAGE_* definitions from <asm/page.h>, but cannot
+include this due to potential circular includes. For example, a number
+of definitions in <asm/memory.h> rely on PAGE_SHIFT, and <asm/page.h>
+includes <asm/memory.h>.
+
+This requires users of these definitions to include both headers, which
+is fragile and error-prone.
+
+This patch ameliorates matters by moving the basic definitions out to a
+new header, <asm/page-def.h>. Both <asm/page.h> and <asm/memory.h> are
+updated to include this, avoiding this fragility, and avoiding the
+possibility of circular include dependencies.
+
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Reviewed-by: Will Deacon <will.deacon@arm.com>
+Tested-by: Laura Abbott <labbott@redhat.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: James Morse <james.morse@arm.com>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/include/asm/memory.h   |    1 
+ arch/arm64/include/asm/page-def.h |   40 ++++++++++++++++++++++++++++++++++++++
+ arch/arm64/include/asm/page.h     |   18 -----------------
+ 3 files changed, 42 insertions(+), 17 deletions(-)
+ create mode 100644 arch/arm64/include/asm/page-def.h
+
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -24,6 +24,7 @@
+ #include <linux/compiler.h>
+ #include <linux/const.h>
+ #include <linux/types.h>
++#include <asm/page-def.h>
+ #include <asm/sizes.h>
+ 
+ /*
+--- /dev/null
++++ b/arch/arm64/include/asm/page-def.h
+@@ -0,0 +1,40 @@
++/*
++ * Based on arch/arm/include/asm/page.h
++ *
++ * Copyright (C) 1995-2003 Russell King
++ * Copyright (C) 2017 ARM Ltd.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++#ifndef __ASM_PAGE_DEF_H
++#define __ASM_PAGE_DEF_H
++
++/* PAGE_SHIFT determines the page size */
++/* CONT_SHIFT determines the number of pages which can be tracked together  */
++#ifdef CONFIG_ARM64_64K_PAGES
++#define PAGE_SHIFT		16
++#define CONT_SHIFT		5
++#elif defined(CONFIG_ARM64_16K_PAGES)
++#define PAGE_SHIFT		14
++#define CONT_SHIFT		7
++#else
++#define PAGE_SHIFT		12
++#define CONT_SHIFT		4
++#endif
++#define PAGE_SIZE		(_AC(1, UL) << PAGE_SHIFT)
++#define PAGE_MASK		(~(PAGE_SIZE-1))
++
++#define CONT_SIZE		(_AC(1, UL) << (CONT_SHIFT + PAGE_SHIFT))
++#define CONT_MASK		(~(CONT_SIZE-1))
++
++#endif /* __ASM_PAGE_DEF_H */
+--- a/arch/arm64/include/asm/page.h
++++ b/arch/arm64/include/asm/page.h
+@@ -19,23 +19,7 @@
+ #ifndef __ASM_PAGE_H
+ #define __ASM_PAGE_H
+ 
+-/* PAGE_SHIFT determines the page size */
+-/* CONT_SHIFT determines the number of pages which can be tracked together  */
+-#ifdef CONFIG_ARM64_64K_PAGES
+-#define PAGE_SHIFT		16
+-#define CONT_SHIFT		5
+-#elif defined(CONFIG_ARM64_16K_PAGES)
+-#define PAGE_SHIFT		14
+-#define CONT_SHIFT		7
+-#else
+-#define PAGE_SHIFT		12
+-#define CONT_SHIFT		4
+-#endif
+-#define PAGE_SIZE		(_AC(1, UL) << PAGE_SHIFT)
+-#define PAGE_MASK		(~(PAGE_SIZE-1))
+-
+-#define CONT_SIZE		(_AC(1, UL) << (CONT_SHIFT + PAGE_SHIFT))
+-#define CONT_MASK		(~(CONT_SIZE-1))
++#include <asm/page-def.h>
+ 
+ #ifndef __ASSEMBLY__
+ 
