@@ -1,0 +1,119 @@
+From ac06d1f2bbb6aa73982758ec874e39e91999edde Mon Sep 17 00:00:00 2001
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Wed, 7 Sep 2016 11:07:09 +0100
+Subject: [PATCH 02/40] arm64: use alternative auto-nop
+
+Git-commit: 6ba3b554f5b9b53cb99c0edb93f0ea855fbc712a
+Patch-mainline: v4.9-rc1
+References: bsc#1068032
+
+Make use of the new alternative_if and alternative_else_nop_endif and
+get rid of our homebew NOP sleds, making the code simpler to read.
+
+Note that for cpu_do_switch_mm the ret has been moved out of the
+alternative sequence, and in the default case there will be three
+additional NOPs executed.
+
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>
+Cc: James Morse <james.morse@arm.com>
+Cc: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
+---
+ arch/arm64/kernel/entry.S  | 10 ++--------
+ arch/arm64/lib/copy_page.S | 13 ++++---------
+ arch/arm64/mm/proc.S       |  9 ++-------
+ 3 files changed, 8 insertions(+), 24 deletions(-)
+
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 9c6470458a0b..16bc19bd9c5a 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -145,13 +145,7 @@
+ 	ldr	x23, [sp, #S_SP]		// load return stack pointer
+ 	msr	sp_el0, x23
+ #ifdef CONFIG_ARM64_ERRATUM_845719
+-alternative_if_not ARM64_WORKAROUND_845719
+-	nop
+-	nop
+-#ifdef CONFIG_PID_IN_CONTEXTIDR
+-	nop
+-#endif
+-alternative_else
++alternative_if ARM64_WORKAROUND_845719
+ 	tbz	x22, #4, 1f
+ #ifdef CONFIG_PID_IN_CONTEXTIDR
+ 	mrs	x29, contextidr_el1
+@@ -160,7 +154,7 @@ alternative_else
+ 	msr contextidr_el1, xzr
+ #endif
+ 1:
+-alternative_endif
++alternative_else_nop_endif
+ #endif
+ 	.endif
+ 	msr	elr_el1, x21			// set up the return data
+diff --git a/arch/arm64/lib/copy_page.S b/arch/arm64/lib/copy_page.S
+index 4c1e700840b6..c3cd65e31814 100644
+--- a/arch/arm64/lib/copy_page.S
++++ b/arch/arm64/lib/copy_page.S
+@@ -29,14 +29,11 @@
+  *	x1 - src
+  */
+ ENTRY(copy_page)
+-alternative_if_not ARM64_HAS_NO_HW_PREFETCH
+-	nop
+-	nop
+-alternative_else
++alternative_if ARM64_HAS_NO_HW_PREFETCH
+ 	# Prefetch two cache lines ahead.
+ 	prfm    pldl1strm, [x1, #128]
+ 	prfm    pldl1strm, [x1, #256]
+-alternative_endif
++alternative_else_nop_endif
+ 
+ 	ldp	x2, x3, [x1]
+ 	ldp	x4, x5, [x1, #16]
+@@ -52,11 +49,9 @@ alternative_endif
+ 1:
+ 	subs	x18, x18, #128
+ 
+-alternative_if_not ARM64_HAS_NO_HW_PREFETCH
+-	nop
+-alternative_else
++alternative_if ARM64_HAS_NO_HW_PREFETCH
+ 	prfm    pldl1strm, [x1, #384]
+-alternative_endif
++alternative_else_nop_endif
+ 
+ 	stnp	x2, x3, [x0]
+ 	ldp	x2, x3, [x1]
+diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+index f4bd8809479e..a246ab844747 100644
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -136,17 +136,12 @@ ENTRY(cpu_do_switch_mm)
+ 	bfi	x0, x1, #48, #16		// set the ASID
+ 	msr	ttbr0_el1, x0			// set TTBR0
+ 	isb
+-alternative_if_not ARM64_WORKAROUND_CAVIUM_27456
+-	ret
+-	nop
+-	nop
+-	nop
+-alternative_else
++alternative_if ARM64_WORKAROUND_CAVIUM_27456
+ 	ic	iallu
+ 	dsb	nsh
+ 	isb
++alternative_else_nop_endif
+ 	ret
+-alternative_endif
+ ENDPROC(cpu_do_switch_mm)
+ 
+ 	.pushsection ".idmap.text", "ax"
+-- 
+2.11.0
+
