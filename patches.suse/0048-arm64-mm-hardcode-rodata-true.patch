@@ -1,0 +1,34 @@
+From 719a44ca4d4369f57ec0d1503696d12ca23bf67f Mon Sep 17 00:00:00 2001
+From: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+Date: Fri, 5 Jan 2018 10:14:46 +0100
+Subject: [PATCH 35/40] arm64: mm: hardcode rodata=true
+
+Patch-mainline: Never, Fix for compilation errors
+References: bsc#1068032
+
+rodata_enabled is not available since [1] is not applied. [2] has
+used a hardcoded value instead. Fix the compilation errors after
+applying [3] by adding a local rodata_enabled variable with hardcoded
+value and keep the code as is.
+
+[1]: 39290b389ea2 module: extend 'rodata=off' boot cmdline parameter to module mappings
+[2]: e78e92e6d9 arm64: mmu: map .text as read-only from the outset (bsc#1044339)
+[3]: 51a0048beb44 arm64: mm: Map entry trampoline into trampoline and kernel page tables
+
+Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+---
+ arch/arm64/mm/mmu.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -46,6 +46,9 @@
+ 
+ u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
+ 
++/* Hardcode rodata=true to fix compilation errors */
++static bool rodata_enabled = true;
++
+ /*
+  * Empty_zero_page is a special page that is used for zero-initialized data
+  * and COW.
