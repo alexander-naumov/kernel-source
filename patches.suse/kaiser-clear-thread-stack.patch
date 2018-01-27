@@ -1,0 +1,44 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: [PATCH 12-SP[23]] fork: clear thread stack upon allocation
+Patch-mainline: Not yet, under development
+References: bsc#1077560
+
+Quoting Kees from similar patch submission upstream:
+
+===
+One of the classes of kernel stack content leaks is exposing the contents
+of prior heap or stack contents when a new process stack is allocated.
+Normally, those stacks are not zeroed, and the old contents remain in
+place. With some types of stack content exposure flaws, those contents
+can leak to userspace. Kernels built with CONFIG_CLEAR_STACK_FORK will
+no longer be vulnerable to this, as the stack will be wiped each time
+a stack is assigned to a new process. There's not a meaningful change
+in runtime performance; it almost looks like it provides a benefit.
+
+Performing back-to-back kernel builds before:
+        Run times: 157.86 157.09 158.90 160.94 160.80
+        Mean: 159.12
+        Std Dev: 1.54
+
+With CONFIG_CLEAR_STACK_FORK=y:
+        Run times: 159.31 157.34 156.71 158.15 160.81
+        Mean: 158.46
+        Std Dev: 1.46
+===
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ include/linux/thread_info.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -55,7 +55,7 @@ extern long do_no_restart_syscall(struct
+ 
+ #ifdef __KERNEL__
+ 
+-#ifdef CONFIG_DEBUG_STACK_USAGE
++#if defined(CONFIG_DEBUG_STACK_USAGE) || defined(CONFIG_PAGE_TABLE_ISOLATION)
+ # define THREADINFO_GFP		(GFP_KERNEL | __GFP_NOTRACK | __GFP_ZERO)
+ #else
+ # define THREADINFO_GFP		(GFP_KERNEL | __GFP_NOTRACK)
