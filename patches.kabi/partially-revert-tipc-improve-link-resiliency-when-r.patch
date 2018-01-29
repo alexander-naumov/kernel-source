@@ -1,0 +1,112 @@
+From: Jiri Wiesner <jwiesner@suse.com>
+Date: Mon, 20 Nov 2017 16:32:30 +0100
+Subject: partially revert tipc improve link resiliency when rps is activated
+Patch-mainline: Never, kabi workaround
+References: bsc#1068038
+
+Mainline commit 8d6e79d3ce13 ("tipc: improve link resiliency when rps is
+activated") renames some symbols which are part of kABI. As these changes
+are not actually needed, revert them and keep only important parts of the
+commit in SLE12-SP2 backport.
+
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+---
+ include/net/flow_dissector.h | 12 ++++++------
+ net/core/flow_dissector.c    | 20 ++++++++++----------
+ 2 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/include/net/flow_dissector.h b/include/net/flow_dissector.h
+index a21599784c10..8f0b8fd370dc 100644
+--- a/include/net/flow_dissector.h
++++ b/include/net/flow_dissector.h
+@@ -63,11 +63,11 @@ struct flow_dissector_key_ipv6_addrs {
+ };
+ 
+ /**
+- * struct flow_dissector_key_tipc:
+- * @key: source node address combined with selector
++ * struct flow_dissector_key_tipc_addrs:
++ * @srcnode: source node address combined with selector
+  */
+-struct flow_dissector_key_tipc {
+-	__be32 key;
++struct flow_dissector_key_tipc_addrs {
++	__be32 srcnode;
+ };
+ 
+ /**
+@@ -79,7 +79,7 @@ struct flow_dissector_key_addrs {
+ 	union {
+ 		struct flow_dissector_key_ipv4_addrs v4addrs;
+ 		struct flow_dissector_key_ipv6_addrs v6addrs;
+-		struct flow_dissector_key_tipc tipckey;
++		struct flow_dissector_key_tipc_addrs tipcaddrs;
+ 	};
+ };
+ 
+@@ -118,7 +118,7 @@ enum flow_dissector_key_id {
+ 	FLOW_DISSECTOR_KEY_IPV6_ADDRS, /* struct flow_dissector_key_ipv6_addrs */
+ 	FLOW_DISSECTOR_KEY_PORTS, /* struct flow_dissector_key_ports */
+ 	FLOW_DISSECTOR_KEY_ETH_ADDRS, /* struct flow_dissector_key_eth_addrs */
+-	FLOW_DISSECTOR_KEY_TIPC, /* struct flow_dissector_key_tipc */
++	FLOW_DISSECTOR_KEY_TIPC_ADDRS, /* struct flow_dissector_key_tipc_addrs */
+ 	FLOW_DISSECTOR_KEY_VLANID, /* struct flow_dissector_key_flow_tags */
+ 	FLOW_DISSECTOR_KEY_FLOW_LABEL, /* struct flow_dissector_key_flow_tags */
+ 	FLOW_DISSECTOR_KEY_GRE_KEYID, /* struct flow_dissector_key_keyid */
+diff --git a/net/core/flow_dissector.c b/net/core/flow_dissector.c
+index 5b49f38fdcfe..a5c252ef3c34 100644
+--- a/net/core/flow_dissector.c
++++ b/net/core/flow_dissector.c
+@@ -289,12 +289,12 @@ ipv6:
+ 			goto out_bad;
+ 
+ 		if (dissector_uses_key(flow_dissector,
+-				       FLOW_DISSECTOR_KEY_TIPC)) {
++				       FLOW_DISSECTOR_KEY_TIPC_ADDRS)) {
+ 			key_addrs = skb_flow_dissector_target(flow_dissector,
+-							      FLOW_DISSECTOR_KEY_TIPC,
++							      FLOW_DISSECTOR_KEY_TIPC_ADDRS,
+ 							      target_container);
+-			key_addrs->tipckey.key = tipc_hdr_rps_key(hdr);
+-			key_control->addr_type = FLOW_DISSECTOR_KEY_TIPC;
++			key_addrs->tipcaddrs.srcnode = tipc_hdr_rps_key(hdr);
++			key_control->addr_type = FLOW_DISSECTOR_KEY_TIPC_ADDRS;
+ 		}
+ 		goto out_good;
+ 	}
+@@ -527,8 +527,8 @@ static inline size_t flow_keys_hash_length(const struct flow_keys *flow)
+ 	case FLOW_DISSECTOR_KEY_IPV6_ADDRS:
+ 		diff -= sizeof(flow->addrs.v6addrs);
+ 		break;
+-	case FLOW_DISSECTOR_KEY_TIPC:
+-		diff -= sizeof(flow->addrs.tipckey);
++	case FLOW_DISSECTOR_KEY_TIPC_ADDRS:
++		diff -= sizeof(flow->addrs.tipcaddrs);
+ 		break;
+ 	}
+ 	return (sizeof(*flow) - diff) / sizeof(u32);
+@@ -542,8 +542,8 @@ __be32 flow_get_u32_src(const struct flow_keys *flow)
+ 	case FLOW_DISSECTOR_KEY_IPV6_ADDRS:
+ 		return (__force __be32)ipv6_addr_hash(
+ 			&flow->addrs.v6addrs.src);
+-	case FLOW_DISSECTOR_KEY_TIPC:
+-		return flow->addrs.tipckey.key;
++	case FLOW_DISSECTOR_KEY_TIPC_ADDRS:
++		return flow->addrs.tipcaddrs.srcnode;
+ 	default:
+ 		return 0;
+ 	}
+@@ -862,8 +862,8 @@ static const struct flow_dissector_key flow_keys_dissector_keys[] = {
+ 		.offset = offsetof(struct flow_keys, addrs.v6addrs),
+ 	},
+ 	{
+-		.key_id = FLOW_DISSECTOR_KEY_TIPC,
+-		.offset = offsetof(struct flow_keys, addrs.tipckey),
++		.key_id = FLOW_DISSECTOR_KEY_TIPC_ADDRS,
++		.offset = offsetof(struct flow_keys, addrs.tipcaddrs),
+ 	},
+ 	{
+ 		.key_id = FLOW_DISSECTOR_KEY_PORTS,
+-- 
+2.16.0
+
