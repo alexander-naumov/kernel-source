@@ -30,15 +30,15 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 
 --- a/drivers/md/bcache/writeback.c
 +++ b/drivers/md/bcache/writeback.c
-@@ -423,6 +423,7 @@ static int bch_writeback_thread(void *ar
- 	bool searched_full_index;
+@@ -444,6 +444,7 @@ static int bch_writeback_thread(void *ar
+ 	bch_ratelimit_reset(&dc->writeback_rate);
  
  	while (!kthread_should_stop()) {
 +		klp_kgraft_mark_task_safe(current);
  		down_write(&dc->writeback_lock);
  		if (!atomic_read(&dc->has_dirty) ||
  		    (!test_bit(BCACHE_DEV_DETACHING, &dc->disk.flags) &&
-@@ -458,8 +459,10 @@ static int bch_writeback_thread(void *ar
+@@ -477,8 +478,10 @@ static int bch_writeback_thread(void *ar
  
  			while (delay &&
  			       !kthread_should_stop() &&
@@ -47,6 +47,6 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 +				klp_kgraft_mark_task_safe(current);
  				delay = schedule_timeout_interruptible(delay);
 +			}
- 		}
- 	}
  
+ 			bch_ratelimit_reset(&dc->writeback_rate);
+ 		}

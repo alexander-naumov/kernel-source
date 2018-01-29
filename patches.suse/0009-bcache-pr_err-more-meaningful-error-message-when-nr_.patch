@@ -1,0 +1,40 @@
+From 90706094d5be614ae7285b3c96c3125bb198618c Mon Sep 17 00:00:00 2001
+From: Eric Wheeler <git@linux.ewheeler.net>
+Date: Thu, 18 Aug 2016 20:15:26 -0700
+Subject: [PATCH] bcache: pr_err: more meaningful error message when nr_stripes
+ is invalid
+Git-commit: 90706094d5be614ae7285b3c96c3125bb198618c
+Patch-mainline: v4.8-rc4
+References: bsc#1076110
+
+The original error was thought to be corruption, but was actually caused by:
+	make-bcache --data-offset N
+where N was in bytes and should have been in sectors.  While userspace
+tools should be updated to check --data-offset beyond end of volume,
+hopefully this will help others that might not have noticed the units.
+
+Signed-off-by: Eric Wheeler <bcache@linux.ewheeler.net>
+Cc: Kent Overstreet <kent.overstreet@gmail.com>
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ drivers/md/bcache/super.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/md/bcache/super.c b/drivers/md/bcache/super.c
+index 6b93e1b77767..849ad441cd76 100644
+--- a/drivers/md/bcache/super.c
++++ b/drivers/md/bcache/super.c
+@@ -760,7 +760,8 @@ static int bcache_device_init(struct bcache_device *d, unsigned block_size,
+ 	if (!d->nr_stripes ||
+ 	    d->nr_stripes > INT_MAX ||
+ 	    d->nr_stripes > SIZE_MAX / sizeof(atomic_t)) {
+-		pr_err("nr_stripes too large");
++		pr_err("nr_stripes too large or invalid: %u (start sector beyond end of disk?)",
++			(unsigned)d->nr_stripes);
+ 		return -ENOMEM;
+ 	}
+ 
+-- 
+2.15.1
+

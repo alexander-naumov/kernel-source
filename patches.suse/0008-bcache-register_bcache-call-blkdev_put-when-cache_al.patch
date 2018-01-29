@@ -1,0 +1,64 @@
+From d9dc1702b297ec4a6bb9c0326a70641b322ba886 Mon Sep 17 00:00:00 2001
+From: Eric Wheeler <git@linux.ewheeler.net>
+Date: Fri, 17 Jun 2016 15:01:54 -0700
+Subject: [PATCH] bcache: register_bcache(): call blkdev_put() when
+ cache_alloc() fails
+Git-commit: d9dc1702b297ec4a6bb9c0326a70641b322ba886
+Patch-mainline: v4.8-rc4
+References: bsc#1076110
+
+register_cache() is supposed to return an error string on error so that
+register_bcache() will will blkdev_put and cleanup other user counters,
+but it does not set 'char *err' when cache_alloc() fails (eg, due to
+memory pressure) and thus register_bcache() performs no cleanup.
+
+register_bcache() <----------\  <- no jump to err_close, no blkdev_put()
+   |                         |
+   +->register_cache()       |  <- fails to set char *err
+         |                   |
+         +->cache_alloc() ---/  <- returns error
+
+This patch sets `char *err` for this failure case so that register_cache()
+will cause register_bcache() to correctly jump to err_close and do
+cleanup.  This was tested under OOM conditions that triggered the bug.
+
+Signed-off-by: Eric Wheeler <bcache@linux.ewheeler.net>
+Cc: Kent Overstreet <kent.overstreet@gmail.com>
+Cc: stable@vger.kernel.org
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ drivers/md/bcache/super.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/md/bcache/super.c b/drivers/md/bcache/super.c
+index 95a4ca6ce6ff..6ada14b9a157 100644
+--- a/drivers/md/bcache/super.c
++++ b/drivers/md/bcache/super.c
+@@ -1844,7 +1844,7 @@ static int register_cache(struct cache_sb *sb, struct page *sb_page,
+ 				struct block_device *bdev, struct cache *ca)
+ {
+ 	char name[BDEVNAME_SIZE];
+-	const char *err = NULL;
++	const char *err = NULL; /* must be set for any error case */
+ 	int ret = 0;
+ 
+ 	memcpy(&ca->sb, sb, sizeof(struct cache_sb));
+@@ -1861,8 +1861,13 @@ static int register_cache(struct cache_sb *sb, struct page *sb_page,
+ 		ca->discard = CACHE_DISCARD(&ca->sb);
+ 
+ 	ret = cache_alloc(ca);
+-	if (ret != 0)
++	if (ret != 0) {
++		if (ret == -ENOMEM)
++			err = "cache_alloc(): -ENOMEM";
++		else
++			err = "cache_alloc(): unknown error";
+ 		goto err;
++	}
+ 
+ 	if (kobject_add(&ca->kobj, &part_to_dev(bdev->bd_part)->kobj, "bcache")) {
+ 		err = "error calling kobject_add";
+-- 
+2.15.1
+

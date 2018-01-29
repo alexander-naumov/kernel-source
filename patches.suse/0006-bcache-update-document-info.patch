@@ -1,0 +1,50 @@
+From 7abc70d7007757ac1c0e87c57f39cd79f50a632f Mon Sep 17 00:00:00 2001
+From: Yijing Wang <wangyijing@huawei.com>
+Date: Mon, 4 Jul 2016 09:23:34 +0800
+Subject: [PATCH] bcache: update document info
+Git-commit: 7abc70d7007757ac1c0e87c57f39cd79f50a632f
+Patch-mainline: v4.8-rc1
+References: bsc#1076110
+
+There is no return in continue_at(), update the documentation.
+
+Signed-off-by: Yijing Wang <wangyijing@huawei.com>
+Acked-by: Coly Li <colyli@suse.de>
+Signed-off-by: Jens Axboe <axboe@fb.com>
+Signed-off-by: Coly Li <colyli@suse.de>
+
+---
+ drivers/md/bcache/closure.c | 2 +-
+ drivers/md/bcache/closure.h | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/md/bcache/closure.c b/drivers/md/bcache/closure.c
+index 9eaf1d6e8302..864e673aec39 100644
+--- a/drivers/md/bcache/closure.c
++++ b/drivers/md/bcache/closure.c
+@@ -112,7 +112,7 @@ bool closure_wait(struct closure_waitlist *waitlist, struct closure *cl)
+ EXPORT_SYMBOL(closure_wait);
+ 
+ /**
+- * closure_sync - sleep until a closure a closure has nothing left to wait on
++ * closure_sync - sleep until a closure has nothing left to wait on
+  *
+  * Sleeps until the refcount hits 1 - the thread that's running the closure owns
+  * the last refcount.
+diff --git a/drivers/md/bcache/closure.h b/drivers/md/bcache/closure.h
+index 782cc2c8a185..9b2fe2d3e3a9 100644
+--- a/drivers/md/bcache/closure.h
++++ b/drivers/md/bcache/closure.h
+@@ -31,7 +31,8 @@
+  * passing it, as you might expect, the function to run when nothing is pending
+  * and the workqueue to run that function out of.
+  *
+- * continue_at() also, critically, is a macro that returns the calling function.
++ * continue_at() also, critically, requires a 'return' immediately following the
++ * location where this macro is referenced, to return to the calling function.
+  * There's good reason for this.
+  *
+  * To use safely closures asynchronously, they must always have a refcount while
+-- 
+2.15.1
+
