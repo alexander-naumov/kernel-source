@@ -46,10 +46,12 @@ Tested-by: James Morse <james.morse@arm.com>
 Co-developed-by: Marc Zyngier <marc.zyngier@arm.com>
 Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
 Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
+Signed-off-by: Matthias Brugger <mbrugger@suse.com>
 ---
  arch/arm64/include/asm/asm-uaccess.h |   12 +++++++-----
  arch/arm64/include/asm/mmu_context.h |    4 +++-
  arch/arm64/include/asm/uaccess.h     |   11 +++++++----
+ arch/arm64/kernel/efi.c              |   12 +++++++-----
  arch/arm64/kernel/entry.S            |    2 +-
  arch/arm64/lib/clear_user.S          |    2 +-
  arch/arm64/lib/copy_from_user.S      |    2 +-
@@ -58,7 +60,7 @@ Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
  arch/arm64/mm/cache.S                |    2 +-
  arch/arm64/mm/proc.S                 |    3 +++
  arch/arm64/xen/hypercall.S           |    2 +-
- 11 files changed, 27 insertions(+), 17 deletions(-)
+ 12 files changed, 34 insertions(+), 22 deletions(-)
 
 --- a/arch/arm64/include/asm/asm-uaccess.h
 +++ b/arch/arm64/include/asm/asm-uaccess.h
@@ -163,6 +165,35 @@ Signed-off-by: Mian Yousaf Kaukab <yousaf.kaukab@suse.com>
  	ttbr1 |= ttbr0 & TTBR_ASID_MASK;
  	write_sysreg(ttbr1, ttbr1_el1);
  	isb();
+--- a/arch/arm64/kernel/efi.c
++++ b/arch/arm64/kernel/efi.c
+@@ -434,19 +434,21 @@ static void efi_set_pgd(struct mm_struct
+ 		if (mm != current->active_mm) {
+ 			/*
+ 			 * Update the current thread's saved ttbr0 since it is
+-			 * restored as part of a return from exception. Set
+-			 * the hardware TTBR0_EL1 using cpu_switch_mm()
+-			 * directly to enable potential errata workarounds.
++			 * restored as part of a return from exception. Enable
++			 * access to the valid TTBR0_EL1 and invoke the errata
++			 * workaround directly since there is no return from
++			 * exception when invoking the EFI run-time services.
+ 			 */
+ 			update_saved_ttbr0(current, mm);
+-			cpu_switch_mm(mm->pgd, mm);
++			uaccess_ttbr0_enable();
++			post_ttbr_update_workaround();
+ 		} else {
+ 			/*
+ 			 * Defer the switch to the current thread's TTBR0_EL1
+ 			 * until uaccess_enable(). Restore the current
+ 			 * thread's saved ttbr0 corresponding to its active_mm
+ 			 */
+-			cpu_set_reserved_ttbr0();
++			uaccess_ttbr0_disable();
+ 			update_saved_ttbr0(current, current->active_mm);
+ 		}
+ 	}
 --- a/arch/arm64/kernel/entry.S
 +++ b/arch/arm64/kernel/entry.S
 @@ -146,7 +146,7 @@ alternative_if ARM64_HAS_PAN
