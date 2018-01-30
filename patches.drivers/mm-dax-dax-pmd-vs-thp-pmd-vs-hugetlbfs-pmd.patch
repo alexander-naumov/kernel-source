@@ -61,7 +61,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  static inline pte_t pte_set_flags(pte_t pte, pteval_t set)
 --- a/include/linux/huge_mm.h
 +++ b/include/linux/huge_mm.h
-@@ -100,7 +100,8 @@ extern void __split_huge_page_pmd(struct
+@@ -101,7 +101,8 @@ extern void __split_huge_page_pmd(struct
  #define split_huge_page_pmd(__vma, __address, __pmd)			\
  	do {								\
  		pmd_t *____pmd = (__pmd);				\
@@ -71,7 +71,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  			__split_huge_page_pmd(__vma, __address,		\
  					____pmd);			\
  	}  while (0)
-@@ -130,7 +131,7 @@ static inline int pmd_trans_huge_lock(pm
+@@ -131,7 +132,7 @@ static inline int pmd_trans_huge_lock(pm
  		spinlock_t **ptl)
  {
  	VM_BUG_ON_VMA(!rwsem_is_locked(&vma->vm_mm->mmap_sem), vma);
@@ -82,7 +82,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  		return 0;
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
-@@ -319,6 +319,13 @@ struct inode;
+@@ -320,6 +320,13 @@ struct inode;
  #define page_private(page)		((page)->private)
  #define set_page_private(page, v)	((page)->private = (v))
  
@@ -135,7 +135,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  
  	ret = 0;
  out_unlock:
-@@ -1631,7 +1634,7 @@ int __pmd_trans_huge_lock(pmd_t *pmd, st
+@@ -1676,7 +1679,7 @@ int __pmd_trans_huge_lock(pmd_t *pmd, st
  		spinlock_t **ptl)
  {
  	*ptl = pmd_lock(vma->vm_mm, pmd);
@@ -144,7 +144,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  		if (unlikely(pmd_trans_splitting(*pmd))) {
  			spin_unlock(*ptl);
  			wait_split_huge_page(vma->anon_vma, pmd);
-@@ -3006,7 +3009,7 @@ void __split_huge_page_pmd(struct vm_are
+@@ -3050,7 +3053,7 @@ void __split_huge_page_pmd(struct vm_are
  again:
  	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
  	ptl = pmd_lock(mm, pmd);
@@ -153,7 +153,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  		goto unlock;
  	if (vma_is_dax(vma)) {
  		pmd_t _pmd = pmdp_huge_clear_flush_notify(vma, haddr, pmd);
-@@ -3066,7 +3069,7 @@ static void split_huge_page_address(stru
+@@ -3110,7 +3113,7 @@ static void split_huge_page_address(stru
  		return;
  
  	pmd = pmd_offset(pud, address);
@@ -164,7 +164,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  	 * Caller holds the mmap_sem write mode, so a huge pmd cannot
 --- a/mm/memory.c
 +++ b/mm/memory.c
-@@ -956,7 +956,7 @@ static inline int copy_pmd_range(struct
+@@ -996,7 +996,7 @@ static inline int copy_pmd_range(struct
  	src_pmd = pmd_offset(src_pud, addr);
  	do {
  		next = pmd_addr_end(addr, end);
@@ -173,7 +173,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  			int err;
  			VM_BUG_ON(next-addr != HPAGE_PMD_SIZE);
  			err = copy_huge_pmd(dst_mm, src_mm,
-@@ -1183,7 +1183,7 @@ static inline unsigned long zap_pmd_rang
+@@ -1224,7 +1224,7 @@ static inline unsigned long zap_pmd_rang
  	pmd = pmd_offset(pud, addr);
  	do {
  		next = pmd_addr_end(addr, end);
@@ -182,7 +182,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  			if (next - addr != HPAGE_PMD_SIZE) {
  #ifdef CONFIG_DEBUG_VM
  				if (!rwsem_is_locked(&tlb->mm->mmap_sem)) {
-@@ -3374,7 +3374,7 @@ static int __handle_mm_fault(struct mm_s
+@@ -3377,7 +3377,7 @@ static int __handle_mm_fault(struct mm_s
  		int ret;
  
  		barrier();
@@ -191,7 +191,7 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  			unsigned int dirty = flags & FAULT_FLAG_WRITE;
  
  			/*
-@@ -3421,7 +3421,7 @@ static int __handle_mm_fault(struct mm_s
+@@ -3424,7 +3424,7 @@ static int __handle_mm_fault(struct mm_s
  	 * through an atomic read in C, which is what pmd_trans_unstable()
  	 * provides.
  	 */
@@ -202,17 +202,17 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  	 * A regular pmd is established and it can't morph into a huge pmd
 --- a/mm/mprotect.c
 +++ b/mm/mprotect.c
-@@ -149,7 +149,8 @@ static inline unsigned long change_pmd_r
+@@ -163,7 +163,8 @@ static inline unsigned long change_pmd_r
  		unsigned long this_pages;
  
  		next = pmd_addr_end(addr, end);
 -		if (!pmd_trans_huge(*pmd) && pmd_none_or_clear_bad(pmd))
 +		if (!pmd_trans_huge(*pmd) && !pmd_devmap(*pmd)
 +				&& pmd_none_or_clear_bad(pmd))
- 			continue;
+ 			goto next;
  
  		/* invoke the mmu notifier if the pmd is populated */
-@@ -158,7 +159,7 @@ static inline unsigned long change_pmd_r
+@@ -172,7 +173,7 @@ static inline unsigned long change_pmd_r
  			mmu_notifier_invalidate_range_start(mm, mni_start, end);
  		}
  
@@ -232,4 +232,3 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  	pmd = pmdp_huge_get_and_clear(vma->vm_mm, address, pmdp);
  	flush_pmd_tlb_range(vma, address, address + HPAGE_PMD_SIZE);
  	return pmd;
-
