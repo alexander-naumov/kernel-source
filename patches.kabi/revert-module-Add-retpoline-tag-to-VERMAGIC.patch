@@ -1,7 +1,8 @@
 From: Jiri Slaby <jslaby@suse.cz>
 Date: Wed, 24 Jan 2018 14:01:47 +0100
 Subject: Revert "module: Add retpoline tag to VERMAGIC"
-Patch-mainline: never, kabi
+Patch-mainline: v4.15
+Git-commit: 5132ede0fe8092b043dae09a7cc32b8ae7272baa
 References: kabi
 
 This reverts commit 1782af2835fe6fbff6265a53fb85847fb9c58137, upstream
