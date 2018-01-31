@@ -1,0 +1,38 @@
+From ed8dda0bf74b4fb8e73d8880c78effabd3285fd8 Mon Sep 17 00:00:00 2001
+From: Alexander Yarygin <yarygin@linux.vnet.ibm.com>
+Date: Thu, 31 Mar 2016 13:48:52 +0300
+Subject: [PATCH] KVM: s390: Enable all facility bits that are known good for
+ passthrough
+Git-commit: ed8dda0bf74b4fb8e73d8880c78effabd3285fd8
+Patch-mainline: v4.7-rc1
+References: bsc#1076806
+
+Some facility bits are in a range that is defined to be "ok for guests
+without any necessary hypervisor changes". Enable those bits.
+
+Signed-off-by: Alexander Yarygin <yarygin@linux.vnet.ibm.com>
+Reviewed-by: David Hildenbrand <dahi@linux.vnet.ibm.com>
+Signed-off-by: Christian Borntraeger <borntraeger@de.ibm.com>
+Acked-by: Liang Yan <lyan@suse.com>
+---
+ arch/s390/kvm/kvm-s390.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/s390/kvm/kvm-s390.c b/arch/s390/kvm/kvm-s390.c
+index dab26de74f77..243e3f9bf7e8 100644
+--- a/arch/s390/kvm/kvm-s390.c
++++ b/arch/s390/kvm/kvm-s390.c
+@@ -118,8 +118,8 @@ struct kvm_stats_debugfs_item debugfs_entries[] = {
+ 
+ /* upper facilities limit for kvm */
+ unsigned long kvm_s390_fac_list_mask[] = {
+-	0xffe6fffbfcfdfc40UL,
+-	0x005e800000000000UL,
++	0xffe6ffffffffffffUL,
++	0x005effffffffffffUL,
+ };
+ 
+ unsigned long kvm_s390_fac_list_mask_size(void)
+-- 
+2.16.1
+
