@@ -1,8 +1,8 @@
-From 539bafef44289c1097a5a18772f2d65f9cb173e8 Mon Sep 17 00:00:00 2001
+From f4827963273b2b9e00a75f7326edf8d35ef26751 Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Thu, 11 Jan 2018 14:43:07 +0100
-Subject: [PATCH 16/19] powerpc/pseries: rfi-flush: Call setup_rfi_flush()
- after LPM migration
+Subject: [PATCH] powerpc/pseries: rfi-flush: Call setup_rfi_flush() after LPM
+ migration
 
 References: bsc#1068032, bsc#1075087
 Patch-mainline: no, under development
@@ -15,11 +15,11 @@ Signed-off-by: Ram Pai <linuxram@us.ibm.com>
 Signed-off-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/include/asm/setup.h          |  2 +-
- arch/powerpc/kernel/setup_64.c            | 32 +++++++++++++++++++++++++++----
+ arch/powerpc/kernel/setup_64.c            | 34 +++++++++++++++++++++++++++----
  arch/powerpc/platforms/pseries/mobility.c |  3 +++
  arch/powerpc/platforms/pseries/pseries.h  |  2 ++
  arch/powerpc/platforms/pseries/setup.c    |  2 +-
- 5 files changed, 35 insertions(+), 6 deletions(-)
+ 5 files changed, 37 insertions(+), 6 deletions(-)
 
 diff --git a/arch/powerpc/include/asm/setup.h b/arch/powerpc/include/asm/setup.h
 index 7916b56f2e60..3733195be997 100644
@@ -35,7 +35,7 @@ index 7916b56f2e60..3733195be997 100644
  
  #endif /* !__ASSEMBLY__ */
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index d8e1c2b82a3a..0a538191873d 100644
+index d8e1c2b82a3a..0acb7ba37fd9 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
 @@ -884,11 +884,24 @@ void rfi_flush_enable(bool enable)
@@ -64,8 +64,12 @@ index d8e1c2b82a3a..0a538191873d 100644
  	l1d_size = ppc64_caches.dsize;
  	limit = min(safe_stack_limit(), ppc64_rma_size);
  
-@@ -918,11 +931,22 @@ static void init_fallback_flush(void)
+@@ -916,13 +929,26 @@ static void init_fallback_flush(void)
+ 		paca_aux->l1d_flush_congruence = c;
+ 		paca_aux->l1d_flush_sets = c / 128;
  	}
++
++	return true;
  }
  
 -void __init setup_rfi_flush(enum l1d_flush_type types, bool enable)
