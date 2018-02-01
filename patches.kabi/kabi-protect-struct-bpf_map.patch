@@ -3,8 +3,10 @@ Subject: kABI: protect struct bpf_map
 Patch-mainline: never, kabi
 References: kabi
 
-In patches.suse/bpf-prevent-out-of-bounds-speculation.patch, we added
-one bool to struct bpf_map. It indeed made the kABI checker to complain.
+In 4.4.112, commit 9a7fad4c0e215fb1c256fee27c45f9f8bc4364c5 (bpf:
+prevent out-of-bounds speculation), upstream commit
+b2157399cc9898260d6031c5bfe45fe137c1fbe7 added one bool to struct
+bpf_map. It indeed made the kABI checker to complain.
 
 Given this is only bpf-internal structure (bpf_register_map_type is not
 exported), let's ignore this change and hide it from the kABI checker.
