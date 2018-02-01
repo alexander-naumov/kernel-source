@@ -1,0 +1,33 @@
+From: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Date: Wed, 24 Jan 2018 02:31:19 +0000
+Subject: [PATCH] x86/microcode/intel: Fix BDW late-loading revision check
+References: bnc#1012382
+Patch-mainline: 4.4.114
+Git-commit: 20e3fa5dd5818b425b18528571e133034833df27
+
+The backport of commit b94b73733171 ("x86/microcode/intel: Extend BDW
+late-loading with a revision check") to 4.4-stable deleted a "return true"
+statement.  This bug is not present upstream or other stable branches.
+
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/kernel/cpu/microcode/intel.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/x86/kernel/cpu/microcode/intel.c b/arch/x86/kernel/cpu/microcode/intel.c
+index b428a8174be1..ee011bd7934d 100644
+--- a/arch/x86/kernel/cpu/microcode/intel.c
++++ b/arch/x86/kernel/cpu/microcode/intel.c
+@@ -1005,6 +1005,7 @@ static bool is_blacklisted(unsigned int cpu)
+ 	    c->microcode < 0x0b000021) {
+ 		pr_err_once("Erratum BDF90: late loading with revision < 0x0b000021 (0x%x) disabled.\n", c->microcode);
+ 		pr_err_once("Please consider either early loading through initrd/built-in or a potential BIOS update.\n");
++		return true;
+ 	}
+ 
+ 	return false;
+-- 
+2.16.1
+

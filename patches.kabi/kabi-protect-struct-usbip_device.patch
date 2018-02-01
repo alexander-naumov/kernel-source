@@ -1,0 +1,30 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: protect struct usbip_device
+Patch-mainline: never, kabi
+References: kabi
+
+In 4.4.114, commit 28f467e0bdda754aa36390fd90b01823f0d3b18d (usbip:
+prevent vhci_hcd driver from leaking a socket pointer address), upstream
+commit 2f2d0088eb93db5c649d2a5e34a3800a8a935fc5 added an int to struct
+usbip_device. It indeed made the kABI checker to complain.
+
+Given the structure is internal to usbip, let's ignore this change and
+hide it from the kABI checker.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/usbip/usbip_common.h |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/drivers/usb/usbip/usbip_common.h
++++ b/drivers/usb/usbip/usbip_common.h
+@@ -261,7 +261,9 @@ struct usbip_device {
+ 	/* lock for status */
+ 	spinlock_t lock;
+ 
++#ifndef __GENKSYMS__
+ 	int sockfd;
++#endif
+ 	struct socket *tcp_socket;
+ 
+ 	struct task_struct *tcp_rx;

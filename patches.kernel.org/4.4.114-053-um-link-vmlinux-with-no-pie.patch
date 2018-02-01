@@ -1,0 +1,37 @@
+From: Thomas Meyer <thomas@m3y3r.de>
+Date: Sun, 20 Aug 2017 13:26:04 +0200
+Subject: [PATCH] um: link vmlinux with -no-pie
+References: bnc#1012382
+Patch-mainline: 4.4.114
+Git-commit: 883354afbc109c57f925ccc19840055193da0cc0
+
+commit 883354afbc109c57f925ccc19840055193da0cc0 upstream.
+
+Debian's gcc defaults to pie. The global Makefile already defines the -fno-pie option.
+Link UML dynamic kernel image also with -no-pie to fix the build.
+
+Signed-off-by: Thomas Meyer <thomas@m3y3r.de>
+Signed-off-by: Richard Weinberger <richard@nod.at>
+Cc: Bernie Innocenti <codewiz@google.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/um/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/um/Makefile b/arch/um/Makefile
+index e3abe6f3156d..9ccf462131c4 100644
+--- a/arch/um/Makefile
++++ b/arch/um/Makefile
+@@ -117,7 +117,7 @@ archheaders:
+ archprepare: include/generated/user_constants.h
+ 
+ LINK-$(CONFIG_LD_SCRIPT_STATIC) += -static
+-LINK-$(CONFIG_LD_SCRIPT_DYN) += -Wl,-rpath,/lib
++LINK-$(CONFIG_LD_SCRIPT_DYN) += -Wl,-rpath,/lib $(call cc-option, -no-pie)
+ 
+ CFLAGS_NO_HARDENING := $(call cc-option, -fno-PIC,) $(call cc-option, -fno-pic,) \
+ 	$(call cc-option, -fno-stack-protector,) \
+-- 
+2.16.1
+

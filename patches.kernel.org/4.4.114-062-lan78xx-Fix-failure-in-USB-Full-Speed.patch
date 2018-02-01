@@ -1,0 +1,36 @@
+From: Yuiko Oshino <yuiko.oshino@microchip.com>
+Date: Mon, 15 Jan 2018 13:24:28 -0500
+Subject: [PATCH] lan78xx: Fix failure in USB Full Speed
+References: bnc#1012382
+Patch-mainline: 4.4.114
+Git-commit: a5b1379afbfabf91e3a689e82ac619a7157336b3
+
+[ Upstream commit a5b1379afbfabf91e3a689e82ac619a7157336b3 ]
+
+Fix initialize the uninitialized tx_qlen to an appropriate value when USB
+Full Speed is used.
+
+Fixes: 55d7de9de6c3 ("Microchip's LAN7800 family USB 2/3 to 10/100/1000 Ethernet device driver")
+Signed-off-by: Yuiko Oshino <yuiko.oshino@microchip.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/usb/lan78xx.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/usb/lan78xx.c b/drivers/net/usb/lan78xx.c
+index 41e9ebd7d0a6..ebdee8f01f65 100644
+--- a/drivers/net/usb/lan78xx.c
++++ b/drivers/net/usb/lan78xx.c
+@@ -1859,6 +1859,7 @@ static int lan78xx_reset(struct lan78xx_net *dev)
+ 		buf = DEFAULT_BURST_CAP_SIZE / FS_USB_PKT_SIZE;
+ 		dev->rx_urb_size = DEFAULT_BURST_CAP_SIZE;
+ 		dev->rx_qlen = 4;
++		dev->tx_qlen = 4;
+ 	}
+ 
+ 	ret = lan78xx_write_reg(dev, BURST_CAP, buf);
+-- 
+2.16.1
+

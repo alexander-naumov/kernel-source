@@ -1,0 +1,54 @@
+From: Marc Kleine-Budde <mkl@pengutronix.de>
+Date: Tue, 16 Jan 2018 19:30:14 +0100
+Subject: [PATCH] can: af_can: canfd_rcv(): replace WARN_ONCE by pr_warn_once
+References: bnc#1012382
+Patch-mainline: 4.4.114
+Git-commit: d4689846881d160a4d12a514e991a740bcb5d65a
+
+commit d4689846881d160a4d12a514e991a740bcb5d65a upstream.
+
+If an invalid CANFD frame is received, from a driver or from a tun
+interface, a Kernel warning is generated.
+
+This patch replaces the WARN_ONCE by a simple pr_warn_once, so that a
+kernel, bootet with panic_on_warn, does not panic. A printk seems to be
+more appropriate here.
+
+Reported-by: syzbot+e3b775f40babeff6e68b@syzkaller.appspotmail.com
+Suggested-by: Dmitry Vyukov <dvyukov@google.com>
+Acked-by: Oliver Hartkopp <socketcan@hartkopp.net>
+Cc: linux-stable <stable@vger.kernel.org>
+Signed-off-by: Marc Kleine-Budde <mkl@pengutronix.de>
+Signed-off-by: Oliver Hartkopp <socketcan@hartkopp.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/can/af_can.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/net/can/af_can.c b/net/can/af_can.c
+index 924ad0513af9..c866e761651a 100644
+--- a/net/can/af_can.c
++++ b/net/can/af_can.c
+@@ -745,13 +745,12 @@ static int canfd_rcv(struct sk_buff *skb, struct net_device *dev,
+ 	if (unlikely(!net_eq(dev_net(dev), &init_net)))
+ 		goto drop;
+ 
+-	if (WARN_ONCE(dev->type != ARPHRD_CAN ||
+-		      skb->len != CANFD_MTU ||
+-		      cfd->len > CANFD_MAX_DLEN,
+-		      "PF_CAN: dropped non conform CAN FD skbuf: "
+-		      "dev type %d, len %d, datalen %d\n",
+-		      dev->type, skb->len, cfd->len))
++	if (unlikely(dev->type != ARPHRD_CAN || skb->len != CANFD_MTU ||
++		     cfd->len > CANFD_MAX_DLEN)) {
++		pr_warn_once("PF_CAN: dropped non conform CAN FD skbuf: dev type %d, len %d, datalen %d\n",
++			     dev->type, skb->len, cfd->len);
+ 		goto drop;
++	}
+ 
+ 	can_receive(skb, dev);
+ 	return NET_RX_SUCCESS;
+-- 
+2.16.1
+

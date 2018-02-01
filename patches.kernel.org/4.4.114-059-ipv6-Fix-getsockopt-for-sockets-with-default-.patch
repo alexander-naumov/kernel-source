@@ -1,0 +1,72 @@
+From: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Date: Mon, 22 Jan 2018 20:06:42 +0000
+Subject: [PATCH] ipv6: Fix getsockopt() for sockets with default
+ IPV6_AUTOFLOWLABEL
+References: bnc#1012382
+Patch-mainline: 4.4.114
+Git-commit: e9191ffb65d8e159680ce0ad2224e1acbde6985c
+
+[ Upstream commit e9191ffb65d8e159680ce0ad2224e1acbde6985c ]
+
+Commit 513674b5a2c9 ("net: reevalulate autoflowlabel setting after
+sysctl setting") removed the initialisation of
+ipv6_pinfo::autoflowlabel and added a second flag to indicate
+whether this field or the net namespace default should be used.
+
+The getsockopt() handling for this case was not updated, so it
+currently returns 0 for all sockets for which IPV6_AUTOFLOWLABEL is
+not explicitly enabled.  Fix it to return the effective value, whether
+that has been set at the socket or net namespace level.
+
+Fixes: 513674b5a2c9 ("net: reevalulate autoflowlabel setting after sysctl ...")
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/net/ipv6.h       | 1 +
+ net/ipv6/ip6_output.c    | 2 +-
+ net/ipv6/ipv6_sockglue.c | 2 +-
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/include/net/ipv6.h b/include/net/ipv6.h
+index 7a8066b90289..84f0d0602433 100644
+--- a/include/net/ipv6.h
++++ b/include/net/ipv6.h
+@@ -281,6 +281,7 @@ int ipv6_flowlabel_opt_get(struct sock *sk, struct in6_flowlabel_req *freq,
+ 			   int flags);
+ int ip6_flowlabel_init(void);
+ void ip6_flowlabel_cleanup(void);
++bool ip6_autoflowlabel(struct net *net, const struct ipv6_pinfo *np);
+ 
+ static inline void fl6_sock_release(struct ip6_flowlabel *fl)
+ {
+diff --git a/net/ipv6/ip6_output.c b/net/ipv6/ip6_output.c
+index b809958f7388..d82b814e6c27 100644
+--- a/net/ipv6/ip6_output.c
++++ b/net/ipv6/ip6_output.c
+@@ -148,7 +148,7 @@ int ip6_output(struct net *net, struct sock *sk, struct sk_buff *skb)
+ 			    !(IP6CB(skb)->flags & IP6SKB_REROUTED));
+ }
+ 
+-static bool ip6_autoflowlabel(struct net *net, const struct ipv6_pinfo *np)
++bool ip6_autoflowlabel(struct net *net, const struct ipv6_pinfo *np)
+ {
+ 	if (!np->autoflowlabel_set)
+ 		return ip6_default_np_autolabel(net);
+diff --git a/net/ipv6/ipv6_sockglue.c b/net/ipv6/ipv6_sockglue.c
+index 435e26210587..9011176c8387 100644
+--- a/net/ipv6/ipv6_sockglue.c
++++ b/net/ipv6/ipv6_sockglue.c
+@@ -1313,7 +1313,7 @@ static int do_ipv6_getsockopt(struct sock *sk, int level, int optname,
+ 		break;
+ 
+ 	case IPV6_AUTOFLOWLABEL:
+-		val = np->autoflowlabel;
++		val = ip6_autoflowlabel(sock_net(sk), np);
+ 		break;
+ 
+ 	default:
+-- 
+2.16.1
+
