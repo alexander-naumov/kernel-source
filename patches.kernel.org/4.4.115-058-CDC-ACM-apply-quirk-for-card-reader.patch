@@ -1,26 +1,27 @@
-From df1cc78a52491f71d8170d513d0f6f114faa1bda Mon Sep 17 00:00:00 2001
 From: Oliver Neukum <oneukum@suse.com>
 Date: Thu, 18 Jan 2018 12:13:45 +0100
 Subject: [PATCH] CDC-ACM: apply quirk for card reader
+Patch-mainline: 4.4.115
+References: bnc#1012382 bsc#1060279
 Git-commit: df1cc78a52491f71d8170d513d0f6f114faa1bda
-Patch-mainline: v4.16
-References: bsc#1060279
+
+commit df1cc78a52491f71d8170d513d0f6f114faa1bda upstream.
 
 This devices drops random bytes from messages if you talk to it
 too fast.
 
 Signed-off-by: Oliver Neukum <oneukum@suse.com>
-CC: stable@vger.kernel.org
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  drivers/usb/class/cdc-acm.c | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/drivers/usb/class/cdc-acm.c b/drivers/usb/class/cdc-acm.c
-index 6c64ab6e80fa..18bbe3fedb8b 100644
+index 0cad689c60ca..edd8ef4ee502 100644
 --- a/drivers/usb/class/cdc-acm.c
 +++ b/drivers/usb/class/cdc-acm.c
-@@ -1752,6 +1752,9 @@ static const struct usb_device_id acm_ids[] = {
+@@ -1695,6 +1695,9 @@ static const struct usb_device_id acm_ids[] = {
  	{ USB_DEVICE(0x0ace, 0x1611), /* ZyDAS 56K USB MODEM - new version */
  	.driver_info = SINGLE_RX_URB, /* firmware bug */
  	},
@@ -31,5 +32,5 @@ index 6c64ab6e80fa..18bbe3fedb8b 100644
  	.driver_info = NO_UNION_NORMAL, /* has no union descriptor */
  	},
 -- 
-2.13.6
+2.16.1
 

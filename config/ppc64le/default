@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/powerpc 4.4.112-rc2 Kernel Configuration
+# Linux/powerpc 4.4.115 Kernel Configuration
 #
 CONFIG_PPC64=y
 
@@ -2161,7 +2161,6 @@ CONFIG_WIZNET_W5300=m
 # CONFIG_WIZNET_BUS_INDIRECT is not set
 CONFIG_WIZNET_BUS_ANY=y
 CONFIG_NET_VENDOR_XILINX=y
-CONFIG_XILINX_LL_TEMAC=m
 # CONFIG_FDDI is not set
 CONFIG_HIPPI=y
 CONFIG_ROADRUNNER=m

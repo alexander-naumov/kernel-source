@@ -136,7 +136,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
 --- a/fs/btrfs/free-space-cache.c
 +++ b/fs/btrfs/free-space-cache.c
 @@ -1261,7 +1261,7 @@ static int __btrfs_write_out_cache(struc
- 		goto out;
+ 		goto out_unlock;
  
  	lock_extent_bits(&BTRFS_I(inode)->io_tree, 0, i_size_read(inode) - 1,
 -			 0, &cached_state);
@@ -173,7 +173,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  
  	ret = test_range_bit(io_tree, ordered_extent->file_offset,
  			ordered_extent->file_offset + ordered_extent->len - 1,
-@@ -4664,7 +4664,7 @@ again:
+@@ -4675,7 +4675,7 @@ again:
  	}
  	wait_on_page_writeback(page);
  
@@ -182,7 +182,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  	set_page_extent_mapped(page);
  
  	ordered = btrfs_lookup_ordered_extent(inode, page_start);
-@@ -4795,7 +4795,7 @@ int btrfs_cont_expand(struct inode *inod
+@@ -4806,7 +4806,7 @@ int btrfs_cont_expand(struct inode *inod
  	while (1) {
  		struct btrfs_ordered_extent *ordered;
  
@@ -191,7 +191,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  				 &cached_state);
  		ordered = btrfs_lookup_ordered_range(inode, hole_start,
  						     block_end - hole_start);
-@@ -5107,7 +5107,7 @@ static void evict_inode_truncate_pages(s
+@@ -5118,7 +5118,7 @@ static void evict_inode_truncate_pages(s
  		end = state->end;
  		spin_unlock(&io_tree->lock);
  
@@ -200,7 +200,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  
  		/*
  		 * If still has DELALLOC flag, the extent didn't reach disk,
-@@ -7390,7 +7390,7 @@ static int lock_extent_direct(struct ino
+@@ -7415,7 +7415,7 @@ static int lock_extent_direct(struct ino
  
  	while (1) {
  		lock_extent_bits(&BTRFS_I(inode)->io_tree, lockstart, lockend,
@@ -209,7 +209,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  		/*
  		 * We're concerned with the entire range that we're going to be
  		 * doing DIO to, so we need to make sure theres no ordered
-@@ -8639,7 +8639,7 @@ static void btrfs_invalidatepage(struct
+@@ -8671,7 +8671,7 @@ static void btrfs_invalidatepage(struct
  	}
  
  	if (!inode_evicting)
@@ -218,7 +218,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  	ordered = btrfs_lookup_ordered_extent(inode, page_start);
  	if (ordered) {
  		/*
-@@ -8677,7 +8677,7 @@ static void btrfs_invalidatepage(struct
+@@ -8709,7 +8709,7 @@ static void btrfs_invalidatepage(struct
  		btrfs_put_ordered_extent(ordered);
  		if (!inode_evicting) {
  			cached_state = NULL;
@@ -227,7 +227,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  					 &cached_state);
  		}
  	}
-@@ -8780,7 +8780,7 @@ again:
+@@ -8812,7 +8812,7 @@ again:
  	}
  	wait_on_page_writeback(page);
  

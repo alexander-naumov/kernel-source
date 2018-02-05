@@ -1,9 +1,11 @@
 From: Alexei Starovoitov <ast@fb.com>
-Date: Wed, 22 Nov 2017 16:42:05 -0800
-Subject: bpf: fix branch pruning logic
-Patch-mainline: v4.15-rc1
+Date: Tue, 30 Jan 2018 03:37:38 +0100
+Subject: [PATCH] bpf: fix branch pruning logic
+Patch-mainline: 4.4.115
+References: CVE-2017-17862 CVE-2017-17864 bnc#1012382 bsc#1073928
 Git-commit: c131187db2d3fa2f8bf32fdf4e9a4ef805168467
-References: CVE-2017-17862 CVE-2017-17864 bsc#1073928
+
+[ Upstream commit c131187db2d3fa2f8bf32fdf4e9a4ef805168467 ]
 
 when the verifier detects that register contains a runtime constant
 and it's compared with another constant it will prune exploration
@@ -25,8 +27,8 @@ Fixes: 17a5267067f3 ("bpf: verifier (add verifier core)")
 Signed-off-by: Alexei Starovoitov <ast@kernel.org>
 Acked-by: Daniel Borkmann <daniel@iogearbox.net>
 Signed-off-by: Daniel Borkmann <daniel@iogearbox.net>
-Acked-by: Michal Kubecek <mkubecek@suse.cz>
-
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  kernel/bpf/verifier.c | 28 ++++++++++++++++++++++++++++
  1 file changed, 28 insertions(+)
@@ -51,7 +53,7 @@ index 014c2d759916..a62679711de0 100644
  		if (class == BPF_ALU || class == BPF_ALU64) {
  			err = check_alu_op(env, insn);
  			if (err)
-@@ -1988,6 +1990,7 @@ process_bpf_exit:
+@@ -1988,6 +1990,7 @@ static int do_check(struct verifier_env *env)
  					return err;
  
  				insn_idx++;
@@ -102,7 +104,7 @@ index 014c2d759916..a62679711de0 100644
  /* convert load instructions that access fields of 'struct __sk_buff'
   * into sequence of instructions that access fields of 'struct sk_buff'
   */
-@@ -2370,6 +2395,9 @@ skip_full_check:
+@@ -2370,6 +2395,9 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
  	while (pop_stack(env, NULL) >= 0);
  	free_states(env);
  
@@ -113,5 +115,5 @@ index 014c2d759916..a62679711de0 100644
  		/* program is valid, convert *(u32*)(ctx + off) accesses */
  		ret = convert_ctx_accesses(env);
 -- 
-2.15.1
+2.16.1
 

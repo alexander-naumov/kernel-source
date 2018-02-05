@@ -37,8 +37,8 @@ Acked-by: NeilBrown <neilb@suse.com>
 
 --- a/net/sunrpc/xprtsock.c
 +++ b/net/sunrpc/xprtsock.c
-@@ -2377,7 +2377,12 @@ static void xs_tcp_setup_socket(struct w
- 	case -ENETUNREACH:
+@@ -2378,7 +2378,12 @@ static void xs_tcp_setup_socket(struct w
+ 	case -EHOSTUNREACH:
  	case -EADDRINUSE:
  	case -ENOBUFS:
 -		/* retry with existing socket, after a delay */

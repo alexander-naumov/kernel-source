@@ -1,0 +1,48 @@
+From: Trond Myklebust <trond.myklebust@primarydata.com>
+Date: Fri, 3 Nov 2017 08:00:12 -0400
+Subject: [PATCH] nfsd: CLOSE SHOULD return the invalid special stateid for
+ NFSv4.x (x>0)
+References: bnc#1012382
+Patch-mainline: 4.4.115
+Git-commit: fb500a7cfee7f2f447d2bbf30cb59629feab6ac1
+
+[ Upstream commit fb500a7cfee7f2f447d2bbf30cb59629feab6ac1 ]
+
+Signed-off-by: Trond Myklebust <trond.myklebust@primarydata.com>
+Signed-off-by: J. Bruce Fields <bfields@redhat.com>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ fs/nfsd/nfs4state.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
+index 11c67e8b939d..d31b6cdefb9d 100644
+--- a/fs/nfsd/nfs4state.c
++++ b/fs/nfsd/nfs4state.c
+@@ -63,6 +63,9 @@ static const stateid_t zero_stateid = {
+ static const stateid_t currentstateid = {
+ 	.si_generation = 1,
+ };
++static const stateid_t close_stateid = {
++	.si_generation = 0xffffffffU,
++};
+ 
+ static u64 current_sessionid = 1;
+ 
+@@ -5243,6 +5246,11 @@ nfsd4_close(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
+ 	nfsd4_close_open_stateid(stp);
+ 	mutex_unlock(&stp->st_mutex);
+ 
++	/* See RFC5661 sectionm 18.2.4 */
++	if (stp->st_stid.sc_client->cl_minorversion)
++		memcpy(&close->cl_stateid, &close_stateid,
++				sizeof(close->cl_stateid));
++
+ 	/* put reference from nfs4_preprocess_seqid_op */
+ 	nfs4_put_stid(&stp->st_stid);
+ out:
+-- 
+2.16.1
+

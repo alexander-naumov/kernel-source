@@ -68,7 +68,7 @@ Acked-by: David Chang <dchang@suse.com>
  static void igb_configure(struct igb_adapter *);
  static void igb_configure_tx(struct igb_adapter *);
  static void igb_configure_rx(struct igb_adapter *);
-@@ -3172,7 +3172,7 @@ err_setup_tx:
+@@ -3174,7 +3174,7 @@ err_setup_tx:
  	return err;
  }
  
@@ -77,12 +77,12 @@ Acked-by: David Chang <dchang@suse.com>
  {
  	return __igb_open(netdev, false);
  }
-@@ -3209,7 +3209,7 @@ static int __igb_close(struct net_device
+@@ -3211,7 +3211,7 @@ static int __igb_close(struct net_device
  	return 0;
  }
  
 -static int igb_close(struct net_device *netdev)
 +int igb_close(struct net_device *netdev)
  {
- 	if (netif_device_present(netdev))
+ 	if (netif_device_present(netdev) || netdev->dismantle)
  		return __igb_close(netdev, false);

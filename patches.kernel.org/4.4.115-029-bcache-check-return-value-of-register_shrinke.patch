@@ -1,10 +1,11 @@
-From 6c4ca1e36cdc1a0a7a84797804b87920ccbebf51 Mon Sep 17 00:00:00 2001
 From: Michael Lyle <mlyle@lyle.org>
 Date: Fri, 24 Nov 2017 15:14:27 -0800
 Subject: [PATCH] bcache: check return value of register_shrinker
+Patch-mainline: 4.4.115
+References: bnc#1012382 bsc#1076110
 Git-commit: 6c4ca1e36cdc1a0a7a84797804b87920ccbebf51
-Patch-mainline: v4.15-rc2
-References: bsc#1076110
+
+[ Upstream commit 6c4ca1e36cdc1a0a7a84797804b87920ccbebf51 ]
 
 register_shrinker is now __must_check, so check it to kill a warning.
 Caller of bch_btree_cache_alloc in super.c appropriately checks return
@@ -16,17 +17,18 @@ as I was too hasty getting the previous version out.
 Signed-off-by: Michael Lyle <mlyle@lyle.org>
 Reviewed-by: Vojtech Pavlik <vojtech@suse.com>
 Signed-off-by: Jens Axboe <axboe@kernel.dk>
-Signed-off-by: Coly Li <colyli@suse.de>
-
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  drivers/md/bcache/btree.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/md/bcache/btree.c b/drivers/md/bcache/btree.c
-index 11c5503d31dc..81e8dc3dbe5e 100644
+index 5b815e64c1c9..a5a6909280fe 100644
 --- a/drivers/md/bcache/btree.c
 +++ b/drivers/md/bcache/btree.c
-@@ -807,7 +807,10 @@ int bch_btree_cache_alloc(struct cache_set *c)
+@@ -808,7 +808,10 @@ int bch_btree_cache_alloc(struct cache_set *c)
  	c->shrink.scan_objects = bch_mca_scan;
  	c->shrink.seeks = 4;
  	c->shrink.batch = c->btree_pages * 2;
@@ -39,5 +41,5 @@ index 11c5503d31dc..81e8dc3dbe5e 100644
  	return 0;
  }
 -- 
-2.15.1
+2.16.1
 

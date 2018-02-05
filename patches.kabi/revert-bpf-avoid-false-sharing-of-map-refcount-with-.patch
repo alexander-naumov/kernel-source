@@ -1,0 +1,54 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Mon, 5 Feb 2018 16:49:49 +0100
+Subject: Revert "bpf: avoid false sharing of map refcount with max_entries"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit 96d9b2338bed553c37f759127d8d18c857449ceb, upstream
+commit be95a845cc4402272994ce290e3ad928aff06cb9. While the commit
+removes cacheline sharing, it totally breaks kABI. It shuffles with
+most of the members of struct bpf_map and this cannot be avoided. So
+reverting it for now.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/bpf.h | 16 ++++------------
+ 1 file changed, 4 insertions(+), 12 deletions(-)
+
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index 132585a7fbd8..f2157159b26f 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -31,25 +31,17 @@ struct bpf_map_ops {
+ };
+ 
+ struct bpf_map {
+-	/* 1st cacheline with read-mostly members of which some
+-	 * are also accessed in fast-path (e.g. ops, max_entries).
+-	 */
+-	const struct bpf_map_ops *ops ____cacheline_aligned;
++	atomic_t refcnt;
+ 	enum bpf_map_type map_type;
+ 	u32 key_size;
+ 	u32 value_size;
+ 	u32 max_entries;
+ 	u32 pages;
+ 	bool unpriv_array;
+-	/* 7 bytes hole */
+-
+-	/* 2nd cacheline with misc members to avoid false sharing
+-	 * particularly with refcounting.
+-	 */
+-	struct user_struct *user ____cacheline_aligned;
+-	atomic_t refcnt;
+-	atomic_t usercnt;
++	struct user_struct *user;
++	const struct bpf_map_ops *ops;
+ 	struct work_struct work;
++	atomic_t usercnt;
+ };
+ 
+ struct bpf_map_type_list {
+-- 
+2.16.1
+
