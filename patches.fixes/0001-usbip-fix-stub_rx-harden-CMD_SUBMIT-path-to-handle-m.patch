@@ -1,0 +1,51 @@
+From c6688ef9f29762e65bce325ef4acd6c675806366 Mon Sep 17 00:00:00 2001
+From: Shuah Khan <shuahkh@osg.samsung.com>
+Date: Thu, 7 Dec 2017 14:16:48 -0700
+Subject: [PATCH] usbip: fix stub_rx: harden CMD_SUBMIT path to handle
+ malicious input
+Git-commit: c6688ef9f29762e65bce325ef4acd6c675806366
+Patch-mainline: v4.15
+References: bsc#1078672 CVE-2017-16913
+
+Harden CMD_SUBMIT path to handle malicious input that could trigger
+large memory allocations. Add checks to validate transfer_buffer_length
+and number_of_packets to protect against bad input requesting for
+unbounded memory allocations. Validate early in get_pipe() and return
+failure.
+
+Reported-by: Secunia Research <vuln@secunia.com>
+Cc: stable <stable@vger.kernel.org>
+Signed-off-by: Shuah Khan <shuahkh@osg.samsung.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Oliver Neukum <oneukum@suse.com>
+---
+ drivers/usb/usbip/stub_rx.c |   11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+--- a/drivers/usb/usbip/stub_rx.c
++++ b/drivers/usb/usbip/stub_rx.c
+@@ -358,6 +358,14 @@ static int get_pipe(struct stub_device *
+ 
+ 	epd = &ep->desc;
+ 
++	/* validate transfer_buffer_length */
++	if (pdu->u.cmd_submit.transfer_buffer_length > INT_MAX) {
++		dev_err(&sdev->udev->dev,
++			"CMD_SUBMIT: -EMSGSIZE transfer_buffer_length %d\n",
++			pdu->u.cmd_submit.transfer_buffer_length);
++		return -1;
++	}
++
+ 	if (usb_endpoint_xfer_control(epd)) {
+ 		if (dir == USBIP_DIR_OUT)
+ 			return usb_sndctrlpipe(udev, epnum);
+@@ -497,7 +505,8 @@ static void stub_recv_cmd_submit(struct
+ 	}
+ 
+ 	/* allocate urb transfer buffer, if needed */
+-	if (pdu->u.cmd_submit.transfer_buffer_length > 0) {
++	if (pdu->u.cmd_submit.transfer_buffer_length > 0 &&
++	    pdu->u.cmd_submit.transfer_buffer_length <= INT_MAX) {
+ 		priv->urb->transfer_buffer =
+ 			kzalloc(pdu->u.cmd_submit.transfer_buffer_length,
+ 				GFP_KERNEL);
