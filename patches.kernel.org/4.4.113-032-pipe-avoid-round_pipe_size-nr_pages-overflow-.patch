@@ -1,7 +1,7 @@
 From: Joe Lawrence <joe.lawrence@redhat.com>
 Date: Fri, 17 Nov 2017 15:29:21 -0800
 Subject: [PATCH] pipe: avoid round_pipe_size() nr_pages overflow on 32-bit
-References: bnc#1012382
+References: bnc#1012382 bnc#1006867
 Patch-mainline: 4.4.113
 Git-commit: d3f14c485867cfb2e0c48aa88c41d0ef4bf5209c
 
