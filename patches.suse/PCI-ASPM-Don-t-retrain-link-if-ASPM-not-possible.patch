@@ -1,0 +1,52 @@
+From: David Daney <david.daney@cavium.com>
+Date: Thu, 17 Nov 2016 14:25:01 -0800
+Subject: PCI/ASPM: Don't retrain link if ASPM not possible
+Git-commit: e53f9a28bee35932a0ae4d2ec2784f55491ec6d3
+Patch-mainline: v4.10-rc1
+References: bnc#1071892
+
+Some (defective) PCIe devices are not able to reliably do link retraining.
+
+Check to see if ASPM is possible between link partners before configuring
+common clocking, and doing the resulting link retraining.  If ASPM is not
+possible, there is no reason to risk losing access to a device due to an
+unnecessary link retraining.
+
+Signed-off-by: David Daney <david.daney@cavium.com>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/pci/pcie/aspm.c |   18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+--- a/drivers/pci/pcie/aspm.c
++++ b/drivers/pci/pcie/aspm.c
+@@ -351,12 +351,26 @@ static void pcie_aspm_cap_init(struct pc
+ 		return;
+ 	}
+ 
++	/* Get upstream/downstream components' register state */
++	pcie_get_aspm_reg(parent, &upreg);
++	child = list_entry(linkbus->devices.next, struct pci_dev, bus_list);
++	pcie_get_aspm_reg(child, &dwreg);
++
++	/*
++	 * If ASPM not supported, don't mess with the clocks and link,
++	 * bail out now.
++	 */
++	if (!(upreg.support & dwreg.support))
++		return;
++
+ 	/* Configure common clock before checking latencies */
+ 	pcie_aspm_configure_common_clock(link);
+ 
+-	/* Get upstream/downstream components' register state */
++	/*
++	 * Re-read upstream/downstream components' register state
++	 * after clock configuration
++	 */
+ 	pcie_get_aspm_reg(parent, &upreg);
+-	child = list_entry(linkbus->devices.next, struct pci_dev, bus_list);
+ 	pcie_get_aspm_reg(child, &dwreg);
+ 
+ 	/*
