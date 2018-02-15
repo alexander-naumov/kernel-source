@@ -1,0 +1,105 @@
+From 05c6da1a690ec0478da475f5fb9397625d15bc68 Mon Sep 17 00:00:00 2001
+From: Takashi Iwai <tiwai@suse.de>
+Date: Mon, 29 Jan 2018 14:28:58 +0100
+Subject: [PATCH] Fix kABI compatibility with KEYS changes
+
+Patch-mainline: Never, kABI fix for SLE12-SP2/SP3
+References: CVE-2017-15951, bsc#1065615, bsc#1076684
+
+Restore KEY_FLAG_* bits definitions, and make struct key kABI-compatible.
+Set KEY_FLAG_INSTANTIATED and KEY_FLAG_NEGATIVE bits in mark_key_instantiated()
+explicitly so that access in the 3rd party module can keep working.
+
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+Signed-off-by: Michal Suchanek <msuchanek@suse.de>
+---
+ include/linux/key.h | 35 +++++++++++++++++++++++------------
+ security/keys/key.c |  4 ++++
+ 2 files changed, 27 insertions(+), 12 deletions(-)
+
+diff --git a/include/linux/key.h b/include/linux/key.h
+index af071ca73079..4ba7619eb2e7 100644
+--- a/include/linux/key.h
++++ b/include/linux/key.h
+@@ -162,7 +162,6 @@ struct key {
+ 						 * - may not match RCU dereferenced payload
+ 						 * - payload should contain own length
+ 						 */
+-	short			state;		/* Key state (+) or rejection error (-) */
+ 
+ #ifdef KEY_DEBUGGING
+ 	unsigned		magic;
+@@ -171,17 +170,19 @@ struct key {
+ #endif
+ 
+ 	unsigned long		flags;		/* status flags (change with bitops) */
+-#define KEY_FLAG_DEAD		0	/* set if key type has been deleted */
+-#define KEY_FLAG_REVOKED	1	/* set if key had been revoked */
+-#define KEY_FLAG_IN_QUOTA	2	/* set if key consumes quota */
+-#define KEY_FLAG_USER_CONSTRUCT	3	/* set if key is being constructed in userspace */
+-#define KEY_FLAG_ROOT_CAN_CLEAR	4	/* set if key can be cleared by root without permission */
+-#define KEY_FLAG_INVALIDATED	5	/* set if key has been invalidated */
+-#define KEY_FLAG_TRUSTED	6	/* set if key is trusted */
+-#define KEY_FLAG_TRUSTED_ONLY	7	/* set if keyring only accepts links to trusted keys */
+-#define KEY_FLAG_BUILTIN	8	/* set if key is builtin */
+-#define KEY_FLAG_ROOT_CAN_INVAL	9	/* set if key can be invalidated by root without permission */
+-#define KEY_FLAG_UID_KEYRING	10	/* set if key is a user or user session keyring */
++#define KEY_FLAG_INSTANTIATED	0	/* XXX SLE12: only for compatibility */
++#define KEY_FLAG_DEAD		1	/* set if key type has been deleted */
++#define KEY_FLAG_REVOKED	2	/* set if key had been revoked */
++#define KEY_FLAG_IN_QUOTA	3	/* set if key consumes quota */
++#define KEY_FLAG_USER_CONSTRUCT	4	/* set if key is being constructed in userspace */
++#define KEY_FLAG_NEGATIVE	5	/* XXX SLE12: only for compatibility */
++#define KEY_FLAG_ROOT_CAN_CLEAR	6	/* set if key can be cleared by root without permission */
++#define KEY_FLAG_INVALIDATED	7	/* set if key has been invalidated */
++#define KEY_FLAG_TRUSTED	8	/* set if key is trusted */
++#define KEY_FLAG_TRUSTED_ONLY	9	/* set if keyring only accepts links to trusted keys */
++#define KEY_FLAG_BUILTIN	10	/* set if key is builtin */
++#define KEY_FLAG_ROOT_CAN_INVAL	11	/* set if key can be invalidated by root without permission */
++#define KEY_FLAG_UID_KEYRING	12	/* set if key is a user or user session keyring */
+ 
+ 	/* the key type and key description string
+ 	 * - the desc is used to match a key against search criteria
+@@ -207,7 +208,14 @@ struct key {
+ 			struct list_head name_link;
+ 			struct assoc_array keys;
+ 		};
++#ifdef __GENKSYMS__
++		int reject_error;
++#endif
+ 	};
++
++#ifndef __GENKSYMS__
++	short			state;		/* Key state (+) or rejection error (-) */
++#endif
+ };
+ 
+ extern struct key *key_alloc(struct key_type *type,
+@@ -340,6 +348,9 @@ static inline bool key_is_positive(const struct key *key)
+ 	return key_read_state(key) == KEY_IS_POSITIVE;
+ }
+ 
++/* XXX SLE12: only for compatibility */
++#define key_is_instantiated(key) key_is_positive(key)
++
+ static inline bool key_is_negative(const struct key *key)
+ {
+ 	return key_read_state(key) < 0;
+diff --git a/security/keys/key.c b/security/keys/key.c
+index 4d971bf88ac3..02ca00d474cc 100644
+--- a/security/keys/key.c
++++ b/security/keys/key.c
+@@ -405,6 +405,10 @@ static void mark_key_instantiated(struct key *key, int reject_error)
+ 	 */
+ 	smp_store_release(&key->state,
+ 			  (reject_error < 0) ? reject_error : KEY_IS_POSITIVE);
++	/* XXX SLE12: only for compatibility */
++	set_bit(KEY_FLAG_INSTANTIATED, &key->flags);
++	if (reject_error < 0)
++			set_bit(KEY_FLAG_NEGATIVE, &key->flags);
+ }
+ 
+ /*
+-- 
+2.13.6
+
