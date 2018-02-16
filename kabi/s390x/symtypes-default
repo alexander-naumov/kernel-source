@@ -1942,6 +1942,7 @@ submit_bio_wait extern int submit_bio_wait ( int , s#bio * )
 bio_advance extern void bio_advance ( s#bio * , unsigned ) 
 bio_alloc_pages extern int bio_alloc_pages ( s#bio * , t#gfp_t ) 
 bio_copy_data extern void bio_copy_data ( s#bio * , s#bio * ) 
+bio_free_pages extern void bio_free_pages ( s#bio * ) 
 bio_uncopy_user extern int bio_uncopy_user ( s#bio * ) 
 bio_map_user_iov extern s#bio * bio_map_user_iov ( s#request_queue * , const s#iov_iter * , t#gfp_t ) 
 bio_unmap_user extern void bio_unmap_user ( s#bio * ) 
@@ -7733,6 +7734,7 @@ s##uprobe
 s##net_device
 s##sec_path
 s##rtattr
+shash_no_setkey int shash_no_setkey ( s#crypto_shash * , const t#u8 * , unsigned int ) 
 crypto_shash_setkey int crypto_shash_setkey ( s#crypto_shash * , const t#u8 * , unsigned int ) 
 crypto_shash_update int crypto_shash_update ( s#shash_desc * , const t#u8 * , unsigned int ) 
 crypto_shash_final int crypto_shash_final ( s#shash_desc * , t#u8 * ) 
@@ -28635,7 +28637,6 @@ e#qeth_prot_versions enum qeth_prot_versions { QETH_PROT_IPV4 = 0x0004 , QETH_PR
 qeth_get_ipacmd_buffer s#qeth_cmd_buffer * qeth_get_ipacmd_buffer ( s#qeth_card * , e#qeth_ipa_cmds , e#qeth_prot_versions ) 
 qeth_prepare_ipa_cmd void qeth_prepare_ipa_cmd ( s#qeth_card * , s#qeth_cmd_buffer * , char ) 
 qeth_send_ipa_cmd int qeth_send_ipa_cmd ( s#qeth_card * , s#qeth_cmd_buffer * , int ( * ) ( s#qeth_card * , s#qeth_reply * , unsigned long ) , void * ) 
-qeth_send_startlan int qeth_send_startlan ( s#qeth_card * ) 
 qeth_query_setadapterparms int qeth_query_setadapterparms ( s#qeth_card * ) 
 qeth_query_ipassists int qeth_query_ipassists ( s#qeth_card * , e#qeth_prot_versions ) 
 s#qeth_switch_info struct qeth_switch_info { t#__u32 capabilities ; t#__u32 settings ; } 
@@ -38829,6 +38830,7 @@ dax_clear_sectors int dax_clear_sectors ( s#block_device * , t#sector_t , long )
 t#dio_iodone_t typedef int ( dio_iodone_t ) ( s#kiocb * , t#loff_t , t#ssize_t , void * ) 
 dax_do_io t#ssize_t dax_do_io ( s#kiocb * , s#inode * , s#iov_iter * , t#loff_t , t#get_block_t , t#dio_iodone_t , int ) 
 dax_writeback_mapping_range int dax_writeback_mapping_range ( s#address_space * , s#block_device * , s#writeback_control * ) 
+__dax_fault2 int __dax_fault2 ( s#vm_area_struct * , s#vm_fault * , int * , t#get_block_t ) 
 __dax_fault int __dax_fault ( s#vm_area_struct * , s#vm_fault * , t#get_block_t ) 
 dax_fault int dax_fault ( s#vm_area_struct * , s#vm_fault * , t#get_block_t ) 
 __dax_pmd_fault int __dax_pmd_fault ( s#vm_area_struct * , unsigned long , t#pmd_t * , unsigned int , t#get_block_t ) 
@@ -51639,6 +51641,7 @@ set_freezable extern t#bool set_freezable ( void )
 /* kernel/groups.o */
 groups_alloc extern s#group_info * groups_alloc ( int ) 
 groups_free extern void groups_free ( s#group_info * ) 
+groups_sort extern void groups_sort ( s#group_info * ) 
 s##sched_class
 s##cfs_rq
 s##rt_rq
@@ -54128,6 +54131,7 @@ s##bpf_prog
 s##ftrace_hash
 s##numa_group
 s##uprobe
+___ptrace_may_access extern int ___ptrace_may_access ( s#task_struct * , s#task_struct * , unsigned int ) 
 t#user_regset_get_fn typedef int user_regset_get_fn ( s#task_struct * , const s#user_regset * , unsigned int , unsigned int , void * , void * ) 
 t#user_regset_set_fn typedef int user_regset_set_fn ( s#task_struct * , const s#user_regset * , unsigned int , unsigned int , const void * , const void * ) 
 t#user_regset_active_fn typedef int user_regset_active_fn ( s#task_struct * , const s#user_regset * ) 
@@ -63879,7 +63883,7 @@ ceph_monc_request_next_osdmap extern void ceph_monc_request_next_osdmap ( s#ceph
 ceph_monc_wait_osdmap extern int ceph_monc_wait_osdmap ( s#ceph_mon_client * , t#u32 , unsigned long ) 
 ceph_monc_open_session extern int ceph_monc_open_session ( s#ceph_mon_client * ) 
 s#ceph_statfs struct ceph_statfs { t#__le64 kb , kb_used , kb_avail ; t#__le64 num_objects ; } 
-ceph_monc_do_statfs extern int ceph_monc_do_statfs ( s#ceph_mon_client * , s#ceph_statfs * ) 
+ceph_monc_do_statfs int ceph_monc_do_statfs ( s#ceph_mon_client * , t#u64 , s#ceph_statfs * ) 
 ceph_monc_do_get_version extern int ceph_monc_do_get_version ( s#ceph_mon_client * , const char * , t#u64 * ) 
 ceph_monc_init extern int ceph_monc_init ( s#ceph_mon_client * , s#ceph_client * ) 
 ceph_monc_stop extern void ceph_monc_stop ( s#ceph_mon_client * ) 
@@ -64629,6 +64633,7 @@ dev_getfirstbyhwtype s#net_device * dev_getfirstbyhwtype ( s#net * , unsigned sh
 __dev_get_by_flags s#net_device * __dev_get_by_flags ( s#net * , unsigned short , unsigned short ) 
 dev_valid_name t#bool dev_valid_name ( const char * ) 
 dev_alloc_name int dev_alloc_name ( s#net_device * , const char * ) 
+dev_get_valid_name int dev_get_valid_name ( s#net * , s#net_device * , const char * ) 
 netdev_features_change void netdev_features_change ( s#net_device * ) 
 netdev_state_change void netdev_state_change ( s#net_device * ) 
 netdev_notify_peers void netdev_notify_peers ( s#net_device * ) 
