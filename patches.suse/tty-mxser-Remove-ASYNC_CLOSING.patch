@@ -1,0 +1,58 @@
+From: Peter Hurley <peter@hurleysoftware.com>
+Date: Sun, 10 Jan 2016 14:51:38 -0800
+Subject: tty: mxser: Remove ASYNC_CLOSING
+Git-commit: cd7b4b3944381713038d39240098908ffeec647d
+Patch-mainline: v4.6-rc1
+References: bnc#1072363
+
+The tty core no longer provides ASYNC_CLOSING. Use private flag for
+same purpose, which is to clear the fifos at each and every interrupt
+during driver close(). The driver uses this sledgehammer approach because
+its close/shutdown sequence is hopelessly borked.
+
+Signed-off-by: Peter Hurley <peter@hurleysoftware.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/tty/mxser.c |    9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+--- a/drivers/tty/mxser.c
++++ b/drivers/tty/mxser.c
+@@ -254,6 +254,7 @@ struct mxser_port {
+ 	int xmit_head;
+ 	int xmit_tail;
+ 	int xmit_cnt;
++	int closing;
+ 
+ 	struct ktermios normal_termios;
+ 
+@@ -1081,6 +1082,7 @@ static void mxser_close(struct tty_struc
+ 		return;
+ 	if (tty_port_close_start(port, tty, filp) == 0)
+ 		return;
++	info->closing = 1;
+ 	mutex_lock(&port->mutex);
+ 	mxser_close_port(port);
+ 	mxser_flush_buffer(tty);
+@@ -1091,6 +1093,7 @@ static void mxser_close(struct tty_struc
+ 	mxser_shutdown_port(port);
+ 	clear_bit(ASYNCB_INITIALIZED, &port->flags);
+ 	mutex_unlock(&port->mutex);
++	info->closing = 0;
+ 	/* Right now the tty_port set is done outside of the close_end helper
+ 	   as we don't yet have everyone using refcounts */	
+ 	tty_port_close_end(port, tty);
+@@ -2255,10 +2258,8 @@ static irqreturn_t mxser_interrupt(int i
+ 					break;
+ 				iir &= MOXA_MUST_IIR_MASK;
+ 				tty = tty_port_tty_get(&port->port);
+-				if (!tty ||
+-						(port->port.flags & ASYNC_CLOSING) ||
+-						!(port->port.flags &
+-							ASYNC_INITIALIZED)) {
++				if (!tty || port->closing ||
++				    !(port->port.flags & ASYNC_INITIALIZED)) {
+ 					status = inb(port->ioaddr + UART_LSR);
+ 					outb(0x27, port->ioaddr + UART_FCR);
+ 					inb(port->ioaddr + UART_MSR);
