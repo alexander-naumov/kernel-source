@@ -15,12 +15,10 @@ Signed-off-by: Nicholas Piggin <npiggin@gmail.com>
 Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
- arch/powerpc/include/asm/exception-64s.h |  3 +++
- arch/powerpc/include/asm/paca.h          | 10 +++++++---
- 2 files changed, 10 insertions(+), 3 deletions(-)
+ arch/powerpc/include/asm/exception-64s.h |    3 +++
+ arch/powerpc/include/asm/paca.h          |   12 ++++++++----
+ 2 files changed, 11 insertions(+), 4 deletions(-)
 
-diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 77f52b26dad6..c5d4a4a37de9 100644
 --- a/arch/powerpc/include/asm/exception-64s.h
 +++ b/arch/powerpc/include/asm/exception-64s.h
 @@ -35,6 +35,7 @@
@@ -31,17 +29,15 @@ index 77f52b26dad6..c5d4a4a37de9 100644
  #define EX_R9		0
  #define EX_R10		8
  #define EX_R11		16
-@@ -50,6 +51,8 @@
- #define EX_PPR		88	/* SMT thread status register (priority) */
- #define EX_CTR		96
+@@ -103,6 +104,8 @@
+ 	hrfid;								\
+ 	b	hrfi_flush_fallback
  
 +#define EX_SIZE		13	/* size in u64 units */
 +
  #ifdef CONFIG_RELOCATABLE
  #define __EXCEPTION_RELON_PROLOG_PSERIES_1(label, h)			\
  	ld	r12,PACAKBASE(r13);	/* get high part of &label */	\
-diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
-index 70bd4381f8e6..401a61571c2e 100644
 --- a/arch/powerpc/include/asm/paca.h
 +++ b/arch/powerpc/include/asm/paca.h
 @@ -20,7 +20,11 @@
@@ -69,6 +65,12 @@ index 70bd4381f8e6..401a61571c2e 100644
   				 * on the linear mapping */
  	/* SLB related definitions */
  	u16 vmalloc_sllp;
--- 
-2.13.6
-
+@@ -197,7 +201,7 @@ struct paca_struct {
+ 	 * rfi fallback flush must be in its own cacheline to prevent
+ 	 * other paca data leaking into the L1d
+ 	 */
+-	u64 exrfi[13] __aligned(0x80);
++	u64 exrfi[EX_SIZE] __aligned(0x80);
+ 	void *rfi_flush_fallback_area;
+ 	u64 l1d_flush_congruence;
+ 	u64 l1d_flush_sets;

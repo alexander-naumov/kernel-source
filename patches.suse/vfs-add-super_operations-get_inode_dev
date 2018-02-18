@@ -50,7 +50,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  		pr_info("    @off 0x%lx in [%s]\n"
 --- a/drivers/staging/lustre/lustre/llite/dir.c
 +++ b/drivers/staging/lustre/lustre/llite/dir.c
-@@ -1502,7 +1502,7 @@ skip_lmm:
+@@ -1500,7 +1500,7 @@ skip_lmm:
  			struct lov_user_mds_data *lmdp;
  			lstat_t st = { 0 };
  
@@ -61,7 +61,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  			st.st_uid     = body->uid;
 --- a/drivers/staging/lustre/lustre/llite/file.c
 +++ b/drivers/staging/lustre/lustre/llite/file.c
-@@ -3013,7 +3013,7 @@ int ll_getattr(struct vfsmount *mnt, str
+@@ -2993,7 +2993,7 @@ int ll_getattr(struct vfsmount *mnt, str
  	if (res)
  		return res;
  
@@ -72,7 +72,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	else
 --- a/fs/locks.c
 +++ b/fs/locks.c
-@@ -2559,8 +2559,8 @@ static void lock_get_status(struct seq_f
+@@ -2600,8 +2600,8 @@ static void lock_get_status(struct seq_f
  	if (inode) {
  		/* userspace relies on this representation of dev_t */
  		seq_printf(f, "%d %02x:%02x:%ld ", fl_pid,
@@ -96,7 +96,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  		p = xdr_encode_hyper(p, (u64) fhp->fh_export->ex_fsid);
 --- a/fs/nfsd/vfs.c
 +++ b/fs/nfsd/vfs.c
-@@ -892,7 +892,7 @@ static int wait_for_concurrent_writes(st
+@@ -907,7 +907,7 @@ static int wait_for_concurrent_writes(st
  	int err = 0;
  
  	if (atomic_read(&inode->i_writecount) > 1
@@ -105,7 +105,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  		dprintk("nfsd: write defer %d\n", task_pid_nr(current));
  		msleep(10);
  		dprintk("nfsd: write resume %d\n", task_pid_nr(current));
-@@ -903,7 +903,7 @@ static int wait_for_concurrent_writes(st
+@@ -918,7 +918,7 @@ static int wait_for_concurrent_writes(st
  		err = vfs_fsync(file, 0);
  	}
  	last_ino = inode->i_ino;
@@ -116,7 +116,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  
 --- a/fs/notify/fdinfo.c
 +++ b/fs/notify/fdinfo.c
-@@ -84,7 +84,7 @@ static void inotify_fdinfo(struct seq_fi
+@@ -91,7 +91,7 @@ static void inotify_fdinfo(struct seq_fi
  		 */
  		u32 mask = mark->mask & IN_ALL_EVENTS;
  		seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:%x ",
@@ -125,7 +125,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  			   mask, mark->ignored_mask);
  		show_mark_fhandle(m, inode);
  		seq_putc(m, '\n');
-@@ -117,7 +117,7 @@ static void fanotify_fdinfo(struct seq_f
+@@ -124,7 +124,7 @@ static void fanotify_fdinfo(struct seq_f
  		if (!inode)
  			return;
  		seq_printf(m, "fanotify ino:%lx sdev:%x mflags:%x mask:%x ignored_mask:%x ",
@@ -147,7 +147,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -281,7 +281,7 @@ show_map_vma(struct seq_file *m, struct
+@@ -288,7 +288,7 @@ show_map_vma(struct seq_file *m, struct
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
@@ -158,7 +158,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	}
 --- a/fs/proc/task_nommu.c
 +++ b/fs/proc/task_nommu.c
-@@ -161,7 +161,7 @@ static int nommu_vma_show(struct seq_fil
+@@ -164,7 +164,7 @@ static int nommu_vma_show(struct seq_fil
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
@@ -180,7 +180,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	stat->nlink = inode->i_nlink;
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -1728,6 +1728,7 @@ struct super_operations {
+@@ -1754,6 +1754,7 @@ struct super_operations {
  				  struct shrink_control *);
  	long (*free_cached_objects)(struct super_block *,
  				    struct shrink_control *);
@@ -188,9 +188,9 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  };
  
  /*
-@@ -3040,4 +3041,12 @@ static inline bool dir_relax(struct inod
- 
+@@ -3068,4 +3069,12 @@ static inline bool dir_relax(struct inod
  extern bool path_noexec(const struct path *path);
+ extern void inode_nohighmem(struct inode *inode);
  
 +static inline dev_t inode_get_dev(const struct inode *inode)
 +{
@@ -214,7 +214,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	),
 --- a/kernel/audit.c
 +++ b/kernel/audit.c
-@@ -1711,7 +1711,7 @@ void audit_copy_inode(struct audit_names
+@@ -1725,7 +1725,7 @@ void audit_copy_inode(struct audit_names
  		      const struct inode *inode)
  {
  	name->ino   = inode->i_ino;
@@ -225,7 +225,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	name->gid   = inode->i_gid;
 --- a/kernel/audit_watch.c
 +++ b/kernel/audit_watch.c
-@@ -367,7 +367,7 @@ static int audit_get_nd(struct audit_wat
+@@ -368,7 +368,7 @@ static int audit_get_nd(struct audit_wat
  	mutex_unlock(&d_backing_inode(parent->dentry)->i_mutex);
  	if (d_is_positive(d)) {
  		/* update watch filter fields */
@@ -234,7 +234,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  		watch->ino = d_backing_inode(d)->i_ino;
  	}
  	dput(d);
-@@ -495,7 +495,7 @@ static int audit_watch_handle_event(stru
+@@ -498,7 +498,7 @@ static int audit_watch_handle_event(stru
  	};
  
  	if (mask & (FS_CREATE|FS_MOVED_TO) && inode)
@@ -245,7 +245,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  	else if (mask & (FS_DELETE_SELF|FS_UNMOUNT|FS_MOVE_SELF))
 --- a/kernel/events/core.c
 +++ b/kernel/events/core.c
-@@ -5902,7 +5902,7 @@ static void perf_event_mmap_event(struct
+@@ -6080,7 +6080,7 @@ static void perf_event_mmap_event(struct
  			goto cpy_name;
  		}
  		inode = file_inode(vma->vm_file);
@@ -256,7 +256,7 @@ Signed-off-by: Jeff Mahoney <jeffm@suse.com>
  		maj = MAJOR(dev);
 --- a/mm/memory-failure.c
 +++ b/mm/memory-failure.c
-@@ -97,7 +97,7 @@ static int hwpoison_filter_dev(struct pa
+@@ -98,7 +98,7 @@ static int hwpoison_filter_dev(struct pa
  	if (mapping == NULL || mapping->host == NULL)
  		return -EINVAL;
  

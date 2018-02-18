@@ -263,12 +263,13 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  			giveup_altivec_maybe_transactional(tsk);
  		}
  		preempt_enable();
-@@ -208,14 +189,10 @@ void enable_kernel_vsx(void)
+@@ -208,15 +189,11 @@ void enable_kernel_vsx(void)
  {
  	WARN_ON(preemptible());
  
 -#ifdef CONFIG_SMP
- 	if (current->thread.regs && (current->thread.regs->msr & MSR_VSX))
+ 	if (current->thread.regs &&
+ 	    (current->thread.regs->msr & (MSR_VSX|MSR_VEC|MSR_FP)))
  		giveup_vsx(current);
  	else
  		giveup_vsx(NULL);	/* just enable vsx for kernel - force */
@@ -278,17 +279,17 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  }
  EXPORT_SYMBOL(enable_kernel_vsx);
  
-@@ -232,9 +209,7 @@ void flush_vsx_to_thread(struct task_str
+@@ -233,9 +210,7 @@ void flush_vsx_to_thread(struct task_str
  	if (tsk->thread.regs) {
  		preempt_disable();
- 		if (tsk->thread.regs->msr & MSR_VSX) {
+ 		if (tsk->thread.regs->msr & (MSR_VSX|MSR_VEC|MSR_FP)) {
 -#ifdef CONFIG_SMP
  			BUG_ON(tsk != current);
 -#endif
  			giveup_vsx(tsk);
  		}
  		preempt_enable();
-@@ -249,14 +224,10 @@ void enable_kernel_spe(void)
+@@ -250,14 +225,10 @@ void enable_kernel_spe(void)
  {
  	WARN_ON(preemptible());
  
@@ -303,7 +304,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  }
  EXPORT_SYMBOL(enable_kernel_spe);
  
-@@ -265,9 +236,7 @@ void flush_spe_to_thread(struct task_str
+@@ -266,9 +237,7 @@ void flush_spe_to_thread(struct task_str
  	if (tsk->thread.regs) {
  		preempt_disable();
  		if (tsk->thread.regs->msr & MSR_SPE) {
@@ -313,7 +314,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  			tsk->thread.spefscr = mfspr(SPRN_SPEFSCR);
  			giveup_spe(tsk);
  		}
-@@ -276,32 +245,6 @@ void flush_spe_to_thread(struct task_str
+@@ -277,32 +246,6 @@ void flush_spe_to_thread(struct task_str
  }
  #endif /* CONFIG_SPE */
  
@@ -346,7 +347,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  #ifdef CONFIG_PPC_ADV_DEBUG_REGS
  void do_send_trap(struct pt_regs *regs, unsigned long address,
  		  unsigned long error_code, int signal_code, int breakpt)
-@@ -783,30 +726,9 @@ struct task_struct *__switch_to(struct t
+@@ -784,30 +727,9 @@ struct task_struct *__switch_to(struct t
  
  	__switch_to_tm(prev);
  
@@ -377,7 +378,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  	if (prev->thread.regs && (prev->thread.regs->msr & MSR_VEC))
  		giveup_altivec(prev);
  #endif /* CONFIG_ALTIVEC */
-@@ -816,39 +738,10 @@ struct task_struct *__switch_to(struct t
+@@ -817,39 +739,10 @@ struct task_struct *__switch_to(struct t
  		__giveup_vsx(prev);
  #endif /* CONFIG_VSX */
  #ifdef CONFIG_SPE
@@ -417,7 +418,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  #ifdef CONFIG_PPC_ADV_DEBUG_REGS
  	switch_booke_debug_regs(&new->thread.debug);
  #else
-@@ -1061,13 +954,10 @@ void show_regs(struct pt_regs * regs)
+@@ -1062,13 +955,10 @@ void show_regs(struct pt_regs * regs)
  
  void exit_thread(void)
  {
@@ -431,7 +432,7 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  #ifdef CONFIG_HAVE_HW_BREAKPOINT
  	flush_ptrace_hw_breakpoint(current);
  #else /* CONFIG_HAVE_HW_BREAKPOINT */
-@@ -1305,7 +1195,6 @@ void start_thread(struct pt_regs *regs,
+@@ -1316,7 +1206,6 @@ void start_thread(struct pt_regs *regs,
  		regs->msr = MSR_USER32;
  	}
  #endif

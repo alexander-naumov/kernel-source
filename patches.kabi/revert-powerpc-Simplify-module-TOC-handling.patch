@@ -1,0 +1,109 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Mon, 19 Feb 2018 07:58:54 +0100
+Subject: Revert "powerpc: Simplify module TOC handling"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit fa34303532dcd4c609729cd0cc8aa2c53b3eb4fd, upstream
+commit c153693d7eb9eeb28478aa2deaaf0b4e7b5ff5e9. It changes TOC
+symbols/sections handling on powerpc64 and it breaks both kABI and
+module loading.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/powerpc/kernel/misc_64.S   | 28 ++++++++++++++++++++++++++++
+ arch/powerpc/kernel/module_64.c | 12 +++---------
+ scripts/mod/modpost.c           |  3 +--
+ 3 files changed, 32 insertions(+), 11 deletions(-)
+
+diff --git a/arch/powerpc/kernel/misc_64.S b/arch/powerpc/kernel/misc_64.S
+index 107588295b39..415e58565745 100644
+--- a/arch/powerpc/kernel/misc_64.S
++++ b/arch/powerpc/kernel/misc_64.S
+@@ -701,3 +701,31 @@ _GLOBAL(kexec_sequence)
+ 	li	r5,0
+ 	blr	/* image->start(physid, image->start, 0); */
+ #endif /* CONFIG_KEXEC */
++
++#ifdef CONFIG_MODULES
++#if defined(_CALL_ELF) && _CALL_ELF == 2
++
++#ifdef CONFIG_MODVERSIONS
++.weak __crc_TOC.
++.section "___kcrctab+TOC.","a"
++.globl __kcrctab_TOC.
++__kcrctab_TOC.:
++	.llong	__crc_TOC.
++#endif
++
++/*
++ * Export a fake .TOC. since both modpost and depmod will complain otherwise.
++ * Both modpost and depmod strip the leading . so we do the same here.
++ */
++.section "__ksymtab_strings","a"
++__kstrtab_TOC.:
++	.asciz "TOC."
++
++.section "___ksymtab+TOC.","a"
++/* This symbol name is important: it's used by modpost to find exported syms */
++.globl __ksymtab_TOC.
++__ksymtab_TOC.:
++	.llong 0 /* .value */
++	.llong __kstrtab_TOC.
++#endif /* ELFv2 */
++#endif /* MODULES */
+diff --git a/arch/powerpc/kernel/module_64.c b/arch/powerpc/kernel/module_64.c
+index 08b7a40de5f8..e4f7d4eed20c 100644
+--- a/arch/powerpc/kernel/module_64.c
++++ b/arch/powerpc/kernel/module_64.c
+@@ -326,10 +326,7 @@ static void dedotify_versions(struct modversion_info *vers,
+ 		}
+ }
+ 
+-/*
+- * Undefined symbols which refer to .funcname, hack to funcname. Make .TOC.
+- * seem to be defined (value set later).
+- */
++/* Undefined symbols which refer to .funcname, hack to funcname (or .TOC.) */
+ static void dedotify(Elf64_Sym *syms, unsigned int numsyms, char *strtab)
+ {
+ 	unsigned int i;
+@@ -337,11 +334,8 @@ static void dedotify(Elf64_Sym *syms, unsigned int numsyms, char *strtab)
+ 	for (i = 1; i < numsyms; i++) {
+ 		if (syms[i].st_shndx == SHN_UNDEF) {
+ 			char *name = strtab + syms[i].st_name;
+-			if (name[0] == '.') {
+-				if (strcmp(name+1, "TOC.") == 0)
+-					syms[i].st_shndx = SHN_ABS;
++			if (name[0] == '.')
+ 				syms[i].st_name++;
+-			}
+ 		}
+ 	}
+ }
+@@ -357,7 +351,7 @@ static Elf64_Sym *find_dot_toc(Elf64_Shdr *sechdrs,
+ 	numsyms = sechdrs[symindex].sh_size / sizeof(Elf64_Sym);
+ 
+ 	for (i = 1; i < numsyms; i++) {
+-		if (syms[i].st_shndx == SHN_ABS
++		if (syms[i].st_shndx == SHN_UNDEF
+ 		    && strcmp(strtab + syms[i].st_name, "TOC.") == 0)
+ 			return &syms[i];
+ 	}
+diff --git a/scripts/mod/modpost.c b/scripts/mod/modpost.c
+index 48958d3cec9e..e080746e1a6b 100644
+--- a/scripts/mod/modpost.c
++++ b/scripts/mod/modpost.c
+@@ -594,8 +594,7 @@ static int ignore_undef_symbol(struct elf_info *info, const char *symname)
+ 		if (strncmp(symname, "_restgpr0_", sizeof("_restgpr0_") - 1) == 0 ||
+ 		    strncmp(symname, "_savegpr0_", sizeof("_savegpr0_") - 1) == 0 ||
+ 		    strncmp(symname, "_restvr_", sizeof("_restvr_") - 1) == 0 ||
+-		    strncmp(symname, "_savevr_", sizeof("_savevr_") - 1) == 0 ||
+-		    strcmp(symname, ".TOC.") == 0)
++		    strncmp(symname, "_savevr_", sizeof("_savevr_") - 1) == 0)
+ 			return 1;
+ 	/* Do not ignore this symbol */
+ 	return 0;
+-- 
+2.16.1
+

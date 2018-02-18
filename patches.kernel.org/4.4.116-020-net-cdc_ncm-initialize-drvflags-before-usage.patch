@@ -1,0 +1,53 @@
+From: Matthias Hintzmann <matthias.dev@gmx.de>
+Date: Tue, 6 Feb 2018 20:59:01 +0100
+Subject: [PATCH] net: cdc_ncm: initialize drvflags before usage
+References: bnc#1012382
+Patch-mainline: 4.4.116
+Git-commit: 197ceb5fc08493bbc7913743a5b6e5aa897d3ed7
+
+ctx->drvflags is checked in the if clause before beeing initialized.
+Move initialization before first usage.
+
+Note, that the if clause was backported with commit 75f82a703b30
+("cdc_ncm: Set NTB format again after altsetting switch for Huawei
+devices") from mainline (upstream commit 2b02c20ce0c2 ("cdc_ncm: Set NTB
+format again after altsetting switch for Huawei devices").  In mainline,
+the initialization is at the right place before the if clause.
+
+[mrkiko.rs@gmail.com: commit message tweaks]
+
+Fixes: 75f82a703b30 ("cdc_ncm: Set NTB format again after altsetting switch for Huawei devices")
+Signed-off-by: Matthias Hintzmann <matthias.dev@gmx.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/usb/cdc_ncm.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/usb/cdc_ncm.c b/drivers/net/usb/cdc_ncm.c
+index 1228d0da4075..72cb30828a12 100644
+--- a/drivers/net/usb/cdc_ncm.c
++++ b/drivers/net/usb/cdc_ncm.c
+@@ -825,6 +825,9 @@ int cdc_ncm_bind_common(struct usbnet *dev, struct usb_interface *intf, u8 data_
+ 		goto error2;
+ 	}
+ 
++	/* Device-specific flags */
++	ctx->drvflags = drvflags;
++
+ 	/*
+ 	 * Some Huawei devices have been observed to come out of reset in NDP32 mode.
+ 	 * Let's check if this is the case, and set the device to NDP16 mode again if
+@@ -873,9 +876,6 @@ int cdc_ncm_bind_common(struct usbnet *dev, struct usb_interface *intf, u8 data_
+ 	/* finish setting up the device specific data */
+ 	cdc_ncm_setup(dev);
+ 
+-	/* Device-specific flags */
+-	ctx->drvflags = drvflags;
+-
+ 	/* Allocate the delayed NDP if needed. */
+ 	if (ctx->drvflags & CDC_NCM_FLAG_NDP_TO_END) {
+ 		ctx->delayed_ndp16 = kzalloc(ctx->max_ndp_size, GFP_KERNEL);
+-- 
+2.16.1
+

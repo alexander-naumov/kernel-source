@@ -1,0 +1,163 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Date: Sun, 18 Feb 2018 16:37:57 +0100
+Subject: Revert "netfilter: nf_queue: Make the queue_handler pernet"
+Patch-mainline: never, kabi
+References: kabi
+
+This reverts commit cb92c8fb3bda8fe5c073603c7a5b5f5936cc4882, upstream
+commit dc3ee32e96d74dd6c80eed63af5065cb75899299. It adds a member to
+struct netns_nf. And since that one is included in struct net, it breaks
+kABI heavily.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/net/netfilter/nf_queue.h |  4 ++--
+ include/net/netns/netfilter.h    |  2 --
+ net/netfilter/nf_queue.c         | 17 +++++++++--------
+ net/netfilter/nfnetlink_queue.c  | 18 ++++++------------
+ 4 files changed, 17 insertions(+), 24 deletions(-)
+
+diff --git a/include/net/netfilter/nf_queue.h b/include/net/netfilter/nf_queue.h
+index 0dbce55437f2..9c5638ad872e 100644
+--- a/include/net/netfilter/nf_queue.h
++++ b/include/net/netfilter/nf_queue.h
+@@ -28,8 +28,8 @@ struct nf_queue_handler {
+ 						struct nf_hook_ops *ops);
+ };
+ 
+-void nf_register_queue_handler(struct net *net, const struct nf_queue_handler *qh);
+-void nf_unregister_queue_handler(struct net *net);
++void nf_register_queue_handler(const struct nf_queue_handler *qh);
++void nf_unregister_queue_handler(void);
+ void nf_reinject(struct nf_queue_entry *entry, unsigned int verdict);
+ 
+ void nf_queue_entry_get_refs(struct nf_queue_entry *entry);
+diff --git a/include/net/netns/netfilter.h b/include/net/netns/netfilter.h
+index 36d723579af2..38aa4983e2a9 100644
+--- a/include/net/netns/netfilter.h
++++ b/include/net/netns/netfilter.h
+@@ -5,13 +5,11 @@
+ 
+ struct proc_dir_entry;
+ struct nf_logger;
+-struct nf_queue_handler;
+ 
+ struct netns_nf {
+ #if defined CONFIG_PROC_FS
+ 	struct proc_dir_entry *proc_netfilter;
+ #endif
+-	const struct nf_queue_handler __rcu *queue_handler;
+ 	const struct nf_logger __rcu *nf_loggers[NFPROTO_NUMPROTO];
+ #ifdef CONFIG_SYSCTL
+ 	struct ctl_table_header *nf_log_dir_header;
+diff --git a/net/netfilter/nf_queue.c b/net/netfilter/nf_queue.c
+index b19ad20a705c..5baa8e24e6ac 100644
+--- a/net/netfilter/nf_queue.c
++++ b/net/netfilter/nf_queue.c
+@@ -26,21 +26,23 @@
+  * Once the queue is registered it must reinject all packets it
+  * receives, no matter what.
+  */
++static const struct nf_queue_handler __rcu *queue_handler __read_mostly;
+ 
+ /* return EBUSY when somebody else is registered, return EEXIST if the
+  * same handler is registered, return 0 in case of success. */
+-void nf_register_queue_handler(struct net *net, const struct nf_queue_handler *qh)
++void nf_register_queue_handler(const struct nf_queue_handler *qh)
+ {
+ 	/* should never happen, we only have one queueing backend in kernel */
+-	WARN_ON(rcu_access_pointer(net->nf.queue_handler));
+-	rcu_assign_pointer(net->nf.queue_handler, qh);
++	WARN_ON(rcu_access_pointer(queue_handler));
++	rcu_assign_pointer(queue_handler, qh);
+ }
+ EXPORT_SYMBOL(nf_register_queue_handler);
+ 
+ /* The caller must flush their queue before this */
+-void nf_unregister_queue_handler(struct net *net)
++void nf_unregister_queue_handler(void)
+ {
+-	RCU_INIT_POINTER(net->nf.queue_handler, NULL);
++	RCU_INIT_POINTER(queue_handler, NULL);
++	synchronize_rcu();
+ }
+ EXPORT_SYMBOL(nf_unregister_queue_handler);
+ 
+@@ -101,7 +103,7 @@ void nf_queue_nf_hook_drop(struct net *net, struct nf_hook_ops *ops)
+ 	const struct nf_queue_handler *qh;
+ 
+ 	rcu_read_lock();
+-	qh = rcu_dereference(net->nf.queue_handler);
++	qh = rcu_dereference(queue_handler);
+ 	if (qh)
+ 		qh->nf_hook_drop(net, ops);
+ 	rcu_read_unlock();
+@@ -120,10 +122,9 @@ int nf_queue(struct sk_buff *skb,
+ 	struct nf_queue_entry *entry = NULL;
+ 	const struct nf_afinfo *afinfo;
+ 	const struct nf_queue_handler *qh;
+-	struct net *net = state->net;
+ 
+ 	/* QUEUE == DROP if no one is waiting, to be safe. */
+-	qh = rcu_dereference(net->nf.queue_handler);
++	qh = rcu_dereference(queue_handler);
+ 	if (!qh) {
+ 		status = -ESRCH;
+ 		goto err;
+diff --git a/net/netfilter/nfnetlink_queue.c b/net/netfilter/nfnetlink_queue.c
+index f853b55bf877..c14d2e8eaec3 100644
+--- a/net/netfilter/nfnetlink_queue.c
++++ b/net/netfilter/nfnetlink_queue.c
+@@ -1382,29 +1382,21 @@ static int __net_init nfnl_queue_net_init(struct net *net)
+ 			 net->nf.proc_netfilter, &nfqnl_file_ops))
+ 		return -ENOMEM;
+ #endif
+-	nf_register_queue_handler(net, &nfqh);
+ 	return 0;
+ }
+ 
+ static void __net_exit nfnl_queue_net_exit(struct net *net)
+ {
+-	nf_unregister_queue_handler(net);
+ #ifdef CONFIG_PROC_FS
+ 	remove_proc_entry("nfnetlink_queue", net->nf.proc_netfilter);
+ #endif
+ }
+ 
+-static void nfnl_queue_net_exit_batch(struct list_head *net_exit_list)
+-{
+-	synchronize_rcu();
+-}
+-
+ static struct pernet_operations nfnl_queue_net_ops = {
+-	.init		= nfnl_queue_net_init,
+-	.exit		= nfnl_queue_net_exit,
+-	.exit_batch	= nfnl_queue_net_exit_batch,
+-	.id		= &nfnl_queue_net_id,
+-	.size		= sizeof(struct nfnl_queue_net),
++	.init	= nfnl_queue_net_init,
++	.exit	= nfnl_queue_net_exit,
++	.id	= &nfnl_queue_net_id,
++	.size	= sizeof(struct nfnl_queue_net),
+ };
+ 
+ static int __init nfnetlink_queue_init(void)
+@@ -1425,6 +1417,7 @@ static int __init nfnetlink_queue_init(void)
+ 	}
+ 
+ 	register_netdevice_notifier(&nfqnl_dev_notifier);
++	nf_register_queue_handler(&nfqh);
+ 	return status;
+ 
+ cleanup_netlink_notifier:
+@@ -1436,6 +1429,7 @@ out:
+ 
+ static void __exit nfnetlink_queue_fini(void)
+ {
++	nf_unregister_queue_handler();
+ 	unregister_netdevice_notifier(&nfqnl_dev_notifier);
+ 	nfnetlink_subsys_unregister(&nfqnl_subsys);
+ 	netlink_unregister_notifier(&nfqnl_rtnl_notifier);
+-- 
+2.16.1
+

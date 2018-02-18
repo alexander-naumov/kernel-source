@@ -12,14 +12,12 @@ Signed-off-by: Scott Lawson <scott.lawson@intel.com>
 Signed-off-by: Tejun Heo <tj@kernel.org>
 Acked-by: Hannes Reinecke <hare@suse.de>
 ---
- drivers/ata/ahci.c | 4 ----
+ drivers/ata/ahci.c |    4 ----
  1 file changed, 4 deletions(-)
 
-diff --git a/drivers/ata/ahci.c b/drivers/ata/ahci.c
-index 1fe5920..a83bbcc 100644
 --- a/drivers/ata/ahci.c
 +++ b/drivers/ata/ahci.c
-@@ -376,15 +376,11 @@ static const struct pci_device_id ahci_pci_tbl[] = {
+@@ -376,15 +376,11 @@ static const struct pci_device_id ahci_p
  	{ PCI_VDEVICE(INTEL, 0x2826), board_ahci }, /* Lewisburg RAID*/
  	{ PCI_VDEVICE(INTEL, 0x2827), board_ahci }, /* Lewisburg RAID*/
  	{ PCI_VDEVICE(INTEL, 0xa182), board_ahci }, /* Lewisburg AHCI*/
@@ -34,7 +32,4 @@ index 1fe5920..a83bbcc 100644
 -	{ PCI_VDEVICE(INTEL, 0xa20e), board_ahci }, /* Lewisburg RAID*/
  	{ PCI_VDEVICE(INTEL, 0xa252), board_ahci }, /* Lewisburg RAID*/
  	{ PCI_VDEVICE(INTEL, 0xa256), board_ahci }, /* Lewisburg RAID*/
- 
--- 
-1.8.5.6
-
+ 	{ PCI_VDEVICE(INTEL, 0xa356), board_ahci }, /* Cannon Lake PCH-H RAID */

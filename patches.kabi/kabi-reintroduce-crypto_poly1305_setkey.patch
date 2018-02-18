@@ -1,0 +1,44 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: reintroduce crypto_poly1305_setkey
+Patch-mainline: never, kabi
+References: kabi
+
+In 4.4.116, commit de1ca9ef43de77e507752182c1b5050851a1aa58 (crypto:
+poly1305 - remove ->setkey() method), upstream commit
+a16e772e664b9a261424107784804cffc8894977 removed crypto_poly1305_setkey.
+
+Reintroduce the function in case somebody else uses that.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ crypto/poly1305_generic.c |    7 +++++++
+ include/crypto/poly1305.h |    2 ++
+ 2 files changed, 9 insertions(+)
+
+--- a/crypto/poly1305_generic.c
++++ b/crypto/poly1305_generic.c
+@@ -51,6 +51,13 @@ int crypto_poly1305_init(struct shash_de
+ }
+ EXPORT_SYMBOL_GPL(crypto_poly1305_init);
+ 
++int crypto_poly1305_setkey(struct crypto_shash *tfm,
++		const u8 *key, unsigned int keylen)
++{
++	return -ENOTSUPP;
++}
++EXPORT_SYMBOL_GPL(crypto_poly1305_setkey);
++
+ static void poly1305_setrkey(struct poly1305_desc_ctx *dctx, const u8 *key)
+ {
+ 	/* r &= 0xffffffc0ffffffc0ffffffc0fffffff */
+--- a/include/crypto/poly1305.h
++++ b/include/crypto/poly1305.h
+@@ -30,6 +30,8 @@ struct poly1305_desc_ctx {
+ };
+ 
+ int crypto_poly1305_init(struct shash_desc *desc);
++int crypto_poly1305_setkey(struct crypto_shash *tfm,
++		const u8 *key, unsigned int keylen);
+ unsigned int crypto_poly1305_setdesckey(struct poly1305_desc_ctx *dctx,
+ 					const u8 *src, unsigned int srclen);
+ int crypto_poly1305_update(struct shash_desc *desc,

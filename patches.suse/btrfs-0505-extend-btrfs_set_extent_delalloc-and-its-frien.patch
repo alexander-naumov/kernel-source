@@ -21,10 +21,10 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  fs/btrfs/extent_io.c         |    2 +-
  fs/btrfs/extent_io.h         |    2 +-
  fs/btrfs/file.c              |    2 +-
- fs/btrfs/inode.c             |   40 ++++++++++++++++++++++++++--------------
+ fs/btrfs/inode.c             |   39 +++++++++++++++++++++++++--------------
  fs/btrfs/relocation.c        |    2 +-
  fs/btrfs/tests/inode-tests.c |   12 ++++++------
- 7 files changed, 37 insertions(+), 25 deletions(-)
+ 7 files changed, 36 insertions(+), 25 deletions(-)
 
 --- a/fs/btrfs/ctree.h
 +++ b/fs/btrfs/ctree.h
@@ -189,17 +189,16 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  {
  	WARN_ON((end & (PAGE_CACHE_SIZE - 1)) == 0);
  	return set_extent_delalloc(&BTRFS_I(inode)->io_tree, start, end,
-@@ -2054,7 +2065,8 @@ again:
- 		goto out;
+@@ -2055,7 +2066,7 @@ again:
  	 }
  
--	btrfs_set_extent_delalloc(inode, page_start, page_end, &cached_state);
-+	btrfs_set_extent_delalloc(inode, page_start, page_end, &cached_state,
-+				  0);
- 	ClearPageChecked(page);
- 	set_page_dirty(page);
- out:
-@@ -4757,7 +4769,7 @@ again:
+ 	ret = btrfs_set_extent_delalloc(inode, page_start, page_end,
+-					&cached_state);
++					&cached_state, 0);
+ 	if (ret) {
+ 		mapping_set_error(page->mapping, ret);
+ 		end_extent_writepage(page, ret, page_start, page_end);
+@@ -4776,7 +4787,7 @@ again:
  			  0, 0, &cached_state, GFP_NOFS);
  
  	ret = btrfs_set_extent_delalloc(inode, block_start, block_end,
@@ -208,7 +207,7 @@ Signed-off-by: David Sterba <dsterba@suse.com>
  	if (ret) {
  		unlock_extent_cached(io_tree, block_start, block_end,
  				     &cached_state, GFP_NOFS);
-@@ -9076,7 +9088,7 @@ again:
+@@ -9116,7 +9127,7 @@ again:
  			  0, 0, &cached_state, GFP_NOFS);
  
  	ret = btrfs_set_extent_delalloc(inode, page_start, end,
