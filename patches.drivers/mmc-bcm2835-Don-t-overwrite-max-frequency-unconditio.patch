@@ -1,0 +1,39 @@
+From 45c4eaa5c776b6576a9007b68fb7b2d2a394c3c3 Mon Sep 17 00:00:00 2001
+From: Phil Elwell <phil@raspberrypi.org>
+Date: Mon, 12 Feb 2018 21:13:44 +0100
+Subject: [PATCH] mmc: bcm2835: Don't overwrite max frequency unconditionally
+
+References: bsc#983145, git-fixes
+Patch-mainline: 4.16-rc2
+Git-commit: 118032be389009b07ecb5a03ffe219a89d421def
+
+The optional DT parameter max-frequency could init the max bus frequency.
+So take care of this, before setting the max bus frequency.
+
+Fixes: 660fc733bd74 ("mmc: bcm2835: Add new driver for the sdhost controller.")
+Signed-off-by: Phil Elwell <phil@raspberrypi.org>
+Signed-off-by: Stefan Wahren <stefan.wahren@i2se.com>
+Cc: <stable@vger.kernel.org> # 4.12+
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+Acked-by: Michal Suchanek <msuchanek@suse.de>
+---
+ drivers/mmc/host/bcm2835-sdhost.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/host/bcm2835-sdhost.c b/drivers/mmc/host/bcm2835-sdhost.c
+index 635a4402ea9d..29f78546ee7d 100644
+--- a/drivers/mmc/host/bcm2835-sdhost.c
++++ b/drivers/mmc/host/bcm2835-sdhost.c
+@@ -1432,7 +1432,8 @@ int bcm2835_sdhost_add_host(struct bcm2835_host *host)
+ 
+ 	bcm2835_sdhost_reset_internal(host);
+ 
+-	mmc->f_max = host->max_clk;
++	if (!mmc->f_max || mmc->f_max > host->max_clk)
++		mmc->f_max = host->max_clk;
+ 	mmc->f_min = host->max_clk / SDCDIV_MAX_CDIV;
+ 
+ 	mmc->max_busy_timeout = ~0 / (mmc->f_max / 1000);
+-- 
+2.13.6
+
