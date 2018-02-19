@@ -1,4 +1,4 @@
-From fe1b02f3c1af5108d7d5c5551f2e25b3a880cab7 Mon Sep 17 00:00:00 2001
+From 59c7289cf444f39a42f09d8866bdae0e4ae76d4e Mon Sep 17 00:00:00 2001
 From: Nicholas Piggin <npiggin@gmail.com>
 Date: Wed, 17 Jan 2018 23:58:18 +1000
 Subject: [PATCH] powerpc/64s: Improve RFI L1-D cache flush fallback
@@ -34,8 +34,8 @@ Acked-by: Michal Suchanek <msuchanek@suse.de>
  arch/powerpc/include/asm/paca.h      |  3 +-
  arch/powerpc/kernel/asm-offsets.c    |  3 +-
  arch/powerpc/kernel/exceptions-64s.S | 76 +++++++++++++++++-------------------
- arch/powerpc/kernel/setup_64.c       |  3 +-
- 4 files changed, 39 insertions(+), 46 deletions(-)
+ arch/powerpc/kernel/setup_64.c       | 12 +-----
+ 4 files changed, 39 insertions(+), 55 deletions(-)
 
 diff --git a/arch/powerpc/include/asm/paca.h b/arch/powerpc/include/asm/paca.h
 index c090806353f9..95c3567e1f34 100644
@@ -186,11 +186,22 @@ index 14e0d5e4ccc3..7919b40eeae2 100644
  	hrfid
  
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index 9dac11057744..867bf0d9b909 100644
+index 9dac11057744..5d88abd17e65 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
-@@ -922,8 +922,7 @@ static void init_fallback_flush(void)
- 		u64 c = l1d_size / 8;
+@@ -911,19 +911,9 @@ static void init_fallback_flush(void)
+ 
+ 	for_each_possible_cpu(cpu) {
+ 		struct paca_aux_struct *paca_aux = paca[cpu].aux_ptr;
+-		/*
+-		 * The fallback flush is currently coded for 8-way
+-		 * associativity. Different associativity is possible, but it
+-		 * will be treated as 8-way and may not evict the lines as
+-		 * effectively.
+-		 *
+-		 * 128 byte lines are mandatory.
+-		 */
+-		u64 c = l1d_size / 8;
  
  		paca_aux->rfi_flush_fallback_area = l1d_flush_fallback_area;
 -		paca_aux->l1d_flush_congruence = c;
