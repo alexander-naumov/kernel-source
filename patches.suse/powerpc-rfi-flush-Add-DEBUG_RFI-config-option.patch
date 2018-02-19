@@ -1,7 +1,7 @@
-From 8a7a652e4c44f78c4a1b0c6eb2c8fa416a806504 Mon Sep 17 00:00:00 2001
+From 98b180b12d709c4301ccc9e5a1b6ad05421eb0bb Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Sat, 13 Jan 2018 18:28:28 +0100
-Subject: [PATCH 14/16] powerpc/rfi-flush: Add DEBUG_RFI config option
+Subject: [PATCH] powerpc/rfi-flush: Add DEBUG_RFI config option
 
 References: bsc#1068032, bsc#1075087
 Patch-mainline: no, under development
@@ -10,8 +10,9 @@ Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
  arch/powerpc/Kconfig.debug               | 10 ++++++++++
- arch/powerpc/include/asm/exception-64s.h | 17 +++++++++++++++++
- 2 files changed, 27 insertions(+)
+ arch/powerpc/include/asm/exception-64s.h | 19 ++++++++++++++++++-
+ arch/powerpc/kvm/book3s_rmhandlers.S     |  3 ---
+ 3 files changed, 28 insertions(+), 4 deletions(-)
 
 diff --git a/arch/powerpc/Kconfig.debug b/arch/powerpc/Kconfig.debug
 index 3a510f4a6b68..64b7b5df0c18 100644
@@ -33,7 +34,7 @@ index 3a510f4a6b68..64b7b5df0c18 100644
 +
  endmenu
 diff --git a/arch/powerpc/include/asm/exception-64s.h b/arch/powerpc/include/asm/exception-64s.h
-index 57c5fe1c66ff..31fe608f66f7 100644
+index 9bddbec441b8..e723e889dc85 100644
 --- a/arch/powerpc/include/asm/exception-64s.h
 +++ b/arch/powerpc/include/asm/exception-64s.h
 @@ -34,6 +34,7 @@
@@ -42,9 +43,9 @@ index 57c5fe1c66ff..31fe608f66f7 100644
   */
 +#include <asm/bug.h>
  
- /* PACA save area offsets (exgen, exmc, etc) */
  #define EX_R9		0
-@@ -65,10 +66,24 @@
+ #define EX_R10		8
+@@ -62,10 +63,24 @@
  	nop;								\
  	nop
  
@@ -69,7 +70,7 @@ index 57c5fe1c66ff..31fe608f66f7 100644
  	RFI_FLUSH_SLOT;							\
  	rfid;								\
  	b	rfi_flush_fallback
-@@ -84,9 +99,11 @@
+@@ -81,9 +96,11 @@
  	b	rfi_flush_fallback
  
  #define HRFI_TO_KERNEL							\
@@ -81,6 +82,29 @@ index 57c5fe1c66ff..31fe608f66f7 100644
  	RFI_FLUSH_SLOT;							\
  	hrfid;								\
  	b	hrfi_flush_fallback
+@@ -244,7 +261,7 @@ END_FTR_SECTION_NESTED(ftr,ftr,943)
+ 	mtspr	SPRN_##h##SRR0,r12;					\
+ 	mfspr	r12,SPRN_##h##SRR1;	/* and SRR1 */			\
+ 	mtspr	SPRN_##h##SRR1,r10;					\
+-	h##RFI_TO_KERNEL;						\
++	h##rfid; /* h##RFI_TO_KERNEL runs out of space */		\
+ 	b	.	/* prevent speculative execution */
+ #define EXCEPTION_PROLOG_PSERIES_1(label, h)				\
+ 	__EXCEPTION_PROLOG_PSERIES_1(label, h)
+diff --git a/arch/powerpc/kvm/book3s_rmhandlers.S b/arch/powerpc/kvm/book3s_rmhandlers.S
+index a328f99a887c..def7a0706c1c 100644
+--- a/arch/powerpc/kvm/book3s_rmhandlers.S
++++ b/arch/powerpc/kvm/book3s_rmhandlers.S
+@@ -46,9 +46,6 @@
+ 
+ #define FUNC(name)		name
+ 
+-#define RFI_TO_KERNEL	RFI
+-#define RFI_TO_GUEST	RFI
+-
+ .macro INTERRUPT_TRAMPOLINE intno
+ 
+ .global kvmppc_trampoline_\intno
 -- 
 2.13.6
 

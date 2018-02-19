@@ -1,11 +1,10 @@
-From 4c84467a54bab528c3c05dabc740d9db4f798ee1 Mon Sep 17 00:00:00 2001
+From patchwork Wed Feb 14 21:33:39 2018
+Subject: rfi-flush: Move the logic to avoid a redo into the debugfs code
+X-Patchwork-Id: 873522
 From: Michael Ellerman <mpe@ellerman.id.au>
-Date: Wed, 10 Jan 2018 22:47:40 +1100
-Subject: [PATCH 15/19] powerpc/rfi-flush: Move the logic to avoid a redo into
- the sysfs code
 
-Patch-mainline: no, under development
 References: bsc#1068032, bsc#1075087
+Patch-mainline: submitted https://patchwork.ozlabs.org/patch/873522/
 
 rfi_flush_enable() includes a check to see if we're already
 enabled (or disabled), and in that case does nothing.
@@ -13,21 +12,20 @@ enabled (or disabled), and in that case does nothing.
 But that means calling setup_rfi_flush() a 2nd time doesn't actually
 work, which is a bit confusing.
 
-Remove the check.
+Move that check into the debugfs code, where it really belongs.
 
 Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
-[mauricfo: sysfs.c hunk 1: update context lines]
 Signed-off-by: Mauricio Faria de Oliveira <mauricfo@linux.vnet.ibm.com>
 Acked-by: Michal Suchanek <msuchanek@suse.de>
 ---
- arch/powerpc/kernel/setup_64.c | 3 ---
- 1 file changed, 3 deletions(-)
+ arch/powerpc/kernel/setup_64.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
 
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index 5f38928433d6..d8e1c2b82a3a 100644
+index c388cc3..3efc01a 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
-@@ -875,9 +875,6 @@ static void do_nothing(void *unused)
+@@ -846,9 +846,6 @@ static void do_nothing(void *unused)
  
  void rfi_flush_enable(bool enable)
  {
@@ -37,6 +35,25 @@ index 5f38928433d6..d8e1c2b82a3a 100644
  	if (enable) {
  		do_rfi_flush_fixups(enabled_flush_types);
  		on_each_cpu(do_nothing, NULL, 1);
--- 
-2.13.6
-
+@@ -902,13 +899,19 @@ void __init setup_rfi_flush(enum l1d_flush_type types, bool enable)
+ #ifdef CONFIG_DEBUG_FS
+ static int rfi_flush_set(void *data, u64 val)
+ {
++	bool enable;
++
+ 	if (val == 1)
+-		rfi_flush_enable(true);
++		enable = true;
+ 	else if (val == 0)
+-		rfi_flush_enable(false);
++		enable = false;
+ 	else
+ 		return -EINVAL;
+ 
++	/* Only do anything if we're changing state */
++	if (enable != rfi_flush)
++		rfi_flush_enable(enable);
++
+ 	return 0;
+ }
+ 

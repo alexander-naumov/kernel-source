@@ -1,11 +1,11 @@
-From f4827963273b2b9e00a75f7326edf8d35ef26751 Mon Sep 17 00:00:00 2001
+From c4e654a81d26ef565c95b68af0e47830f703125d Mon Sep 17 00:00:00 2001
 From: Michal Suchanek <msuchanek@suse.de>
 Date: Thu, 11 Jan 2018 14:43:07 +0100
 Subject: [PATCH] powerpc/pseries: rfi-flush: Call setup_rfi_flush() after LPM
  migration
 
 References: bsc#1068032, bsc#1075087
-Patch-mainline: no, under development
+Patch-mainline: submitted https://patchwork.ozlabs.org/patch/873534/ https://patchwork.ozlabs.org/patch/873535/
 
 We might have migrated to a machine that uses a different
 flush type, or doesn't need flushing at all.
@@ -35,10 +35,10 @@ index 7916b56f2e60..3733195be997 100644
  
  #endif /* !__ASSEMBLY__ */
 diff --git a/arch/powerpc/kernel/setup_64.c b/arch/powerpc/kernel/setup_64.c
-index d8e1c2b82a3a..0acb7ba37fd9 100644
+index 9235cadb01d1..9ccc0b596ad8 100644
 --- a/arch/powerpc/kernel/setup_64.c
 +++ b/arch/powerpc/kernel/setup_64.c
-@@ -884,11 +884,24 @@ void rfi_flush_enable(bool enable)
+@@ -890,11 +890,24 @@ void rfi_flush_enable(bool enable)
  	rfi_flush = enable;
  }
  
@@ -64,9 +64,9 @@ index d8e1c2b82a3a..0acb7ba37fd9 100644
  	l1d_size = ppc64_caches.dsize;
  	limit = min(safe_stack_limit(), ppc64_rma_size);
  
-@@ -916,13 +929,26 @@ static void init_fallback_flush(void)
- 		paca_aux->l1d_flush_congruence = c;
- 		paca_aux->l1d_flush_sets = c / 128;
+@@ -921,13 +934,26 @@ static void init_fallback_flush(void)
+ 		paca_aux->rfi_flush_fallback_area = l1d_flush_fallback_area;
+ 		paca_aux->l1d_flush_size = l1d_size;
  	}
 +
 +	return true;
@@ -120,7 +120,7 @@ index 8411c27293e4..e7d80797384d 100644
 +
  #endif /* _PSERIES_PSERIES_H */
 diff --git a/arch/powerpc/platforms/pseries/setup.c b/arch/powerpc/platforms/pseries/setup.c
-index 1efb30697394..e6f144b8fc1a 100644
+index f04e66199522..08c8b58c32c4 100644
 --- a/arch/powerpc/platforms/pseries/setup.c
 +++ b/arch/powerpc/platforms/pseries/setup.c
 @@ -545,7 +545,7 @@ static void __init find_and_init_phbs(void)
