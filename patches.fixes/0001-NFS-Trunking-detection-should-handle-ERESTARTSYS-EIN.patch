@@ -1,0 +1,27 @@
+From: Trond Myklebust <trond.myklebust@primarydata.com>
+Date: Wed, 21 Jun 2017 10:16:56 -0400
+Subject: [PATCH] NFS: Trunking detection should handle ERESTARTSYS/EINTR
+Git-commit: 898fc11bb2bd4fbcefb685872d9fffaba2c8edaf
+Patch-mainline: v4.12
+References: bsc#1074198
+
+Currently, it will return EIO in those cases.
+
+Signed-off-by: Trond Myklebust <trond.myklebust@primarydata.com>
+Acked-by: NeilBrown <neilb@suse.com>
+
+---
+ fs/nfs/nfs4state.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/fs/nfs/nfs4state.c
++++ b/fs/nfs/nfs4state.c
+@@ -2092,6 +2092,8 @@ again:
+ 	put_rpccred(cred);
+ 	switch (status) {
+ 	case 0:
++	case -EINTR:
++	case -ERESTARTSYS:
+ 		break;
+ 	case -ETIMEDOUT:
+ 		if (clnt->cl_softrtry)
