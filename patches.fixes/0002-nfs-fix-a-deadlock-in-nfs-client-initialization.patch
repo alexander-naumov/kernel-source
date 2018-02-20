@@ -1,0 +1,124 @@
+From: Scott Mayhew <smayhew@redhat.com>
+Date: Tue, 5 Dec 2017 13:55:44 -0500
+Subject: [PATCH] nfs: fix a deadlock in nfs client initialization
+Git-commit: c156618e15101a9cc8c815108fec0300a0ec6637
+Patch-mainline: v4.15
+References: bsc#1074198
+
+The following deadlock can occur between a process waiting for a client
+to initialize in while walking the client list during nfsv4 server trunking
+detection and another process waiting for the nfs_clid_init_mutex so it
+can initialize that client:
+
+Process 1                               Process 2
+
+Acked-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Neil Brown <neilb@suse.com>
+
+---------                               ---------
+spin_lock(&nn->nfs_client_lock);
+list_add_tail(&CLIENTA->cl_share_link,
+        &nn->nfs_client_list);
+spin_unlock(&nn->nfs_client_lock);
+                                        spin_lock(&nn->nfs_client_lock);
+                                        list_add_tail(&CLIENTB->cl_share_link,
+                                                &nn->nfs_client_list);
+                                        spin_unlock(&nn->nfs_client_lock);
+                                        mutex_lock(&nfs_clid_init_mutex);
+                                        nfs41_walk_client_list(clp, result, cred);
+                                        nfs_wait_client_init_complete(CLIENTA);
+(waiting for nfs_clid_init_mutex)
+
+Make sure nfs_match_client() only evaluates clients that have completed
+initialization in order to prevent that deadlock.
+
+This patch also fixes v4.0 trunking behavior by not marking the client
+NFS_CS_READY until the clientid has been confirmed.
+
+Signed-off-by: Scott Mayhew <smayhew@redhat.com>
+Signed-off-by: Anna Schumaker <Anna.Schumaker@Netapp.com>
+---
+ fs/nfs/client.c     |   11 +++++++++++
+ fs/nfs/nfs4client.c |   18 +++++++++++++-----
+ 2 files changed, 24 insertions(+), 5 deletions(-)
+
+--- a/fs/nfs/client.c
++++ b/fs/nfs/client.c
+@@ -300,6 +300,7 @@ static struct nfs_client *nfs_match_clie
+ 	if (test_bit(NFS_CS_NO_SHARE, &data->init_flags))
+ 		return NULL;
+ 
++again:
+ 	list_for_each_entry(clp, &nn->nfs_client_list, cl_share_link) {
+ 	        const struct sockaddr *clap = (struct sockaddr *)&clp->cl_addr;
+ 		if (test_bit(NFS_CS_NO_SHARE,&clp->cl_flags))
+@@ -310,6 +311,16 @@ static struct nfs_client *nfs_match_clie
+ 		if (clp->cl_cons_state < 0)
+ 			continue;
+ 
++		/* If a client is still initializing then we need to wait */
++		if (clp->cl_cons_state > NFS_CS_READY) {
++			atomic_inc(&clp->cl_count);
++			spin_unlock(&nn->nfs_client_lock);
++			nfs_wait_client_init_complete(clp);
++			nfs_put_client(clp);
++			spin_lock(&nn->nfs_client_lock);
++			goto again;
++		}
++
+ 		/* Different NFS versions cannot share the same nfs_client */
+ 		if (clp->rpc_ops != data->nfs_mod->rpc_ops)
+ 			continue;
+--- a/fs/nfs/nfs4client.c
++++ b/fs/nfs/nfs4client.c
+@@ -403,15 +403,19 @@ struct nfs_client *nfs4_init_client(stru
+ 	if (error < 0)
+ 		goto error;
+ 
+-	if (!nfs4_has_session(clp))
+-		nfs_mark_client_ready(clp, NFS_CS_READY);
+-
+ 	error = nfs4_discover_server_trunking(clp, &old);
+ 	if (error < 0)
+ 		goto error;
+ 
+-	if (clp != old)
++	if (clp != old) {
+ 		clp->cl_preserve_clid = true;
++		/*
++		 * Mark the client as having failed initialization so other
++		 * processes walking the nfs_client_list in nfs_match_client()
++		 * won't try to use it.
++		 */
++		nfs_mark_client_ready(clp, -EPERM);
++	}
+ 	nfs_put_client(clp);
+ 	return old;
+ 
+@@ -489,6 +493,9 @@ int nfs40_walk_client_list(struct nfs_cl
+ 	spin_lock(&nn->nfs_client_lock);
+ 	list_for_each_entry(pos, &nn->nfs_client_list, cl_share_link) {
+ 
++		if (pos == new)
++			goto found;
++
+ 		if (pos->rpc_ops != new->rpc_ops)
+ 			continue;
+ 
+@@ -521,7 +528,7 @@ int nfs40_walk_client_list(struct nfs_cl
+ 
+ 		if (pos->cl_xprt_id != new->cl_xprt_id)
+ 			continue;
+-
++	found:
+ 		atomic_inc(&pos->cl_count);
+ 		spin_unlock(&nn->nfs_client_lock);
+ 
+@@ -534,6 +541,7 @@ int nfs40_walk_client_list(struct nfs_cl
+ 			break;
+ 		case 0:
+ 			nfs4_swap_callback_idents(pos, new);
++			nfs_mark_client_ready(pos, NFS_CS_READY);
+ 
+ 			prev = NULL;
+ 			*result = pos;
