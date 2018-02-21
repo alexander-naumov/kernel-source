@@ -36,11 +36,11 @@ index 84f0d0602433..794de0805674 100644
  int ip6_datagram_connect_v6_only(struct sock *sk, struct sockaddr *addr,
  				 int addr_len);
 diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
-index 19c790991de7..3d29c3ee47d9 100644
+index 7110fd084b43..418365c88881 100644
 --- a/net/ipv6/datagram.c
 +++ b/net/ipv6/datagram.c
-@@ -64,7 +64,8 @@ static void ip6_datagram_flow_key_init(struct flowi6 *fl6, struct sock *sk)
- 	security_sk_classify_flow(sk, flowi6_to_flowi(fl6));
+@@ -117,7 +117,8 @@ out:
+ 	return err;
  }
  
 -static int __ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
@@ -49,8 +49,8 @@ index 19c790991de7..3d29c3ee47d9 100644
  {
  	struct sockaddr_in6	*usin = (struct sockaddr_in6 *) uaddr;
  	struct inet_sock	*inet = inet_sk(sk);
-@@ -223,6 +224,7 @@ out:
- 	fl6_sock_release(flowlabel);
+@@ -234,6 +235,7 @@ ipv4_connected:
+ out:
  	return err;
  }
 +EXPORT_SYMBOL_GPL(__ip6_datagram_connect);
