@@ -1,0 +1,36 @@
+From: Nicolas Dichtel <nicolas.dichtel@6wind.com>
+Date: Tue, 3 May 2016 09:58:27 +0200
+Subject: ipv6/ila: fix nlsize calculation for lwtunnel
+Patch-mainline: v4.6-rc7
+Git-commit: 79e8dc8b80bff0bc5bbb90ca5e73044bf207c8ac
+References: bsc#1042286
+
+The handler 'ila_fill_encap_info' adds one attribute: ILA_ATTR_LOCATOR.
+
+Fixes: 65d7ab8de582 ("net: Identifier Locator Addressing module")
+CC: Tom Herbert <tom@herbertland.com>
+Signed-off-by: Nicolas Dichtel <nicolas.dichtel@6wind.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/ipv6/ila.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/net/ipv6/ila.c b/net/ipv6/ila.c
+index 1a6852e1ac69..fff4d329a760 100644
+--- a/net/ipv6/ila.c
++++ b/net/ipv6/ila.c
+@@ -192,8 +192,7 @@ nla_put_failure:
+ 
+ static int ila_encap_nlsize(struct lwtunnel_state *lwtstate)
+ {
+-	/* No encapsulation overhead */
+-	return 0;
++	return nla_total_size(sizeof(u64)); /* ILA_ATTR_LOCATOR */
+ }
+ 
+ static int ila_encap_cmp(struct lwtunnel_state *a, struct lwtunnel_state *b)
+-- 
+2.16.2
+
