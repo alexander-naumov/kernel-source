@@ -1,0 +1,89 @@
+From: Martin KaFai Lau <kafai@fb.com>
+Date: Mon, 11 Apr 2016 15:29:37 -0700
+Subject: ipv6: udp: Do a route lookup and update during release_cb
+Patch-mainline: v4.6-rc5
+Git-commit: e646b657f6983017783914a951039e323120dc55
+References: bsc#1042286
+
+This patch adds a release_cb for UDPv6.  It does a route lookup
+and updates sk->sk_dst_cache if it is needed.  It picks up the
+left-over job from ip6_sk_update_pmtu() if the sk was owned
+by user during the pmtu update.
+
+It takes a rcu_read_lock to protect the __sk_dst_get() operations
+because another thread may do ip6_dst_store() without taking the
+sk lock (e.g. sendmsg).
+
+Fixes: 45e4fd26683c ("ipv6: Only create RTF_CACHE routes after encountering pmtu exception")
+Signed-off-by: Martin KaFai Lau <kafai@fb.com>
+Reported-by: Wei Wang <weiwan@google.com>
+Cc: Cong Wang <xiyou.wangcong@gmail.com>
+Cc: Eric Dumazet <edumazet@google.com>
+Cc: Wei Wang <weiwan@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ include/net/ipv6.h  |  1 +
+ net/ipv6/datagram.c | 20 ++++++++++++++++++++
+ net/ipv6/udp.c      |  1 +
+ 3 files changed, 22 insertions(+)
+
+diff --git a/include/net/ipv6.h b/include/net/ipv6.h
+index 3863d5f0d8fc..85b1d84eb1ad 100644
+--- a/include/net/ipv6.h
++++ b/include/net/ipv6.h
+@@ -941,6 +941,7 @@ int ip6_datagram_connect(struct sock *sk, struct sockaddr *addr, int addr_len);
+ int ip6_datagram_connect_v6_only(struct sock *sk, struct sockaddr *addr,
+ 				 int addr_len);
+ int ip6_datagram_dst_update(struct sock *sk, bool fix_sk_saddr);
++void ip6_datagram_release_cb(struct sock *sk);
+ 
+ int ipv6_recv_error(struct sock *sk, struct msghdr *msg, int len,
+ 		    int *addr_len);
+diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
+index 4a2f6b1ad082..44b24522d1cc 100644
+--- a/net/ipv6/datagram.c
++++ b/net/ipv6/datagram.c
+@@ -119,6 +119,26 @@ out:
+ 	return err;
+ }
+ 
++void ip6_datagram_release_cb(struct sock *sk)
++{
++	struct dst_entry *dst;
++
++	if (ipv6_addr_v4mapped(&sk->sk_v6_daddr))
++		return;
++
++	rcu_read_lock();
++	dst = __sk_dst_get(sk);
++	if (!dst || !dst->obsolete ||
++	    dst->ops->check(dst, inet6_sk(sk)->dst_cookie)) {
++		rcu_read_unlock();
++		return;
++	}
++	rcu_read_unlock();
++
++	ip6_datagram_dst_update(sk, false);
++}
++EXPORT_SYMBOL_GPL(ip6_datagram_release_cb);
++
+ static int __ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
+ {
+ 	struct sockaddr_in6	*usin = (struct sockaddr_in6 *) uaddr;
+diff --git a/net/ipv6/udp.c b/net/ipv6/udp.c
+index f6b1060253f7..47429ffaf38c 100644
+--- a/net/ipv6/udp.c
++++ b/net/ipv6/udp.c
+@@ -1541,6 +1541,7 @@ struct proto udpv6_prot = {
+ 	.sendmsg	   = udpv6_sendmsg,
+ 	.recvmsg	   = udpv6_recvmsg,
+ 	.backlog_rcv	   = __udpv6_queue_rcv_skb,
++	.release_cb	   = ip6_datagram_release_cb,
+ 	.hash		   = udp_lib_hash,
+ 	.unhash		   = udp_lib_unhash,
+ 	.rehash		   = udp_v6_rehash,
+-- 
+2.16.2
+

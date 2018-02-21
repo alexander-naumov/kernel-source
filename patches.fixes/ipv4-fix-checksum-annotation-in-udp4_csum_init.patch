@@ -1,0 +1,40 @@
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Date: Sun, 12 Jun 2016 12:02:46 +0200
+Subject: ipv4: fix checksum annotation in udp4_csum_init
+Patch-mainline: v4.7-rc6
+Git-commit: b46d9f625b07f843c706c2c7d0210a90ccdf143b
+References: bsc#1042286
+
+Reported-by: Cong Wang <xiyou.wangcong@gmail.com>
+Cc: Cong Wang <xiyou.wangcong@gmail.com>
+Cc: Tom Herbert <tom@herbertland.com>
+Fixes: 4068579e1e098fa ("net: Implmement RFC 6936 (zero RX csums for UDP/IPv6")
+Signed-off-by: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/ipv4/udp.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/net/ipv4/udp.c b/net/ipv4/udp.c
+index 0bbac5686308..bc57bab164b7 100644
+--- a/net/ipv4/udp.c
++++ b/net/ipv4/udp.c
+@@ -1746,8 +1746,11 @@ static inline int udp4_csum_init(struct sk_buff *skb, struct udphdr *uh,
+ 			return err;
+ 	}
+ 
+-	return skb_checksum_init_zero_check(skb, proto, uh->check,
+-					    inet_compute_pseudo);
++	/* Note, we are only interested in != 0 or == 0, thus the
++	 * force to int.
++	 */
++	return (__force int)skb_checksum_init_zero_check(skb, proto, uh->check,
++							 inet_compute_pseudo);
+ }
+ 
+ /*
+-- 
+2.16.2
+

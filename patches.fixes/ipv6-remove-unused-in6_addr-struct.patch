@@ -1,0 +1,34 @@
+From: Luis de Bethencourt <luisbg@osg.samsung.com>
+Date: Mon, 21 Mar 2016 17:37:28 +0000
+Subject: ipv6: remove unused in6_addr struct
+Patch-mainline: v4.6-rc1
+Git-commit: db219baf19a7024ec1db71f7c3c2663d49de1818
+References: bsc#1042286
+
+struct in6_addr isn't used anymore in inet6_connection_sock.h, removing
+the forward declaration.
+
+Fixes: 1b33bc3e9e90 ("ipv6: remove obsolete inet6 functions")
+Signed-off-by: Luis de Bethencourt <luisbg@osg.samsung.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ include/net/inet6_connection_sock.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/include/net/inet6_connection_sock.h b/include/net/inet6_connection_sock.h
+index 064cfbe639d0..954ad6bfb56a 100644
+--- a/include/net/inet6_connection_sock.h
++++ b/include/net/inet6_connection_sock.h
+@@ -15,7 +15,6 @@
+ 
+ #include <linux/types.h>
+ 
+-struct in6_addr;
+ struct inet_bind_bucket;
+ struct request_sock;
+ struct sk_buff;
+-- 
+2.16.2
+

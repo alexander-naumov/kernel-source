@@ -1,0 +1,42 @@
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Date: Sat, 11 Jun 2016 20:41:38 +0200
+Subject: ipv6: tcp: fix endianness annotation in tcp_v6_send_response
+Patch-mainline: v4.7-rc6
+Git-commit: 5119bd16815d3f0364390a1369392dcc036790e7
+References: bsc#1042286
+
+Cc: Florent Fourcot <florent.fourcot@enst-bretagne.fr>
+Fixes: 1d13a96c74fc ("ipv6: tcp: fix flowlabel value in ACK messages send from TIME_WAIT")
+Signed-off-by: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/ipv6/tcp_ipv6.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/net/ipv6/tcp_ipv6.c b/net/ipv6/tcp_ipv6.c
+index 2738bdb1b7f7..f92f6ce2378a 100644
+--- a/net/ipv6/tcp_ipv6.c
++++ b/net/ipv6/tcp_ipv6.c
+@@ -743,7 +743,7 @@ static const struct tcp_request_sock_ops tcp_request_sock_ipv6_ops = {
+ static void tcp_v6_send_response(const struct sock *sk, struct sk_buff *skb, u32 seq,
+ 				 u32 ack, u32 win, u32 tsval, u32 tsecr,
+ 				 int oif, struct tcp_md5sig_key *key, int rst,
+-				 u8 tclass, u32 label)
++				 u8 tclass, __be32 label)
+ {
+ 	const struct tcphdr *th = tcp_hdr(skb);
+ 	struct tcphdr *t1;
+@@ -918,7 +918,7 @@ release_sk1:
+ static void tcp_v6_send_ack(const struct sock *sk, struct sk_buff *skb, u32 seq,
+ 			    u32 ack, u32 win, u32 tsval, u32 tsecr, int oif,
+ 			    struct tcp_md5sig_key *key, u8 tclass,
+-			    u32 label)
++			    __be32 label)
+ {
+ 	tcp_v6_send_response(sk, skb, seq, ack, win, tsval, tsecr, oif, key, 0,
+ 			     tclass, label);
+-- 
+2.16.2
+
