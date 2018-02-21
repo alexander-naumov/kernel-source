@@ -23,10 +23,10 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  4 files changed, 28 insertions(+), 13 deletions(-)
 
 diff --git a/include/net/ipv6.h b/include/net/ipv6.h
-index 9a5c9f013784..39f34c1bfa88 100644
+index 84f0d0602433..794de0805674 100644
 --- a/include/net/ipv6.h
 +++ b/include/net/ipv6.h
-@@ -931,6 +931,8 @@ int compat_ipv6_setsockopt(struct sock *sk, int level, int optname,
+@@ -937,6 +937,8 @@ int compat_ipv6_setsockopt(struct sock *sk, int level, int optname,
  int compat_ipv6_getsockopt(struct sock *sk, int level, int optname,
  			   char __user *optval, int __user *optlen);
  
@@ -36,11 +36,11 @@ index 9a5c9f013784..39f34c1bfa88 100644
  int ip6_datagram_connect_v6_only(struct sock *sk, struct sockaddr *addr,
  				 int addr_len);
 diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
-index 428162155280..0a3569846276 100644
+index 19c790991de7..3d29c3ee47d9 100644
 --- a/net/ipv6/datagram.c
 +++ b/net/ipv6/datagram.c
-@@ -40,7 +40,8 @@ static bool ipv6_mapped_addr_any(const struct in6_addr *a)
- 	return ipv6_addr_v4mapped(a) && (a->s6_addr32[3] == 0);
+@@ -64,7 +64,8 @@ static void ip6_datagram_flow_key_init(struct flowi6 *fl6, struct sock *sk)
+ 	security_sk_classify_flow(sk, flowi6_to_flowi(fl6));
  }
  
 -static int __ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
@@ -49,7 +49,7 @@ index 428162155280..0a3569846276 100644
  {
  	struct sockaddr_in6	*usin = (struct sockaddr_in6 *) uaddr;
  	struct inet_sock	*inet = inet_sk(sk);
-@@ -209,6 +210,7 @@ out:
+@@ -223,6 +224,7 @@ out:
  	fl6_sock_release(flowlabel);
  	return err;
  }
@@ -58,10 +58,10 @@ index 428162155280..0a3569846276 100644
  int ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
  {
 diff --git a/net/l2tp/l2tp_ip.c b/net/l2tp/l2tp_ip.c
-index 445b7cd0826a..ad33f00c59f5 100644
+index efe17aa305dd..472bf8f899f6 100644
 --- a/net/l2tp/l2tp_ip.c
 +++ b/net/l2tp/l2tp_ip.c
-@@ -309,21 +309,24 @@ static int l2tp_ip_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len
+@@ -317,21 +317,24 @@ static int l2tp_ip_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len
  	struct sockaddr_l2tpip *lsa = (struct sockaddr_l2tpip *) uaddr;
  	int rc;
  
@@ -93,7 +93,7 @@ index 445b7cd0826a..ad33f00c59f5 100644
  	l2tp_ip_sk(sk)->peer_conn_id = lsa->l2tp_conn_id;
  
  	write_lock_bh(&l2tp_ip_lock);
-@@ -331,7 +334,9 @@ static int l2tp_ip_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len
+@@ -339,7 +342,9 @@ static int l2tp_ip_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len
  	sk_add_bind_node(sk, &l2tp_ip_bind_table);
  	write_unlock_bh(&l2tp_ip_lock);
  
@@ -104,10 +104,10 @@ index 445b7cd0826a..ad33f00c59f5 100644
  }
  
 diff --git a/net/l2tp/l2tp_ip6.c b/net/l2tp/l2tp_ip6.c
-index bcdab1cba773..0d3b858d2787 100644
+index d4df0885dd5e..65669a49a0c0 100644
 --- a/net/l2tp/l2tp_ip6.c
 +++ b/net/l2tp/l2tp_ip6.c
-@@ -368,9 +368,6 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
+@@ -376,9 +376,6 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
  	int	addr_type;
  	int rc;
  
@@ -117,7 +117,7 @@ index bcdab1cba773..0d3b858d2787 100644
  	if (addr_len < sizeof(*lsa))
  		return -EINVAL;
  
-@@ -387,10 +384,18 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
+@@ -395,10 +392,18 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
  			return -EINVAL;
  	}
  
@@ -138,7 +138,7 @@ index bcdab1cba773..0d3b858d2787 100644
  	l2tp_ip6_sk(sk)->peer_conn_id = lsa->l2tp_conn_id;
  
  	write_lock_bh(&l2tp_ip6_lock);
-@@ -398,6 +403,7 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
+@@ -406,6 +411,7 @@ static int l2tp_ip6_connect(struct sock *sk, struct sockaddr *uaddr,
  	sk_add_bind_node(sk, &l2tp_ip6_bind_table);
  	write_unlock_bh(&l2tp_ip6_lock);
  
@@ -147,5 +147,5 @@ index bcdab1cba773..0d3b858d2787 100644
  
  	return rc;
 -- 
-2.12.0
+2.16.2
 
