@@ -1,0 +1,93 @@
+From: Nicolas Dichtel <nicolas.dichtel@6wind.com>
+Date: Mon, 13 Jun 2016 10:31:04 +0200
+Subject: ovs/gre,geneve: fix error path when creating an iface
+Patch-mainline: v4.7-rc6
+Git-commit: 106da663ff495e0aea3ac15b8317aa410754fcac
+References: bsc#1042286
+
+After ipgre_newlink()/geneve_configure() call, the netdev is registered.
+
+Fixes: 7e059158d57b ("vxlan, gre, geneve: Set a large MTU on ovs-created tunnel devices")
+CC: David Wragg <david@weave.works>
+Signed-off-by: Nicolas Dichtel <nicolas.dichtel@6wind.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ drivers/net/geneve.c | 10 +++++++---
+ net/ipv4/ip_gre.c    | 10 +++++++---
+ 2 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/geneve.c b/drivers/net/geneve.c
+index fbd59977da97..30efee91819d 100644
+--- a/drivers/net/geneve.c
++++ b/drivers/net/geneve.c
+@@ -1384,6 +1384,7 @@ struct net_device *geneve_dev_create_fb(struct net *net, const char *name,
+ {
+ 	struct nlattr *tb[IFLA_MAX + 1];
+ 	struct net_device *dev;
++	LIST_HEAD(list_kill);
+ 	int err;
+ 
+ 	memset(tb, 0, sizeof(tb));
+@@ -1394,8 +1395,10 @@ struct net_device *geneve_dev_create_fb(struct net *net, const char *name,
+ 
+ 	err = geneve_configure(net, dev, &geneve_remote_unspec,
+ 			       0, 0, 0, htons(dst_port), true);
+-	if (err)
+-		goto err;
++	if (err) {
++		free_netdev(dev);
++		return ERR_PTR(err);
++	}
+ 
+ 	/* openvswitch users expect packet sizes to be unrestricted,
+ 	 * so set the largest MTU we can.
+@@ -1407,7 +1410,8 @@ struct net_device *geneve_dev_create_fb(struct net *net, const char *name,
+ 	return dev;
+ 
+  err:
+-	free_netdev(dev);
++	geneve_dellink(dev, &list_kill);
++	unregister_netdevice_many(&list_kill);
+ 	return ERR_PTR(err);
+ }
+ EXPORT_SYMBOL_GPL(geneve_dev_create_fb);
+diff --git a/net/ipv4/ip_gre.c b/net/ipv4/ip_gre.c
+index 4ac1af86a980..900ee28bda99 100644
+--- a/net/ipv4/ip_gre.c
++++ b/net/ipv4/ip_gre.c
+@@ -1249,6 +1249,7 @@ struct net_device *gretap_fb_dev_create(struct net *net, const char *name,
+ {
+ 	struct nlattr *tb[IFLA_MAX + 1];
+ 	struct net_device *dev;
++	LIST_HEAD(list_kill);
+ 	struct ip_tunnel *t;
+ 	int err;
+ 
+@@ -1264,8 +1265,10 @@ struct net_device *gretap_fb_dev_create(struct net *net, const char *name,
+ 	t->collect_md = true;
+ 
+ 	err = ipgre_newlink(net, dev, tb, NULL);
+-	if (err < 0)
+-		goto out;
++	if (err < 0) {
++		free_netdev(dev);
++		return ERR_PTR(err);
++	}
+ 
+ 	/* openvswitch users expect packet sizes to be unrestricted,
+ 	 * so set the largest MTU we can.
+@@ -1280,7 +1283,8 @@ struct net_device *gretap_fb_dev_create(struct net *net, const char *name,
+ 
+ 	return dev;
+ out:
+-	free_netdev(dev);
++	ip_tunnel_dellink(dev, &list_kill);
++	unregister_netdevice_many(&list_kill);
+ 	return ERR_PTR(err);
+ }
+ EXPORT_SYMBOL_GPL(gretap_fb_dev_create);
+-- 
+2.16.2
+
