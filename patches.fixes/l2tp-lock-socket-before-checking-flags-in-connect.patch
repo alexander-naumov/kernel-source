@@ -23,7 +23,7 @@ Acked-by: Michal Kubecek <mkubecek@suse.cz>
  4 files changed, 28 insertions(+), 13 deletions(-)
 
 diff --git a/include/net/ipv6.h b/include/net/ipv6.h
-index 84f0d0602433..794de0805674 100644
+index 85b1d84eb1ad..f1aa5583f569 100644
 --- a/include/net/ipv6.h
 +++ b/include/net/ipv6.h
 @@ -937,6 +937,8 @@ int compat_ipv6_setsockopt(struct sock *sk, int level, int optname,
@@ -36,12 +36,12 @@ index 84f0d0602433..794de0805674 100644
  int ip6_datagram_connect_v6_only(struct sock *sk, struct sockaddr *addr,
  				 int addr_len);
 diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
-index 7110fd084b43..418365c88881 100644
+index 44b24522d1cc..152aa23956d0 100644
 --- a/net/ipv6/datagram.c
 +++ b/net/ipv6/datagram.c
-@@ -117,7 +117,8 @@ out:
- 	return err;
+@@ -139,7 +139,8 @@ void ip6_datagram_release_cb(struct sock *sk)
  }
+ EXPORT_SYMBOL_GPL(ip6_datagram_release_cb);
  
 -static int __ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 +int __ip6_datagram_connect(struct sock *sk, struct sockaddr *uaddr,
@@ -49,7 +49,7 @@ index 7110fd084b43..418365c88881 100644
  {
  	struct sockaddr_in6	*usin = (struct sockaddr_in6 *) uaddr;
  	struct inet_sock	*inet = inet_sk(sk);
-@@ -234,6 +235,7 @@ ipv4_connected:
+@@ -256,6 +257,7 @@ ipv4_connected:
  out:
  	return err;
  }
