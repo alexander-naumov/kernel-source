@@ -1,0 +1,98 @@
+From: Ido Schimmel <idosch@mellanox.com>
+Date: Mon, 10 Apr 2017 14:59:27 +0300
+Subject: bridge: implement missing ndo_uninit()
+Patch-mainline: v4.11-rc7
+Git-commit: b6fe0440c63716e09cfc0d1484e3898a0f29d1d1
+References: bsc#1042286
+
+While the bridge driver implements an ndo_init(), it was missing a
+symmetric ndo_uninit(), causing the different de-initialization
+operations to be scattered around its dellink() and destructor().
+
+Implement a symmetric ndo_uninit() and remove the overlapping operations
+from its dellink() and destructor().
+
+This is a prerequisite for the next patch, as it allows us to have a
+proper cleanup upon changelink() failure during the bridge's newlink().
+
+Fixes: b6677449dff6 ("bridge: netlink: call br_changelink() during br_dev_newlink()")
+Signed-off-by: Nikolay Aleksandrov <nikolay@cumulusnetworks.com>
+Signed-off-by: Ido Schimmel <idosch@mellanox.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+SLE12-SP2: ommitted part handling bridge multicast stats added by commit
+1080ab95e3c7 ("net: bridge: add support for IGMP/MLD stats and export them
+via netlink") which we don't have.
+
+---
+ net/bridge/br_device.c | 19 ++++++++++---------
+ net/bridge/br_if.c     |  1 -
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/net/bridge/br_device.c b/net/bridge/br_device.c
+index 2c8095a5d824..daa1e427ff02 100644
+--- a/net/bridge/br_device.c
++++ b/net/bridge/br_device.c
+@@ -111,6 +111,14 @@ static int br_dev_init(struct net_device *dev)
+ 	return err;
+ }
+ 
++static void br_dev_uninit(struct net_device *dev)
++{
++	struct net_bridge *br = netdev_priv(dev);
++
++	br_vlan_flush(br);
++	free_percpu(br->stats);
++}
++
+ static int br_dev_open(struct net_device *dev)
+ {
+ 	struct net_bridge *br = netdev_priv(dev);
+@@ -326,6 +334,7 @@ static const struct net_device_ops br_netdev_ops = {
+ 	.ndo_open		 = br_dev_open,
+ 	.ndo_stop		 = br_dev_stop,
+ 	.ndo_init		 = br_dev_init,
++	.ndo_uninit		 = br_dev_uninit,
+ 	.ndo_start_xmit		 = br_dev_xmit,
+ 	.ndo_get_stats64	 = br_get_stats64,
+ 	.ndo_set_mac_address	 = br_set_mac_address,
+@@ -350,14 +359,6 @@ static const struct net_device_ops br_netdev_ops = {
+ 	.ndo_features_check	 = passthru_features_check,
+ };
+ 
+-static void br_dev_free(struct net_device *dev)
+-{
+-	struct net_bridge *br = netdev_priv(dev);
+-
+-	free_percpu(br->stats);
+-	free_netdev(dev);
+-}
+-
+ static struct device_type br_type = {
+ 	.name	= "bridge",
+ };
+@@ -370,7 +371,7 @@ void br_dev_setup(struct net_device *dev)
+ 	ether_setup(dev);
+ 
+ 	dev->netdev_ops = &br_netdev_ops;
+-	dev->destructor = br_dev_free;
++	dev->destructor = free_netdev;
+ 	dev->ethtool_ops = &br_ethtool_ops;
+ 	SET_NETDEV_DEVTYPE(dev, &br_type);
+ 	dev->priv_flags = IFF_EBRIDGE | IFF_NO_QUEUE;
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index ec02f5869a78..7a342766fdcc 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -283,7 +283,6 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 
+ 	br_fdb_delete_by_port(br, NULL, 0, 1);
+ 
+-	br_vlan_flush(br);
+ 	br_multicast_dev_del(br);
+ 	del_timer_sync(&br->gc_timer);
+ 
+-- 
+2.16.2
+
