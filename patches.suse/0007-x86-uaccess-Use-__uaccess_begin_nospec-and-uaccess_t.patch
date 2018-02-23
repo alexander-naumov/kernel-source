@@ -1,10 +1,9 @@
 From: Dan Williams <dan.j.williams@intel.com>
-Date: Fri, 12 Jan 2018 15:49:30 -0800
-Subject: x86, __get_user: use __uaccess_begin_nospec
-Git-repo: git://git.kernel.org/pub/scm/linux/kernel/git/djbw/linux.git
-Git-commit: bad6716b8bd73e5415052a9f06ff607780655e93
-Patch-mainline: Queued in subsystem maintainer repository
-References: bsc#1068032 CVE-2017-5715
+Date: Mon, 29 Jan 2018 17:02:49 -0800
+Subject: x86/uaccess: Use __uaccess_begin_nospec() and uaccess_try_nospec
+Git-commit: 304ec1b050310548db33063e567123fae8fd0301
+Patch-mainline: v4.16-rc1
+References: bsc#1068032 CVE-2017-5753
 
 Quoting Linus:
 
@@ -17,27 +16,32 @@ Quoting Linus:
     space. So it's a prime candidate for then finding _subsequent_
     accesses that can then be used to perturb the cache.
 
-'__uaccess_begin_nospec' covers '__get_user' and 'copy_from_iter' where
-the limit check is far away from the user pointer de-reference. In those
-cases an 'lfence' prevents speculation with a potential pointer to
-privileged memory.
+__uaccess_begin_nospec() covers __get_user() and copy_from_iter() where the
+limit check is far away from the user pointer de-reference. In those cases
+a barrier_nospec() prevents speculation with a potential pointer to
+privileged memory. uaccess_try_nospec covers get_user_try.
+
+[js] use __uaccess_begin_nospec in all old copy_from_user (there are
+     more in 4.4)
 
 Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
 Suggested-by: Andi Kleen <ak@linux.intel.com>
-Cc: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
-Cc: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Ingo Molnar <mingo@redhat.com>
-Cc: x86@kernel.org
 Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-arch@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727416953.33451.10508284228526170604.stgit@dwillia2-desk3.amr.corp.intel.com
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  arch/x86/include/asm/uaccess.h    |    6 +++---
- arch/x86/include/asm/uaccess_32.h |    6 +++---
+ arch/x86/include/asm/uaccess_32.h |   18 +++++++++---------
  arch/x86/include/asm/uaccess_64.h |   12 ++++++------
- arch/x86/lib/usercopy_32.c        |    8 ++++----
- 4 files changed, 16 insertions(+), 16 deletions(-)
+ arch/x86/lib/usercopy_32.c        |    4 ++--
+ 4 files changed, 20 insertions(+), 20 deletions(-)
 
 --- a/arch/x86/include/asm/uaccess.h
 +++ b/arch/x86/include/asm/uaccess.h
@@ -71,6 +75,48 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 --- a/arch/x86/include/asm/uaccess_32.h
 +++ b/arch/x86/include/asm/uaccess_32.h
 @@ -111,17 +111,17 @@ __copy_from_user_inatomic(void *to, cons
+ 
+ 		switch (n) {
+ 		case 1:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u8 *)to, from, 1, ret, 1);
+ 			__uaccess_end();
+ 			return ret;
+ 		case 2:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u16 *)to, from, 2, ret, 2);
+ 			__uaccess_end();
+ 			return ret;
+ 		case 4:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u32 *)to, from, 4, ret, 4);
+ 			__uaccess_end();
+ 			return ret;
+@@ -162,17 +162,17 @@ __copy_from_user(void *to, const void __
+ 
+ 		switch (n) {
+ 		case 1:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u8 *)to, from, 1, ret, 1);
+ 			__uaccess_end();
+ 			return ret;
+ 		case 2:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u16 *)to, from, 2, ret, 2);
+ 			__uaccess_end();
+ 			return ret;
+ 		case 4:
+-			__uaccess_begin();
++			__uaccess_begin_nospec();
+ 			__get_user_size(*(u32 *)to, from, 4, ret, 4);
+ 			__uaccess_end();
+ 			return ret;
+@@ -190,17 +190,17 @@ static __always_inline unsigned long __c
  
  		switch (n) {
  		case 1:
@@ -141,36 +187,21 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  		if (likely(!ret))
 --- a/arch/x86/lib/usercopy_32.c
 +++ b/arch/x86/lib/usercopy_32.c
-@@ -570,12 +570,12 @@ do {									\
+@@ -570,7 +570,7 @@ do {									\
  unsigned long __copy_to_user_ll(void __user *to, const void *from,
  				unsigned long n)
  {
--	stac();
+-	__uaccess_begin();
 +	__uaccess_begin_nospec();
  	if (movsl_is_ok(to, from, n))
  		__copy_user(to, from, n);
  	else
- 		n = __copy_user_intel(to, from, n);
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_to_user_ll);
 @@ -610,7 +610,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nozero
  unsigned long __copy_from_user_ll_nocache(void *to, const void __user *from,
  					unsigned long n)
  {
--	stac();
+-	__uaccess_begin();
 +	__uaccess_begin_nospec();
  #ifdef CONFIG_X86_INTEL_USERCOPY
  	if (n > 64 && cpu_has_xmm2)
  		n = __copy_user_zeroing_intel_nocache(to, from, n);
-@@ -636,7 +636,7 @@ unsigned long __copy_from_user_ll_nocach
- #else
- 	__copy_user(to, from, n);
- #endif
--	clac();
-+	__uaccess_end();
- 	return n;
- }
- EXPORT_SYMBOL(__copy_from_user_ll_nocache_nozero);

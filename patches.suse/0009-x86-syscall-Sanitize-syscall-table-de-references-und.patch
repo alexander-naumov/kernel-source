@@ -1,0 +1,61 @@
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Mon, 29 Jan 2018 17:02:59 -0800
+Subject: x86/syscall: Sanitize syscall table de-references under speculation
+Git-commit: 2fbd7af5af8665d18bcefae3e9700be07e22b681
+Patch-mainline: v4.16-rc1
+References: bsc#1068032 CVE-2017-5753
+
+The syscall table base is a user controlled function pointer in kernel
+space. Use array_index_nospec() to prevent any out of bounds speculation.
+
+While retpoline prevents speculating into a userspace directed target it
+does not stop the pointer de-reference, the concern is leaking memory
+relative to the syscall table base, by observing instruction cache
+behavior.
+
+[js] 64bit syscall entry is still in asm in 4.4
+
+Reported-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Dan Williams <dan.j.williams@intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-arch@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
+Cc: gregkh@linuxfoundation.org
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: alan@linux.intel.com
+Link: https://lkml.kernel.org/r/151727417984.33451.1216731042505722161.stgit@dwillia2-desk3.amr.corp.intel.com
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/entry/common.c   |    2 ++
+ arch/x86/entry/entry_64.S |    2 ++
+ 2 files changed, 4 insertions(+)
+
+--- a/arch/x86/entry/common.c
++++ b/arch/x86/entry/common.c
+@@ -20,6 +20,7 @@
+ #include <linux/export.h>
+ #include <linux/context_tracking.h>
+ #include <linux/user-return-notifier.h>
++#include <linux/nospec.h>
+ #include <linux/uprobes.h>
+ 
+ #include <asm/desc.h>
+@@ -381,6 +382,7 @@ __always_inline void do_syscall_32_irqs_
+ 	}
+ 
+ 	if (likely(nr < IA32_NR_syscalls)) {
++		nr = array_index_nospec(nr, IA32_NR_syscalls);
+ 		/*
+ 		 * It's possible that a 32-bit syscall implementation
+ 		 * takes a 64-bit parameter but nonetheless assumes that
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -184,6 +184,8 @@ entry_SYSCALL_64_fastpath:
+ 	cmpl	$__NR_syscall_max, %eax
+ #endif
+ 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
++	sbb %r11, %r11				/* array_index_mask_nospec() */
++	and %r11, %rax
+ 	movq	%r10, %rcx
+ #ifdef CONFIG_RETPOLINE
+ 	movq	sys_call_table(, %rax, 8), %rax
