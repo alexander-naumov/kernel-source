@@ -31,10 +31,10 @@ Signed-off-by: Chris Mason <clm@fb.com>
  #include "backref.h"
  #include "hash.h"
 +#include "qgroup.h"
+ #include "inode-map.h"
  
  /* magic values for the inode_only field in btrfs_log_inode:
-  *
-@@ -679,6 +680,21 @@ static noinline int replay_one_extent(st
+@@ -680,6 +681,21 @@ static noinline int replay_one_extent(st
  		ins.type = BTRFS_EXTENT_ITEM_KEY;
  		offset = key->offset - btrfs_file_extent_offset(eb, item);
  

@@ -31,7 +31,7 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
 
 --- a/sound/pci/hda/patch_realtek.c
 +++ b/sound/pci/hda/patch_realtek.c
-@@ -5196,6 +5196,8 @@ enum {
+@@ -5210,6 +5210,8 @@ enum {
  	ALC256_FIXUP_DELL_INSPIRON_7559_SUBWOOFER,
  	ALC269_FIXUP_ATIV_BOOK_8,
  	ALC221_FIXUP_HP_MIC_NO_PRESENCE,
@@ -40,7 +40,7 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
  };
  
  static const struct hda_fixup alc269_fixups[] = {
-@@ -5929,6 +5931,20 @@ static const struct hda_fixup alc269_fix
+@@ -5947,6 +5949,20 @@ static const struct hda_fixup alc269_fix
  		.chained = true,
  		.chain_id = ALC269_FIXUP_HEADSET_MODE
  	},
@@ -61,7 +61,7 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
  };
  
  static const struct snd_pci_quirk alc269_fixup_tbl[] = {
-@@ -6042,9 +6058,14 @@ static const struct snd_pci_quirk alc269
+@@ -6061,9 +6077,14 @@ static const struct snd_pci_quirk alc269
  	SND_PCI_QUIRK(0x103c, 0x8256, "HP", ALC221_FIXUP_HP_FRONT_MIC),
  	SND_PCI_QUIRK(0x103c, 0x82bf, "HP", ALC221_FIXUP_HP_MIC_NO_PRESENCE),
  	SND_PCI_QUIRK(0x103c, 0x82c0, "HP", ALC221_FIXUP_HP_MIC_NO_PRESENCE),
@@ -76,7 +76,7 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
  	SND_PCI_QUIRK(0x1043, 0x1427, "Asus Zenbook UX31E", ALC269VB_FIXUP_ASUS_ZENBOOK),
  	SND_PCI_QUIRK(0x1043, 0x1517, "Asus Zenbook UX31A", ALC269VB_FIXUP_ASUS_ZENBOOK_UX31A),
  	SND_PCI_QUIRK(0x1043, 0x16e3, "ASUS UX50", ALC269_FIXUP_STEREO_DMIC),
-@@ -6054,6 +6075,7 @@ static const struct snd_pci_quirk alc269
+@@ -6073,6 +6094,7 @@ static const struct snd_pci_quirk alc269
  	SND_PCI_QUIRK(0x1043, 0x1bbd, "ASUS Z550MA", ALC255_FIXUP_ASUS_MIC_NO_PRESENCE),
  	SND_PCI_QUIRK(0x1043, 0x10d0, "ASUS X540LA/X540LJ", ALC255_FIXUP_ASUS_MIC_NO_PRESENCE),
  	SND_PCI_QUIRK(0x1043, 0x11c0, "ASUS X556UR", ALC255_FIXUP_ASUS_MIC_NO_PRESENCE),
@@ -84,8 +84,8 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
  	SND_PCI_QUIRK(0x1043, 0x831a, "ASUS P901", ALC269_FIXUP_STEREO_DMIC),
  	SND_PCI_QUIRK(0x1043, 0x834a, "ASUS S101", ALC269_FIXUP_STEREO_DMIC),
  	SND_PCI_QUIRK(0x1043, 0x8398, "ASUS P1005", ALC269_FIXUP_STEREO_DMIC),
-@@ -6372,6 +6394,14 @@ static const struct snd_hda_pin_quirk al
- 		{0x21, 0x02211020}),
+@@ -6402,6 +6424,14 @@ static const struct snd_hda_pin_quirk al
+ 		{0x21, 0x0221101f}),
  	SND_HDA_PIN_QUIRK(0x10ec0256, 0x1028, "Dell", ALC255_FIXUP_DELL1_MIC_NO_PRESENCE,
  		ALC256_STANDARD_PINS),
 +	SND_HDA_PIN_QUIRK(0x10ec0256, 0x1043, "ASUS", ALC256_FIXUP_ASUS_MIC,
