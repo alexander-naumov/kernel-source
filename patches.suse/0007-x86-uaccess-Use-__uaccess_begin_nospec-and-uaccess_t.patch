@@ -39,9 +39,9 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  arch/x86/include/asm/uaccess.h    |    6 +++---
  arch/x86/include/asm/uaccess_32.h |   18 +++++++++---------
- arch/x86/include/asm/uaccess_64.h |   12 ++++++------
- arch/x86/lib/usercopy_32.c        |    4 ++--
- 4 files changed, 20 insertions(+), 20 deletions(-)
+ arch/x86/include/asm/uaccess_64.h |   20 ++++++++++----------
+ arch/x86/lib/usercopy_32.c        |    8 ++++----
+ 4 files changed, 26 insertions(+), 26 deletions(-)
 
 --- a/arch/x86/include/asm/uaccess.h
 +++ b/arch/x86/include/asm/uaccess.h
@@ -185,11 +185,56 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  		__get_user_asm(*(u64 *)dst, (u64 __user *)src,
  			       ret, "q", "", "=r", 16);
  		if (likely(!ret))
+@@ -190,7 +190,7 @@ int __copy_in_user(void __user *dst, con
+ 	switch (size) {
+ 	case 1: {
+ 		u8 tmp;
+-		__uaccess_begin();
++		__uaccess_begin_nospec();
+ 		__get_user_asm(tmp, (u8 __user *)src,
+ 			       ret, "b", "b", "=q", 1);
+ 		if (likely(!ret))
+@@ -201,7 +201,7 @@ int __copy_in_user(void __user *dst, con
+ 	}
+ 	case 2: {
+ 		u16 tmp;
+-		__uaccess_begin();
++		__uaccess_begin_nospec();
+ 		__get_user_asm(tmp, (u16 __user *)src,
+ 			       ret, "w", "w", "=r", 2);
+ 		if (likely(!ret))
+@@ -213,7 +213,7 @@ int __copy_in_user(void __user *dst, con
+ 
+ 	case 4: {
+ 		u32 tmp;
+-		__uaccess_begin();
++		__uaccess_begin_nospec();
+ 		__get_user_asm(tmp, (u32 __user *)src,
+ 			       ret, "l", "k", "=r", 4);
+ 		if (likely(!ret))
+@@ -224,7 +224,7 @@ int __copy_in_user(void __user *dst, con
+ 	}
+ 	case 8: {
+ 		u64 tmp;
+-		__uaccess_begin();
++		__uaccess_begin_nospec();
+ 		__get_user_asm(tmp, (u64 __user *)src,
+ 			       ret, "q", "", "=r", 8);
+ 		if (likely(!ret))
 --- a/arch/x86/lib/usercopy_32.c
 +++ b/arch/x86/lib/usercopy_32.c
-@@ -570,7 +570,7 @@ do {									\
- unsigned long __copy_to_user_ll(void __user *to, const void *from,
- 				unsigned long n)
+@@ -583,7 +583,7 @@ EXPORT_SYMBOL(__copy_to_user_ll);
+ unsigned long __copy_from_user_ll(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	__uaccess_begin();
++	__uaccess_begin_nospec();
+ 	if (movsl_is_ok(to, from, n))
+ 		__copy_user_zeroing(to, from, n);
+ 	else
+@@ -596,7 +596,7 @@ EXPORT_SYMBOL(__copy_from_user_ll);
+ unsigned long __copy_from_user_ll_nozero(void *to, const void __user *from,
+ 					 unsigned long n)
  {
 -	__uaccess_begin();
 +	__uaccess_begin_nospec();
@@ -205,3 +250,12 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  #ifdef CONFIG_X86_INTEL_USERCOPY
  	if (n > 64 && cpu_has_xmm2)
  		n = __copy_user_zeroing_intel_nocache(to, from, n);
+@@ -627,7 +627,7 @@ EXPORT_SYMBOL(__copy_from_user_ll_nocach
+ unsigned long __copy_from_user_ll_nocache_nozero(void *to, const void __user *from,
+ 					unsigned long n)
+ {
+-	__uaccess_begin();
++	__uaccess_begin_nospec();
+ #ifdef CONFIG_X86_INTEL_USERCOPY
+ 	if (n > 64 && cpu_has_xmm2)
+ 		n = __copy_user_intel_nocache(to, from, n);

@@ -27,8 +27,8 @@ Link: https://lkml.kernel.org/r/151727417984.33451.1216731042505722161.stgit@dwi
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  arch/x86/entry/common.c   |    2 ++
- arch/x86/entry/entry_64.S |    2 ++
- 2 files changed, 4 insertions(+)
+ arch/x86/entry/entry_64.S |    4 ++++
+ 2 files changed, 6 insertions(+)
 
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
@@ -54,8 +54,17 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  	cmpl	$__NR_syscall_max, %eax
  #endif
  	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
-+	sbb %r11, %r11				/* array_index_mask_nospec() */
-+	and %r11, %rax
++	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
++	and	%rcx, %rax
  	movq	%r10, %rcx
+ #ifdef CONFIG_RETPOLINE
+ 	movq	sys_call_table(, %rax, 8), %rax
+@@ -282,6 +284,8 @@ tracesys_phase2:
+ 	cmpl	$__NR_syscall_max, %eax
+ #endif
+ 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
++	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
++	and	%rcx, %rax
+ 	movq	%r10, %rcx			/* fixup for C */
  #ifdef CONFIG_RETPOLINE
  	movq	sys_call_table(, %rax, 8), %rax
