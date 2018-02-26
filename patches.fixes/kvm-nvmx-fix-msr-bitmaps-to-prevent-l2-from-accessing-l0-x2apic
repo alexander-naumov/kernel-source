@@ -36,12 +36,12 @@ Reviewed-by: Wanpeng Li <wanpeng.li@hotmail.com>
 Signed-off-by: Radim Krčmář <rkrcmar@redhat.com>
 Acked-by: Joerg Roedel <jroedel@suse.de>
 ---
- arch/x86/kvm/vmx.c | 107 ++++++++++++++++++++++-------------------------------
- 1 file changed, 44 insertions(+), 63 deletions(-)
+ arch/x86/kvm/vmx.c |   96 ++++++++++++++++++++---------------------------------
+ 1 file changed, 38 insertions(+), 58 deletions(-)
 
 --- a/arch/x86/kvm/vmx.c
 +++ b/arch/x86/kvm/vmx.c
-@@ -423,6 +423,8 @@ struct nested_vmx {
+@@ -431,6 +431,8 @@ struct nested_vmx {
  	u16 posted_intr_nv;
  	u64 msr_ia32_feature_control;
  
@@ -50,7 +50,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	struct hrtimer preemption_timer;
  	bool preemption_timer_expired;
  
-@@ -899,7 +901,6 @@ static unsigned long *vmx_msr_bitmap_leg
+@@ -912,7 +914,6 @@ static unsigned long *vmx_msr_bitmap_leg
  static unsigned long *vmx_msr_bitmap_longmode;
  static unsigned long *vmx_msr_bitmap_legacy_x2apic;
  static unsigned long *vmx_msr_bitmap_longmode_x2apic;
@@ -58,7 +58,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  static unsigned long *vmx_vmread_bitmap;
  static unsigned long *vmx_vmwrite_bitmap;
  
-@@ -2331,7 +2332,7 @@ static void vmx_set_msr_bitmap(struct kv
+@@ -2349,7 +2350,7 @@ static void vmx_set_msr_bitmap(struct kv
  	unsigned long *msr_bitmap;
  
  	if (is_guest_mode(vcpu))
@@ -67,7 +67,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	else if (vcpu->arch.apic_base & X2APIC_ENABLE) {
  		if (is_long_mode(vcpu))
  			msr_bitmap = vmx_msr_bitmap_longmode_x2apic;
-@@ -6155,13 +6156,6 @@ static __init int hardware_setup(void)
+@@ -6177,13 +6178,6 @@ static __init int hardware_setup(void)
  	if (!vmx_msr_bitmap_longmode_x2apic)
  		goto out4;
  
@@ -81,7 +81,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	vmx_vmread_bitmap = (unsigned long *)__get_free_page(GFP_KERNEL);
  	if (!vmx_vmread_bitmap)
  		goto out6;
-@@ -6184,8 +6178,6 @@ static __init int hardware_setup(void)
+@@ -6201,8 +6195,6 @@ static __init int hardware_setup(void)
  
  	memset(vmx_msr_bitmap_legacy, 0xff, PAGE_SIZE);
  	memset(vmx_msr_bitmap_longmode, 0xff, PAGE_SIZE);
@@ -90,7 +90,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  
  	if (setup_vmcs_config(&vmcs_config) < 0) {
  		r = -EIO;
-@@ -6320,9 +6312,6 @@ out8:
+@@ -6339,9 +6331,6 @@ out8:
  out7:
  	free_page((unsigned long)vmx_vmread_bitmap);
  out6:
@@ -100,7 +100,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	free_page((unsigned long)vmx_msr_bitmap_longmode_x2apic);
  out4:
  	free_page((unsigned long)vmx_msr_bitmap_longmode);
-@@ -6348,8 +6337,6 @@ static __exit void hardware_unsetup(void
+@@ -6367,8 +6356,6 @@ static __exit void hardware_unsetup(void
  	free_page((unsigned long)vmx_io_bitmap_a);
  	free_page((unsigned long)vmx_vmwrite_bitmap);
  	free_page((unsigned long)vmx_vmread_bitmap);
@@ -109,7 +109,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  
  	free_kvm_area();
  }
-@@ -6792,10 +6779,17 @@ static int handle_vmon(struct kvm_vcpu *
+@@ -6811,10 +6798,17 @@ static int handle_vmon(struct kvm_vcpu *
  		return 1;
  	}
  
@@ -128,7 +128,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  		/* mark vmcs as shadow */
  		shadow_vmcs->revision_id |= (1u << 31);
  		/* init shadow vmcs */
-@@ -6815,6 +6809,12 @@ static int handle_vmon(struct kvm_vcpu *
+@@ -6834,6 +6828,12 @@ static int handle_vmon(struct kvm_vcpu *
  	skip_emulated_instruction(vcpu);
  	nested_vmx_succeed(vcpu);
  	return 1;
@@ -141,7 +141,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  }
  
  /*
-@@ -6884,6 +6884,10 @@ static void free_nested(struct vcpu_vmx
+@@ -6903,6 +6903,10 @@ static void free_nested(struct vcpu_vmx
  	vmx->nested.vmxon = false;
  	free_vpid(vmx->nested.vpid02);
  	nested_release_vmcs12(vmx);
@@ -152,7 +152,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	if (enable_shadow_vmcs)
  		free_vmcs(vmx->nested.current_shadow_vmcs);
  	/* Unpin physical memory we referred to in current vmcs02 */
-@@ -9207,8 +9211,10 @@ static inline bool nested_vmx_merge_msr_
+@@ -9234,8 +9238,10 @@ static inline bool nested_vmx_merge_msr_
  {
  	int msr;
  	struct page *page;
@@ -164,21 +164,15 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	if (!nested_cpu_has_virt_x2apic_mode(vmcs12))
  		return false;
  
-@@ -9217,63 +9223,37 @@ static inline bool nested_vmx_merge_msr_
+@@ -9244,58 +9250,32 @@ static inline bool nested_vmx_merge_msr_
  		WARN_ON(1);
  		return false;
  	}
 -	msr_bitmap = (unsigned long *)kmap(page);
--	if (!msr_bitmap) {
 +	msr_bitmap_l1 = (unsigned long *)kmap(page);
-+	if (!msr_bitmap_l1) {
- 		nested_release_page_clean(page);
- 		WARN_ON(1);
- 		return false;
- 	}
- 
-+	memset(msr_bitmap_l0, 0xff, PAGE_SIZE);
 +
++	memset(msr_bitmap_l0, 0xff, PAGE_SIZE);
+ 
  	if (nested_cpu_has_virt_x2apic_mode(vmcs12)) {
  		if (nested_cpu_has_apic_reg_virt(vmcs12))
  			for (msr = 0x800; msr <= 0x8ff; msr++)
@@ -239,7 +233,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  	}
  	kunmap(page);
  	nested_release_page_clean(page);
-@@ -9688,10 +9668,10 @@ static void prepare_vmcs02(struct kvm_vc
+@@ -9715,10 +9695,10 @@ static void prepare_vmcs02(struct kvm_vc
  	}
  
  	if (cpu_has_vmx_msr_bitmap() &&

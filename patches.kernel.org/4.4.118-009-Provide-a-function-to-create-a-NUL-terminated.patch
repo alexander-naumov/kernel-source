@@ -1,0 +1,82 @@
+From: David Howells <dhowells@redhat.com>
+Date: Tue, 4 Jul 2017 17:25:02 +0100
+Subject: [PATCH] Provide a function to create a NUL-terminated string from
+ unterminated data
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: f35157417215ec138c920320c746fdb3e04ef1d5
+
+commit f35157417215ec138c920320c746fdb3e04ef1d5 upstream.
+
+Provide a function, kmemdup_nul(), that will create a NUL-terminated string
+from an unterminated character array where the length is known in advance.
+
+This is better than kstrndup() in situations where we already know the
+string length as the strnlen() in kstrndup() is superfluous.
+
+Signed-off-by: David Howells <dhowells@redhat.com>
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/linux/string.h |  1 +
+ mm/util.c              | 24 ++++++++++++++++++++++++
+ 2 files changed, 25 insertions(+)
+
+diff --git a/include/linux/string.h b/include/linux/string.h
+index aa30789b0f65..98bb781a2eff 100644
+--- a/include/linux/string.h
++++ b/include/linux/string.h
+@@ -122,6 +122,7 @@ extern char *kstrdup(const char *s, gfp_t gfp);
+ extern const char *kstrdup_const(const char *s, gfp_t gfp);
+ extern char *kstrndup(const char *s, size_t len, gfp_t gfp);
+ extern void *kmemdup(const void *src, size_t len, gfp_t gfp);
++extern char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
+ 
+ extern char **argv_split(gfp_t gfp, const char *str, int *argcp);
+ extern void argv_free(char **argv);
+diff --git a/mm/util.c b/mm/util.c
+index d5259b62f8d7..818bbae84721 100644
+--- a/mm/util.c
++++ b/mm/util.c
+@@ -80,6 +80,8 @@ EXPORT_SYMBOL(kstrdup_const);
+  * @s: the string to duplicate
+  * @max: read at most @max chars from @s
+  * @gfp: the GFP mask used in the kmalloc() call when allocating memory
++ *
++ * Note: Use kmemdup_nul() instead if the size is known exactly.
+  */
+ char *kstrndup(const char *s, size_t max, gfp_t gfp)
+ {
+@@ -117,6 +119,28 @@ void *kmemdup(const void *src, size_t len, gfp_t gfp)
+ }
+ EXPORT_SYMBOL(kmemdup);
+ 
++/**
++ * kmemdup_nul - Create a NUL-terminated string from unterminated data
++ * @s: The data to stringify
++ * @len: The size of the data
++ * @gfp: the GFP mask used in the kmalloc() call when allocating memory
++ */
++char *kmemdup_nul(const char *s, size_t len, gfp_t gfp)
++{
++	char *buf;
++
++	if (!s)
++		return NULL;
++
++	buf = kmalloc_track_caller(len + 1, gfp);
++	if (buf) {
++		memcpy(buf, s, len);
++		buf[len] = '\0';
++	}
++	return buf;
++}
++EXPORT_SYMBOL(kmemdup_nul);
++
+ /**
+  * memdup_user - duplicate memory region from user space
+  *
+-- 
+2.16.2
+

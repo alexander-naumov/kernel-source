@@ -1,0 +1,51 @@
+From: Steffen Klassert <steffen.klassert@secunet.com>
+Date: Wed, 29 Nov 2017 06:53:55 +0100
+Subject: [PATCH] xfrm: Fix stack-out-of-bounds read on socket policy lookup.
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: ddc47e4404b58f03e98345398fb12d38fe291512
+
+commit ddc47e4404b58f03e98345398fb12d38fe291512 upstream.
+
+When we do tunnel or beet mode, we pass saddr and daddr from the
+template to xfrm_state_find(), this is ok. On transport mode,
+we pass the addresses from the flowi, assuming that the IP
+addresses (and address family) don't change during transformation.
+This assumption is wrong in the IPv4 mapped IPv6 case, packet
+is IPv4 and template is IPv6.
+
+Fix this by catching address family missmatches of the policy
+and the flow already before we do the lookup.
+
+Reported-by: syzbot <syzkaller@googlegroups.com>
+Signed-off-by: Steffen Klassert <steffen.klassert@secunet.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/xfrm/xfrm_policy.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/net/xfrm/xfrm_policy.c b/net/xfrm/xfrm_policy.c
+index 22df3b51e905..4b09a9eaa35f 100644
+--- a/net/xfrm/xfrm_policy.c
++++ b/net/xfrm/xfrm_policy.c
+@@ -1225,9 +1225,15 @@ static struct xfrm_policy *xfrm_sk_policy_lookup(const struct sock *sk, int dir,
+ 	read_lock_bh(&net->xfrm.xfrm_policy_lock);
+ 	pol = rcu_dereference(sk->sk_policy[dir]);
+ 	if (pol != NULL) {
+-		bool match = xfrm_selector_match(&pol->selector, fl, family);
++		bool match;
+ 		int err = 0;
+ 
++		if (pol->family != family) {
++			pol = NULL;
++			goto out;
++		}
++
++		match = xfrm_selector_match(&pol->selector, fl, family);
+ 		if (match) {
+ 			if ((sk->sk_mark & pol->mark.m) != pol->mark.v) {
+ 				pol = NULL;
+-- 
+2.16.2
+

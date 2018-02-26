@@ -1,0 +1,46 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Mon, 10 Oct 2016 14:41:10 +0200
+Subject: [PATCH] tlan: avoid unused label with PCI=n
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 1e09c106a44c2b2685a77a1ef27951381c9fcd23
+
+commit 1e09c106a44c2b2685a77a1ef27951381c9fcd23 upstream.
+
+While build testing with randconfig on x86, I ran into this warning
+that appears to have been around forever
+
+drivers/net/ethernet/ti/tlan.c: In function ‘tlan_probe1’:
+drivers/net/ethernet/ti/tlan.c:614:1: error: label ‘err_out’ defined but not used [-Werror=unused-label]
+
+This can be trivially avoided by just moving the label into the
+existing #ifdef.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/ethernet/ti/tlan.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/ti/tlan.c b/drivers/net/ethernet/ti/tlan.c
+index a274cd49afe9..399a89f30826 100644
+--- a/drivers/net/ethernet/ti/tlan.c
++++ b/drivers/net/ethernet/ti/tlan.c
+@@ -610,8 +610,8 @@ static int tlan_probe1(struct pci_dev *pdev, long ioaddr, int irq, int rev,
+ #ifdef CONFIG_PCI
+ 	if (pdev)
+ 		pci_release_regions(pdev);
+-#endif
+ err_out:
++#endif
+ 	if (pdev)
+ 		pci_disable_device(pdev);
+ 	return rc;
+-- 
+2.16.2
+

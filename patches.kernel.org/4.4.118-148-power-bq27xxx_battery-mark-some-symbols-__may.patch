@@ -1,0 +1,65 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 20 Feb 2018 12:54:50 +0100
+Subject: [PATCH] power: bq27xxx_battery: mark some symbols __maybe_unused
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: e8988dbe21b0449e1e5393e92fafd1f19b7db197
+
+Without the I2C driver, we get a few warnings:
+
+drivers/power/bq27xxx_battery.c:288:12: error: 'bq27xxx_regs' defined but not used [-Werror=unused-variable]
+ static u8 *bq27xxx_regs[] = {
+            ^
+drivers/power/bq27xxx_battery.c:994:12: error: 'bq27xxx_powersupply_init' defined but not used [-Werror=unused-function]
+ static int bq27xxx_powersupply_init(struct bq27xxx_device_info *di,
+            ^
+drivers/power/bq27xxx_battery.c:1029:13: error: 'bq27xxx_powersupply_unregister' defined but not used [-Werror=unused-function]
+ static void bq27xxx_powersupply_unregister(struct bq27xxx_device_info *di)
+             ^
+
+In mainline kernels, this was addressed by a larger rework in 703df6c09795 ("power:
+bq27xxx_battery: Reorganize I2C into a module"). We probably don't want this backported
+into stable kernels, so instead let's shut up the warnings by marking the symbols
+as __maybe_unused.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/power/bq27xxx_battery.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/power/bq27xxx_battery.c b/drivers/power/bq27xxx_battery.c
+index 880233ce9343..6c3a447f378b 100644
+--- a/drivers/power/bq27xxx_battery.c
++++ b/drivers/power/bq27xxx_battery.c
+@@ -285,7 +285,7 @@ static u8 bq27421_regs[] = {
+ 	0x18,	/* AP		*/
+ };
+ 
+-static u8 *bq27xxx_regs[] = {
++static u8 *bq27xxx_regs[] __maybe_unused = {
+ 	[BQ27000] = bq27000_regs,
+ 	[BQ27010] = bq27010_regs,
+ 	[BQ27500] = bq27500_regs,
+@@ -991,7 +991,7 @@ static void bq27xxx_external_power_changed(struct power_supply *psy)
+ 	schedule_delayed_work(&di->work, 0);
+ }
+ 
+-static int bq27xxx_powersupply_init(struct bq27xxx_device_info *di,
++static int __maybe_unused bq27xxx_powersupply_init(struct bq27xxx_device_info *di,
+ 				    const char *name)
+ {
+ 	int ret;
+@@ -1026,7 +1026,7 @@ static int bq27xxx_powersupply_init(struct bq27xxx_device_info *di,
+ 	return 0;
+ }
+ 
+-static void bq27xxx_powersupply_unregister(struct bq27xxx_device_info *di)
++static void __maybe_unused bq27xxx_powersupply_unregister(struct bq27xxx_device_info *di)
+ {
+ 	/*
+ 	 * power_supply_unregister call bq27xxx_battery_get_property which
+-- 
+2.16.2
+

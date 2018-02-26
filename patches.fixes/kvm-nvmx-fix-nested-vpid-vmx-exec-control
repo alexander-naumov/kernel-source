@@ -34,12 +34,12 @@ Signed-off-by: Wanpeng Li <wanpeng.li@hotmail.com>
 Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
 Acked-by: Joerg Roedel <jroedel@suse.de>
 ---
- arch/x86/kvm/vmx.c | 7 ++++---
+ arch/x86/kvm/vmx.c |    7 ++++---
  1 file changed, 4 insertions(+), 3 deletions(-)
 
 --- a/arch/x86/kvm/vmx.c
 +++ b/arch/x86/kvm/vmx.c
-@@ -2614,7 +2614,6 @@ static void nested_vmx_setup_ctls_msrs(s
+@@ -2632,7 +2632,6 @@ static void nested_vmx_setup_ctls_msrs(s
  		SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES |
  		SECONDARY_EXEC_RDTSCP |
  		SECONDARY_EXEC_VIRTUALIZE_X2APIC_MODE |
@@ -47,7 +47,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
  		SECONDARY_EXEC_APIC_REGISTER_VIRT |
  		SECONDARY_EXEC_VIRTUAL_INTR_DELIVERY |
  		SECONDARY_EXEC_WBINVD_EXITING |
-@@ -2644,11 +2643,13 @@ static void nested_vmx_setup_ctls_msrs(s
+@@ -2662,10 +2661,12 @@ static void nested_vmx_setup_ctls_msrs(s
  	 * though it is treated as global context.  The alternative is
  	 * not failing the single-context invvpid, and it is worse.
  	 */
@@ -56,8 +56,7 @@ Acked-by: Joerg Roedel <jroedel@suse.de>
 +		vmx->nested.nested_vmx_secondary_ctls_high |=
 +			SECONDARY_EXEC_ENABLE_VPID;
  		vmx->nested.nested_vmx_vpid_caps = VMX_VPID_INVVPID_BIT |
- 				VMX_VPID_EXTENT_SINGLE_CONTEXT_BIT |
- 				VMX_VPID_EXTENT_GLOBAL_CONTEXT_BIT;
+ 			VMX_VPID_EXTENT_SUPPORTED_MASK;
 -	else
 +	} else
  		vmx->nested.nested_vmx_vpid_caps = 0;

@@ -1,0 +1,44 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 26 Jan 2016 14:17:24 -0200
+Subject: [PATCH] pwc: hide unused label
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 1f6bcd011464cb36059e2562f72baf75f98b732d
+
+commit 1f6bcd011464cb36059e2562f72baf75f98b732d upstream.
+
+The pwc driver causes a warning when CONFIG_USB_PWC_INPUT_EVDEV is unset:
+
+drivers/media/usb/pwc/pwc-if.c: In function 'usb_pwc_probe':
+drivers/media/usb/pwc/pwc-if.c:1115:1: warning: label 'err_video_unreg' defined but not used [-Wunused-label]
+
+This moves the unused label and code inside another #ifdef to
+get rid of the warning.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Hans Verkuil <hans.verkuil@cisco.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/media/usb/pwc/pwc-if.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/usb/pwc/pwc-if.c b/drivers/media/usb/pwc/pwc-if.c
+index 58f23bcfe94e..299750e56916 100644
+--- a/drivers/media/usb/pwc/pwc-if.c
++++ b/drivers/media/usb/pwc/pwc-if.c
+@@ -1119,8 +1119,10 @@ static int usb_pwc_probe(struct usb_interface *intf, const struct usb_device_id
+ 
+ 	return 0;
+ 
++#ifdef CONFIG_USB_PWC_INPUT_EVDEV
+ err_video_unreg:
+ 	video_unregister_device(&pdev->vdev);
++#endif
+ err_unregister_v4l2_dev:
+ 	v4l2_device_unregister(&pdev->v4l2_dev);
+ err_free_controls:
+-- 
+2.16.2
+

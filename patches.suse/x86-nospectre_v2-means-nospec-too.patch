@@ -10,9 +10,9 @@ In patch patches.suse/21-x86-spec-add-nospec-chicken-bit.patch, we add
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  arch/x86/include/asm/spec_ctrl.h |    1 +
- arch/x86/kernel/cpu/bugs.c       |    2 ++
+ arch/x86/kernel/cpu/bugs.c       |    9 +++++++--
  arch/x86/kernel/cpu/spec_ctrl.c  |    2 +-
- 3 files changed, 4 insertions(+), 1 deletion(-)
+ 3 files changed, 9 insertions(+), 3 deletions(-)
 
 --- a/arch/x86/include/asm/spec_ctrl.h
 +++ b/arch/x86/include/asm/spec_ctrl.h
@@ -26,22 +26,37 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  {
 --- a/arch/x86/kernel/cpu/bugs.c
 +++ b/arch/x86/kernel/cpu/bugs.c
-@@ -12,6 +12,7 @@
- #include <linux/cpu.h>
+@@ -13,6 +13,7 @@
+ #include <linux/module.h>
  
  #include <asm/nospec-branch.h>
 +#include <asm/spec_ctrl.h>
  #include <asm/cmdline.h>
  #include <asm/bugs.h>
  #include <asm/processor.h>
-@@ -150,6 +151,7 @@ static enum spectre_v2_mitigation_cmd __
- 	if (!cmdline_find_option_bool(boot_command_line, "nospectre_v2"))
- 		return SPECTRE_V2_CMD_AUTO;
- disable:
-+	nospec("");
- 	spec2_print_if_insecure("disabled on command line.");
- 	return SPECTRE_V2_CMD_NONE;
+@@ -159,9 +160,10 @@ static enum spectre_v2_mitigation_cmd __
+ 	int ret, i;
+ 	enum spectre_v2_mitigation_cmd cmd = SPECTRE_V2_CMD_AUTO;
+ 
+-	if (cmdline_find_option_bool(boot_command_line, "nospectre_v2"))
++	if (cmdline_find_option_bool(boot_command_line, "nospectre_v2")) {
++		nospec("");
+ 		return SPECTRE_V2_CMD_NONE;
+-	else {
++	} else {
+ 		ret = cmdline_find_option(boot_command_line, "spectre_v2", arg,
+ 					  sizeof(arg));
+ 		if (ret < 0)
+@@ -201,6 +203,9 @@ static enum spectre_v2_mitigation_cmd __
+ 	else
+ 		spec2_print_if_insecure(mitigation_options[i].option);
+ 
++	if (cmd == SPECTRE_V2_CMD_NONE)
++		nospec("");
++
+ 	return cmd;
  }
+ 
 --- a/arch/x86/kernel/cpu/spec_ctrl.c
 +++ b/arch/x86/kernel/cpu/spec_ctrl.c
 @@ -85,7 +85,7 @@ void x86_spec_check(void)

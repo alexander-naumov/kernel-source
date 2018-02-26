@@ -16,9 +16,9 @@ IBRS+IBPB.
 Signed-off-by: Jiri Kosina <jkosina@suse.cz>
 ---
  arch/x86/include/asm/spec_ctrl.h |    1 +
- arch/x86/kernel/cpu/bugs.c       |   13 +++++++++++--
+ arch/x86/kernel/cpu/bugs.c       |   11 +++++++++--
  arch/x86/kernel/cpu/spec_ctrl.c  |   16 +++++++++++-----
- 3 files changed, 23 insertions(+), 7 deletions(-)
+ 3 files changed, 21 insertions(+), 7 deletions(-)
 
 --- a/arch/x86/include/asm/spec_ctrl.h
 +++ b/arch/x86/include/asm/spec_ctrl.h
@@ -32,7 +32,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  unsigned int x86_ibrs_enabled(void);
 --- a/arch/x86/kernel/cpu/bugs.c
 +++ b/arch/x86/kernel/cpu/bugs.c
-@@ -250,6 +250,11 @@ retpoline_auto:
+@@ -302,6 +302,11 @@ retpoline_auto:
  		setup_force_cpu_cap(X86_FEATURE_RSB_CTXSW);
  		pr_info("Filling RSB on context switch\n");
  	}
@@ -44,7 +44,7 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  }
  
  #undef pr_fmt
-@@ -278,9 +283,13 @@ ssize_t cpu_show_spectre_v2(struct devic
+@@ -330,10 +335,12 @@ ssize_t cpu_show_spectre_v2(struct devic
  {
  	if (!boot_cpu_has_bug(X86_BUG_SPECTRE_V2))
  		return sprintf(buf, "Not affected\n");
@@ -53,11 +53,10 @@ Signed-off-by: Jiri Kosina <jkosina@suse.cz>
  		return sprintf(buf, "Mitigation: IBRS+IBPB\n");
 +	}
  
--	return sprintf(buf, "%s\n", spectre_v2_strings[spectre_v2_enabled]);
-+	if (x86_ibpb_enabled())
-+		return sprintf(buf, "%s + IBPB\n", spectre_v2_strings[spectre_v2_enabled]);
-+	else
-+		return sprintf(buf, "%s\n", spectre_v2_strings[spectre_v2_enabled]);
+-	return sprintf(buf, "%s%s\n", spectre_v2_strings[spectre_v2_enabled],
++	return sprintf(buf, "%s%s%s\n", spectre_v2_strings[spectre_v2_enabled],
++		       x86_ibpb_enabled() ? " + IBPB" : "",
+ 		       spectre_v2_module_string());
  }
  #endif
 --- a/arch/x86/kernel/cpu/spec_ctrl.c

@@ -1,0 +1,37 @@
+From: Colin Ian King <colin.king@canonical.com>
+Date: Fri, 22 Jan 2016 17:49:22 +0000
+Subject: [PATCH] iio: adc: axp288: remove redundant duplicate const on
+ axp288_adc_channels
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 7ca6574a7afb669b0b4b30dd63adeb310e97e250
+
+commit 7ca6574a7afb669b0b4b30dd63adeb310e97e250 upstream.
+
+duplicate const can be removed, it is redundant. Found by static
+analysis using smatch.
+
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: Jonathan Cameron <jic23@kernel.org>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/iio/adc/axp288_adc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/adc/axp288_adc.c b/drivers/iio/adc/axp288_adc.c
+index f684fe31f832..64799ad7ebad 100644
+--- a/drivers/iio/adc/axp288_adc.c
++++ b/drivers/iio/adc/axp288_adc.c
+@@ -44,7 +44,7 @@ struct axp288_adc_info {
+ 	struct regmap *regmap;
+ };
+ 
+-static const struct iio_chan_spec const axp288_adc_channels[] = {
++static const struct iio_chan_spec axp288_adc_channels[] = {
+ 	{
+ 		.indexed = 1,
+ 		.type = IIO_TEMP,
+-- 
+2.16.2
+

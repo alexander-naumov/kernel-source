@@ -35,7 +35,7 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  
  /*
   * Balloon device works in 4K page units.  So each page is pointed to by
-@@ -229,10 +230,13 @@ static void update_balloon_stats(struct
+@@ -235,10 +236,13 @@ static void update_balloon_stats(struct
  	unsigned long events[NR_VM_EVENT_ITEMS];
  	struct sysinfo i;
  	int idx = 0;
@@ -46,10 +46,10 @@ Acked-by: Takashi Iwai <tiwai@suse.de>
  
 +	available = si_mem_available();
 +
+ #ifdef CONFIG_VM_EVENT_COUNTERS
  	update_stat(vb, idx++, VIRTIO_BALLOON_S_SWAP_IN,
  				pages_to_bytes(events[PSWPIN]));
- 	update_stat(vb, idx++, VIRTIO_BALLOON_S_SWAP_OUT,
-@@ -243,6 +247,8 @@ static void update_balloon_stats(struct
+@@ -251,6 +255,8 @@ static void update_balloon_stats(struct
  				pages_to_bytes(i.freeram));
  	update_stat(vb, idx++, VIRTIO_BALLOON_S_MEMTOT,
  				pages_to_bytes(i.totalram));

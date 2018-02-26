@@ -75,10 +75,10 @@ Signed-off-by: Neil Brown <neilb@suse.de>
  }
  
  int sync_page_io(struct md_rdev *rdev, sector_t sector, int size,
-@@ -1328,9 +1347,10 @@ super_90_rdev_size_change(struct md_rdev
- 	 */
- 	if (num_sectors >= (2ULL << 32) && rdev->mddev->level >= 1)
- 		num_sectors = (2ULL << 32) - 2;
+@@ -1330,9 +1349,10 @@ super_90_rdev_size_change(struct md_rdev
+ 	if (IS_ENABLED(CONFIG_LBDAF) && (u64)num_sectors >= (2ULL << 32) &&
+ 	    rdev->mddev->level >= 1)
+ 		num_sectors = (sector_t)(2ULL << 32) - 2;
 -	md_super_write(rdev->mddev, rdev, rdev->sb_start, rdev->sb_size,
 +	do
 +		md_super_write(rdev->mddev, rdev, rdev->sb_start, rdev->sb_size,
@@ -88,7 +88,7 @@ Signed-off-by: Neil Brown <neilb@suse.de>
  	return num_sectors;
  }
  
-@@ -1878,9 +1898,10 @@ super_1_rdev_size_change(struct md_rdev
+@@ -1880,9 +1900,10 @@ super_1_rdev_size_change(struct md_rdev
  	sb->data_size = cpu_to_le64(num_sectors);
  	sb->super_offset = cpu_to_le64(rdev->sb_start);
  	sb->sb_csum = calc_sb_1_csum(sb);
@@ -102,7 +102,7 @@ Signed-off-by: Neil Brown <neilb@suse.de>
  	return num_sectors;
  
  }
-@@ -2410,6 +2431,7 @@ repeat:
+@@ -2412,6 +2433,7 @@ repeat:
  	pr_debug("md: updating %s RAID superblock on device (in sync %d)\n",
  		 mdname(mddev), mddev->in_sync);
  
@@ -110,7 +110,7 @@ Signed-off-by: Neil Brown <neilb@suse.de>
  	bitmap_update_sb(mddev->bitmap);
  	rdev_for_each(rdev, mddev) {
  		char b[BDEVNAME_SIZE];
-@@ -2441,7 +2463,8 @@ repeat:
+@@ -2443,7 +2465,8 @@ repeat:
  			/* only need to write one superblock... */
  			break;
  	}
@@ -120,7 +120,7 @@ Signed-off-by: Neil Brown <neilb@suse.de>
  	/* if there was a failure, MD_CHANGE_DEVS was set, and we re-write super */
  
  	spin_lock(&mddev->lock);
-@@ -5482,8 +5505,9 @@ static void __md_stop_writes(struct mdde
+@@ -5484,8 +5507,9 @@ static void __md_stop_writes(struct mdde
  
  	del_timer_sync(&mddev->safemode_timer);
  

@@ -1,0 +1,48 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 20 Feb 2018 12:54:52 +0100
+Subject: [PATCH] binfmt_elf: compat: avoid unused function warning
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: b8b624d9885fea0d0bb7f51d9548004cd6882002
+
+When CONFIG_ELF_CORE is disabled, we get a harmless warning in the compat
+version of binfmt_elf:
+
+fs/compat_binfmt_elf.c:58:13: error: 'cputime_to_compat_timeval' defined but not used [-Werror=unused-function]
+
+This was addressed in mainline Linux as part of a larger rework with commit
+cd19c364b313 ("fs/binfmt: Convert obsolete cputime type to nsecs").
+
+For 4.9 and earlier, this just shuts up the warning by adding an #ifdef
+around the function definition.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ fs/compat_binfmt_elf.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/fs/compat_binfmt_elf.c b/fs/compat_binfmt_elf.c
+index 4d24d17bcfc1..943be5ecfcd9 100644
+--- a/fs/compat_binfmt_elf.c
++++ b/fs/compat_binfmt_elf.c
+@@ -51,6 +51,7 @@
+ #define elf_prstatus	compat_elf_prstatus
+ #define elf_prpsinfo	compat_elf_prpsinfo
+ 
++#ifdef CONFIG_ELF_CORE
+ /*
+  * Compat version of cputime_to_compat_timeval, perhaps this
+  * should be an inline in <linux/compat.h>.
+@@ -63,6 +64,7 @@ static void cputime_to_compat_timeval(const cputime_t cputime,
+ 	value->tv_sec = tv.tv_sec;
+ 	value->tv_usec = tv.tv_usec;
+ }
++#endif
+ 
+ #undef cputime_to_timeval
+ #define cputime_to_timeval cputime_to_compat_timeval
+-- 
+2.16.2
+

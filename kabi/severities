@@ -48,3 +48,5 @@ drivers/net/wireless/iwlwifi/*	PASS
 
 # As per bsc#1068569
 fs/xfs/*			PASS
+
+__x86_indirect_thunk_rsp	PASS

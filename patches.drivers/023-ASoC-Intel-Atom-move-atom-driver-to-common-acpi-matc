@@ -28,9 +28,9 @@ Signed-off-by: Takashi Iwai <tiwai@suse.de>
  	tristate
  	select SND_SST_IPC
 +	select SND_SOC_INTEL_SST
- 	depends on ACPI
  
  config SND_SOC_INTEL_SST
+ 	tristate
 --- a/sound/soc/intel/atom/sst/sst_acpi.c
 +++ b/sound/soc/intel/atom/sst/sst_acpi.c
 @@ -40,18 +40,9 @@

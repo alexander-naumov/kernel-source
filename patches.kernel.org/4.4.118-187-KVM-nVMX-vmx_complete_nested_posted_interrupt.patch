@@ -1,0 +1,73 @@
+From: David Hildenbrand <david@redhat.com>
+Date: Fri, 23 Feb 2018 11:42:15 +0100
+Subject: [PATCH] KVM: nVMX: vmx_complete_nested_posted_interrupt() can't fail
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 6342c50ad12e8ce0736e722184a7dbdea4a3477f
+
+(cherry picked from commit 6342c50ad12e8ce0736e722184a7dbdea4a3477f)
+
+vmx_complete_nested_posted_interrupt() can't fail, let's turn it into
+a void function.
+
+Signed-off-by: David Hildenbrand <david@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
+[jwang: port to 4.4]
+Signed-off-by: Jack Wang <jinpu.wang@profitbricks.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/kvm/vmx.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
+index 08e26ab07ed7..6c753b966c28 100644
+--- a/arch/x86/kvm/vmx.c
++++ b/arch/x86/kvm/vmx.c
+@@ -4512,7 +4512,7 @@ static int vmx_cpu_uses_apicv(struct kvm_vcpu *vcpu)
+ 	return enable_apicv && lapic_in_kernel(vcpu);
+ }
+ 
+-static int vmx_complete_nested_posted_interrupt(struct kvm_vcpu *vcpu)
++static void vmx_complete_nested_posted_interrupt(struct kvm_vcpu *vcpu)
+ {
+ 	struct vcpu_vmx *vmx = to_vmx(vcpu);
+ 	int max_irr;
+@@ -4523,13 +4523,13 @@ static int vmx_complete_nested_posted_interrupt(struct kvm_vcpu *vcpu)
+ 	    vmx->nested.pi_pending) {
+ 		vmx->nested.pi_pending = false;
+ 		if (!pi_test_and_clear_on(vmx->nested.pi_desc))
+-			return 0;
++			return;
+ 
+ 		max_irr = find_last_bit(
+ 			(unsigned long *)vmx->nested.pi_desc->pir, 256);
+ 
+ 		if (max_irr == 256)
+-			return 0;
++			return;
+ 
+ 		vapic_page = kmap(vmx->nested.virtual_apic_page);
+ 		__kvm_apic_update_irr(vmx->nested.pi_desc->pir, vapic_page);
+@@ -4542,7 +4542,6 @@ static int vmx_complete_nested_posted_interrupt(struct kvm_vcpu *vcpu)
+ 			vmcs_write16(GUEST_INTR_STATUS, status);
+ 		}
+ 	}
+-	return 0;
+ }
+ 
+ static inline bool kvm_vcpu_trigger_posted_interrupt(struct kvm_vcpu *vcpu)
+@@ -10155,7 +10154,8 @@ static int vmx_check_nested_events(struct kvm_vcpu *vcpu, bool external_intr)
+ 		return 0;
+ 	}
+ 
+-	return vmx_complete_nested_posted_interrupt(vcpu);
++	vmx_complete_nested_posted_interrupt(vcpu);
++	return 0;
+ }
+ 
+ static u32 vmx_get_preemption_timer_value(struct kvm_vcpu *vcpu)
+-- 
+2.16.2
+

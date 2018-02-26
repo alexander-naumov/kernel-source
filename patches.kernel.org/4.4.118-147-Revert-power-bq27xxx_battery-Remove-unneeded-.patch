@@ -1,0 +1,44 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 20 Feb 2018 12:54:49 +0100
+Subject: [PATCH] Revert "power: bq27xxx_battery: Remove unneeded dependency in
+ Kconfig"
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 7131acefb98a5f96745847221ce9825fa21dbde7
+
+This reverts commit 6bd03ce3c12a22d86f59070f1da15aaa2bde8a51, it was applied
+in error and cuased this link failure
+
+drivers/built-in.o: In function `bq27xxx_battery_i2c_read':
+core.c:(.text+0xa6da8): undefined reference to `i2c_transfer'
+drivers/built-in.o: In function `bq27xxx_battery_init':
+core.c:(.init.text+0x68e0): undefined reference to `i2c_register_driver'
+drivers/built-in.o: In function `bq27xxx_battery_exit':
+core.c:(.exit.text+0xc6c): undefined reference to `i2c_del_driver'
+
+Later upstream kernels fixed this with a larger rework in commit
+703df6c09795 ("power: bq27xxx_battery: Reorganize I2C into a module"),
+but we cannot backport that to 4.4.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/power/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/power/Kconfig b/drivers/power/Kconfig
+index 237d7aa73e8c..9f53fb74ae6f 100644
+--- a/drivers/power/Kconfig
++++ b/drivers/power/Kconfig
+@@ -159,6 +159,7 @@ config BATTERY_SBS
+ 
+ config BATTERY_BQ27XXX
+ 	tristate "BQ27xxx battery driver"
++	depends on I2C || I2C=n
+ 	help
+ 	  Say Y here to enable support for batteries with BQ27xxx (I2C/HDQ) chips.
+ 
+-- 
+2.16.2
+

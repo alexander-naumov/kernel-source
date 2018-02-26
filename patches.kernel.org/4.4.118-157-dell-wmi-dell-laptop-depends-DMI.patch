@@ -1,0 +1,51 @@
+From: Andy Lutomirski <luto@kernel.org>
+Date: Tue, 20 Feb 2018 12:55:00 +0100
+Subject: [PATCH] dell-wmi, dell-laptop: depends DMI
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: a570af4850043260b87fb1b8aa27a4484e648878
+
+commit a570af4850043260b87fb1b8aa27a4484e648878 upstream.
+
+dell-wmi and dell-laptop will compile but won't work right if DMI
+isn't selected.
+
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Acked-by: Pali Rohár <pali.rohar@gmail.com>
+[arnd: Use depends instead of selects to avoid recursive dependencies]
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Darren Hart <dvhart@linux.intel.com>
+[arnd: rebase to 4.4-stable]
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/platform/x86/Kconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
+index 1089eaa02b00..988ebe9a6b90 100644
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -95,6 +95,7 @@ config DELL_LAPTOP
+ 	tristate "Dell Laptop Extras"
+ 	depends on X86
+ 	depends on DCDBAS
++	depends on DMI
+ 	depends on BACKLIGHT_CLASS_DEVICE
+ 	depends on ACPI_VIDEO || ACPI_VIDEO = n
+ 	depends on RFKILL || RFKILL = n
+@@ -110,6 +111,7 @@ config DELL_LAPTOP
+ config DELL_WMI
+ 	tristate "Dell WMI extras"
+ 	depends on ACPI_WMI
++	depends on DMI
+ 	depends on INPUT
+ 	depends on ACPI_VIDEO || ACPI_VIDEO = n
+ 	select INPUT_SPARSEKMAP
+-- 
+2.16.2
+

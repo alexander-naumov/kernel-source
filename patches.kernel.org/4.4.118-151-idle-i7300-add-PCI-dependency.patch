@@ -1,0 +1,42 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 20 Feb 2018 12:54:53 +0100
+Subject: [PATCH] idle: i7300: add PCI dependency
+References: bnc#1012382
+Patch-mainline: 4.4.118
+Git-commit: 3596e409a454a880a564045bf7443994f53a39cd
+
+GCC correctly points out an uninitialized variable use when CONFIG_PCI is disabled.
+
+drivers/idle/i7300_idle.c: In function 'i7300_idle_notifier':
+include/asm-generic/bug.h:119:5: error: 'got_ctl' may be used uninitialized in this function [-Werror=maybe-uninitialized]
+  if (unlikely(__ret_warn_once && !__warned)) {  \
+     ^
+drivers/idle/i7300_idle.c:415:5: note: 'got_ctl' was declared here
+  u8 got_ctl;
+     ^~~~~~~
+
+The driver no longer exists in later kernels, so this patch only appplies to
+linux-4.9.y and earlier.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/idle/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/idle/Kconfig b/drivers/idle/Kconfig
+index 4732dfc15447..331adc509f3a 100644
+--- a/drivers/idle/Kconfig
++++ b/drivers/idle/Kconfig
+@@ -17,6 +17,7 @@ config I7300_IDLE_IOAT_CHANNEL
+ 
+ config I7300_IDLE
+ 	tristate "Intel chipset idle memory power saving driver"
++	depends on PCI
+ 	select I7300_IDLE_IOAT_CHANNEL
+ 	help
+ 	  Enable memory power savings when idle with certain Intel server
+-- 
+2.16.2
+
