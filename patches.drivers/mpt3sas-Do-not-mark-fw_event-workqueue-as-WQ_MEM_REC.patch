@@ -1,0 +1,34 @@
+From: Hannes Reinecke <hare@suse.de>
+Date: Thu, 1 Feb 2018 10:45:46 +0100
+Subject: [PATCH] mpt3sas: Do not mark fw_event workqueue as WQ_MEM_RECLAIM
+Patch-Mainline: submitted linux-scsi 2018/02/26
+References: bsc#1078583
+
+The firmware event workqueue should not be marked as WQ_MEM_RECLAIM
+as it's doesn't need to make forward progress under memory pressure.
+In the current state it will result in a deadlock if the device had been
+forcefully removed.
+
+Cc: Sreekanth Reddy <sreekanth.reddy@broadcom.com>
+Cc: Suganath Prabu Subramani <suganath-prabu.subramani@broadcom.com>
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+---
+ drivers/scsi/mpt3sas/mpt3sas_scsih.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/mpt3sas/mpt3sas_scsih.c b/drivers/scsi/mpt3sas/mpt3sas_scsih.c
+index 74fca184dba9..b1d3218a7ad7 100644
+--- a/drivers/scsi/mpt3sas/mpt3sas_scsih.c
++++ b/drivers/scsi/mpt3sas/mpt3sas_scsih.c
+@@ -10547,7 +10547,7 @@ _scsih_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 	snprintf(ioc->firmware_event_name, sizeof(ioc->firmware_event_name),
+ 	    "fw_event_%s%d", ioc->driver_name, ioc->id);
+ 	ioc->firmware_event_thread = alloc_ordered_workqueue(
+-	    ioc->firmware_event_name, WQ_MEM_RECLAIM);
++	    ioc->firmware_event_name, 0);
+ 	if (!ioc->firmware_event_thread) {
+ 		pr_err(MPT3SAS_FMT "failure at %s:%d/%s()!\n",
+ 		    ioc->name, __FILE__, __LINE__, __func__);
+-- 
+2.12.3
+
