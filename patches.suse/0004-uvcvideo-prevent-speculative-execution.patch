@@ -1,0 +1,26 @@
+From: Elena Reshetova <elena.reshetova@intel.com>
+Date: Mon, 4 Sep 2017 13:11:46 +0300
+Subject: uvcvideo: prevent speculative execution
+References: bsc#1068032 CVE-2017-5753
+Patch-mainline: submitted on 2018/1/9
+References: bnc#1068032
+
+real commit text tbd
+
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: Tim Chen <tim.c.chen@linux.intel.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/media/usb/uvc/uvc_v4l2.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/drivers/media/usb/uvc/uvc_v4l2.c
++++ b/drivers/media/usb/uvc/uvc_v4l2.c
+@@ -811,6 +811,7 @@ static int uvc_ioctl_enum_input(struct f
+ 		}
+ 		pin = iterm->id;
+ 	} else if (index < selector->bNrInPins) {
++		gmb();
+ 		pin = selector->baSourceID[index];
+ 		list_for_each_entry(iterm, &chain->entities, chain) {
+ 			if (!UVC_ENTITY_IS_ITERM(iterm))
