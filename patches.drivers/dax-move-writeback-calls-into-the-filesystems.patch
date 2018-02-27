@@ -39,10 +39,10 @@ Acked-by: Jeff Mahoney <jeffm@suse.com>
  7 files changed, 43 insertions(+), 16 deletions(-)
 
 diff --git a/fs/block_dev.c b/fs/block_dev.c
-index 31c6d10..826b164 100644
+index 5501fc552fb8..1b6613219811 100644
 --- a/fs/block_dev.c
 +++ b/fs/block_dev.c
-@@ -1697,13 +1697,24 @@ static int blkdev_releasepage(struct page *page, gfp_t wait)
+@@ -1703,13 +1703,24 @@ static int blkdev_releasepage(struct page *page, gfp_t wait)
  	return try_to_free_buffers(page);
  }
  
@@ -69,10 +69,10 @@ index 31c6d10..826b164 100644
  	.direct_IO	= blkdev_direct_IO,
  	.is_dirty_writeback = buffer_check_dirty_writeback,
 diff --git a/fs/dax.c b/fs/dax.c
-index 9a173dd..7111724 100644
+index 7a423ce93cbd..ab970781f836 100644
 --- a/fs/dax.c
 +++ b/fs/dax.c
-@@ -484,11 +484,10 @@ static int dax_writeback_one(struct block_device *bdev,
+@@ -489,11 +489,10 @@ static int dax_writeback_one(struct block_device *bdev,
   * end]. This is required by data integrity operations to ensure file data is
   * on persistent storage prior to completion of the operation.
   */
@@ -86,7 +86,7 @@ index 9a173dd..7111724 100644
  	pgoff_t start_index, end_index, pmd_index;
  	pgoff_t indices[PAGEVEC_SIZE];
  	struct pagevec pvec;
-@@ -499,8 +498,11 @@ int dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
+@@ -504,8 +503,11 @@ int dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
  	if (WARN_ON_ONCE(inode->i_blkbits != PAGE_SHIFT))
  		return -EIO;
  
@@ -101,7 +101,7 @@ index 9a173dd..7111724 100644
  
  	rcu_read_lock();
 diff --git a/fs/ext2/inode.c b/fs/ext2/inode.c
-index 4467cbd..6bd58e6 100644
+index 376fa0ebaf45..7b15ce499c69 100644
 --- a/fs/ext2/inode.c
 +++ b/fs/ext2/inode.c
 @@ -876,6 +876,14 @@ ext2_direct_IO(struct kiocb *iocb, struct iov_iter *iter, loff_t offset)
@@ -120,10 +120,10 @@ index 4467cbd..6bd58e6 100644
  }
  
 diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 5708e68..aee960b 100644
+index f4dd290242ca..fa3102d17e0e 100644
 --- a/fs/ext4/inode.c
 +++ b/fs/ext4/inode.c
-@@ -2478,6 +2478,10 @@ static int ext4_writepages(struct address_space *mapping,
+@@ -2645,6 +2645,10 @@ static int ext4_writepages(struct address_space *mapping,
  
  	trace_ext4_writepages(inode, wbc);
  
@@ -135,22 +135,22 @@ index 5708e68..aee960b 100644
  	 * No pages to write? This is mainly a kludge to avoid starting
  	 * a transaction for special inodes like journal inode on last iput()
 diff --git a/fs/xfs/xfs_aops.c b/fs/xfs/xfs_aops.c
-index fc20518..a9ebabfe 100644
+index 922157b492ff..34fc8e7aefc6 100644
 --- a/fs/xfs/xfs_aops.c
 +++ b/fs/xfs/xfs_aops.c
-@@ -1208,6 +1208,10 @@ xfs_vm_writepages(
- 	struct writeback_control *wbc)
- {
+@@ -1005,6 +1005,10 @@ xfs_vm_writepages(
+ 	int			ret;
+ 
  	xfs_iflags_clear(XFS_I(mapping->host), XFS_ITRUNCATED);
 +	if (dax_mapping(mapping))
 +		return dax_writeback_mapping_range(mapping,
 +				xfs_find_bdev_for_inode(mapping->host), wbc);
 +
- 	return generic_writepages(mapping, wbc);
- }
- 
+ 	ret = write_cache_pages(mapping, wbc, xfs_do_writepage, &wpc);
+ 	if (wpc.ioend)
+ 		ret = xfs_submit_ioend(wbc, wpc.ioend, ret);
 diff --git a/include/linux/dax.h b/include/linux/dax.h
-index 7b6bced..636dd59 100644
+index 7b6bcedb980f..636dd59ab505 100644
 --- a/include/linux/dax.h
 +++ b/include/linux/dax.h
 @@ -52,6 +52,8 @@ static inline bool dax_mapping(struct address_space *mapping)
@@ -165,10 +165,10 @@ index 7b6bced..636dd59 100644
 +		struct block_device *bdev, struct writeback_control *wbc);
  #endif
 diff --git a/mm/filemap.c b/mm/filemap.c
-index 23edcce..3461d97 100644
+index 063751db0498..d8464e5d31ca 100644
 --- a/mm/filemap.c
 +++ b/mm/filemap.c
-@@ -446,7 +446,8 @@ int filemap_write_and_wait(struct address_space *mapping)
+@@ -500,7 +500,8 @@ int filemap_write_and_wait(struct address_space *mapping)
  {
  	int err = 0;
  
@@ -178,7 +178,7 @@ index 23edcce..3461d97 100644
  		err = filemap_fdatawrite(mapping);
  		/*
  		 * Even if the above returned error, the pages may be
-@@ -482,13 +483,8 @@ int filemap_write_and_wait_range(struct address_space *mapping,
+@@ -536,13 +537,8 @@ int filemap_write_and_wait_range(struct address_space *mapping,
  {
  	int err = 0;
  
@@ -194,5 +194,3 @@ index 23edcce..3461d97 100644
  		err = __filemap_fdatawrite_range(mapping, lstart, lend,
  						 WB_SYNC_ALL);
  		/* See comment of filemap_write_and_wait() */
-
-
