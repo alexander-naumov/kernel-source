@@ -1,0 +1,38 @@
+From: Elena Reshetova <elena.reshetova@intel.com>
+Date: Mon, 4 Sep 2017 13:11:43 +0300
+Subject: locking/barriers: introduce new memory barrier gmb()
+References: bsc#1068032 CVE-2017-5753
+Patch-mainline: submitted on 2018/1/9
+References: bnc#1068032
+
+In constrast to existing mb() and rmb() barriers,
+gmb() barrier is arch-independent and can be used to
+implement any type of memory barrier.
+In x86 case, it is either lfence or mfence, based on
+processor type. ARM and others can define it according
+to their needs.
+
+[js] x86 support removed, this is left here only for other arrches to be
+     sorted out later.
+
+Suggested-by: Arjan van de Ven <arjan@linux.intel.com>
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: Tim Chen <tim.c.chen@linux.intel.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/asm-generic/barrier.h |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+--- a/include/asm-generic/barrier.h
++++ b/include/asm-generic/barrier.h
+@@ -42,6 +42,10 @@
+ #define wmb()	mb()
+ #endif
+ 
++#ifndef gmb
++#define gmb()	do { } while (0)
++#endif
++
+ #ifndef dma_rmb
+ #define dma_rmb()	rmb()
+ #endif
