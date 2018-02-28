@@ -1,0 +1,30 @@
+From: Borislav Petkov <bp@suse.de>
+Date: Wed, 28 Feb 2018 18:13:43 +0100
+Subject: x86/mce: Pin the timer when modifying
+Patch-mainline: no, never, some funky hypervisor fix
+References: bsc#1080851,1076282
+
+On some funky guests mce_timer_fn() fires because the timers get migrated to the
+wrong CPU. This doesn't happen on baremetal thus I'm doing the simple fix of
+pinning that timer.
+
+Signed-off-by: Borislav Petkov <bp@suse.de>
+Link: https://bugzilla.suse.com/show_bug.cgi?id=1076282
+---
+ arch/x86/kernel/cpu/mcheck/mce.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
+index 9e336df32b3c..a405c6c99327 100644
+--- a/arch/x86/kernel/cpu/mcheck/mce.c
++++ b/arch/x86/kernel/cpu/mcheck/mce.c
+@@ -1345,7 +1345,7 @@ static void __start_timer(struct timer_list *t, unsigned long interval)
+ 	local_irq_save(flags);
+ 
+ 	if (!timer_pending(t) || time_before(when, t->expires))
+-		mod_timer(t, round_jiffies(when));
++		mod_timer_pinned(t, round_jiffies(when));
+ 
+ 	local_irq_restore(flags);
+ }
+
