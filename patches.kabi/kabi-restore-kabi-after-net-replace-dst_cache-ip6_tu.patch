@@ -1,0 +1,132 @@
+From: Michal Kubecek <mkubecek@suse.cz>
+Date: Wed, 28 Feb 2018 10:15:46 +0100
+Subject: kabi: restore kabi after "net: replace dst_cache ip6_tunnel implementation with the generic one"
+Patch-mainline: Never, kabi workaround
+References: bsc#1082897
+
+Stable 4.4 backport of mainline commit 607f725f6f7d ("net: replace
+dst_cache ip6_tunnel implementation with the generic one") breaks kabi:
+
+1. struct ip6_tnl_dst is removed. Just put the definition back.
+
+2. Type of dst_cache member in ip6_tnl changed from a (percpu) pointer to
+struct dst_cache. As struct dst_cache is bigger, we need to replace the
+original pointer by a placeholder and move the real dst_cache field to the
+end of the structure. We can do this as struct ip6_tnl is inteded to be
+used as a net device private structure, i.e. only allocated via
+netdev_alloc(), and the original percpu pointer should be always accessed
+via ip6_tnl_dst_* helpers (which are not inline).
+
+3. The ip6_tnl_dst_{get,set,init,destroy,reset} helpers are removed. These
+can be replaced by simple wrappers for the respective dst_cache_ calls. The
+only non-trivial case is ip6_tnl_dst_set() as dst_cache_set_ip6() requires
+an extra argument (source address). However, no module using the old
+interface would access the saved source address (or even know about its
+existence) so that we can simply pass in6addr_any.
+
+Signed-off-by: Michal Kubecek <mkubecek@suse.cz>
+---
+ include/net/ip6_tunnel.h | 20 +++++++++++++++++++-
+ net/ipv6/ip6_tunnel.c    | 34 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 53 insertions(+), 1 deletion(-)
+
+diff --git a/include/net/ip6_tunnel.h b/include/net/ip6_tunnel.h
+index d143c8480681..479f68accf91 100644
+--- a/include/net/ip6_tunnel.h
++++ b/include/net/ip6_tunnel.h
+@@ -34,6 +34,12 @@ struct __ip6_tnl_parm {
+ 	__be32			o_key;
+ };
+ 
++struct ip6_tnl_dst {
++	seqlock_t lock;
++	struct dst_entry __rcu *dst;
++	u32 cookie;
++};
++
+ /* IPv6 tunnel */
+ struct ip6_tnl {
+ 	struct ip6_tnl __rcu *next;	/* next tunnel in list */
+@@ -41,7 +47,11 @@ struct ip6_tnl {
+ 	struct net *net;	/* netns for packet i/o */
+ 	struct __ip6_tnl_parm parms;	/* tunnel configuration parameters */
+ 	struct flowi fl;	/* flowi template for xmit */
+-	struct dst_cache dst_cache;	/* cached dst */
++#ifdef __GENKSYMS__
++	struct ip6_tnl_dst __percpu *dst_cache;	/* cached dst */
++#else
++	void *__unused;			/* kABI padding to preserve layout */
++#endif
+ 
+ 	int err_count;
+ 	unsigned long err_time;
+@@ -51,6 +61,9 @@ struct ip6_tnl {
+ 	__u32 o_seqno;	/* The last output seqno */
+ 	int hlen;       /* Precalculated GRE header length */
+ 	int mlink;
++#ifndef __GENKSYMS__
++	struct dst_cache dst_cache;	/* cached dst */
++#endif
+ };
+ 
+ /* Tunnel encapsulation limit destination sub-option */
+@@ -61,6 +74,11 @@ struct ipv6_tlv_tnl_enc_lim {
+ 	__u8 encap_limit;	/* tunnel encapsulation limit   */
+ } __packed;
+ 
++struct dst_entry *ip6_tnl_dst_get(struct ip6_tnl *t);
++int ip6_tnl_dst_init(struct ip6_tnl *t);
++void ip6_tnl_dst_destroy(struct ip6_tnl *t);
++void ip6_tnl_dst_reset(struct ip6_tnl *t);
++void ip6_tnl_dst_set(struct ip6_tnl *t, struct dst_entry *dst);
+ int ip6_tnl_rcv_ctl(struct ip6_tnl *t, const struct in6_addr *laddr,
+ 		const struct in6_addr *raddr);
+ int ip6_tnl_xmit_ctl(struct ip6_tnl *t, const struct in6_addr *laddr,
+diff --git a/net/ipv6/ip6_tunnel.c b/net/ipv6/ip6_tunnel.c
+index 946c2d015b94..e0630d481e9a 100644
+--- a/net/ipv6/ip6_tunnel.c
++++ b/net/ipv6/ip6_tunnel.c
+@@ -122,6 +122,40 @@ static struct net_device_stats *ip6_get_stats(struct net_device *dev)
+ 	return &dev->stats;
+ }
+ 
++/*
++ * Simple wrappers to preserve kABI
++ */
++
++struct dst_entry *ip6_tnl_dst_get(struct ip6_tnl *t)
++{
++	return dst_cache_get(&t->dst_cache);
++}
++EXPORT_SYMBOL_GPL(ip6_tnl_dst_get);
++
++void ip6_tnl_dst_reset(struct ip6_tnl *t)
++{
++	dst_cache_reset(&t->dst_cache);
++}
++EXPORT_SYMBOL_GPL(ip6_tnl_dst_reset);
++
++void ip6_tnl_dst_set(struct ip6_tnl *t, struct dst_entry *dst)
++{
++	dst_cache_set_ip6(&t->dst_cache, dst, &in6addr_any);
++}
++EXPORT_SYMBOL_GPL(ip6_tnl_dst_set);
++
++void ip6_tnl_dst_destroy(struct ip6_tnl *t)
++{
++	dst_cache_destroy(&t->dst_cache);
++}
++EXPORT_SYMBOL_GPL(ip6_tnl_dst_destroy);
++
++int ip6_tnl_dst_init(struct ip6_tnl *t)
++{
++	return dst_cache_init(&t->dst_cache, GFP_KERNEL);
++}
++EXPORT_SYMBOL_GPL(ip6_tnl_dst_init);
++
+ /**
+  * ip6_tnl_lookup - fetch tunnel matching the end-point addresses
+  *   @remote: the address of the tunnel exit-point
+-- 
+2.16.2
+
