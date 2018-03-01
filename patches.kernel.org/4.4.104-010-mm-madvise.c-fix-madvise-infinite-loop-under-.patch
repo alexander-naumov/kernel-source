@@ -3,7 +3,7 @@ Date: Wed, 29 Nov 2017 16:10:54 -0800
 Subject: [PATCH] mm/madvise.c: fix madvise() infinite loop under special
  circumstances
 Patch-mainline: 4.4.104
-References: bnc#1012382 bnc#1070964
+References: bnc#1012382 bnc#1070964 bnc#1083494, CVE-2017-18208
 Git-commit: 6ea8d958a2c95a1d514015d4e29ba21a8c0a1a91
 
 commit 6ea8d958a2c95a1d514015d4e29ba21a8c0a1a91 upstream.
