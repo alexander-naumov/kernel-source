@@ -1,0 +1,45 @@
+From: Alex Deucher <alexander.deucher@amd.com>
+Date: Mon, 22 Jan 2018 23:13:32 -0500
+Subject: [PATCH] drm/amdgpu: Avoid leaking PM domain on driver unbind (v2)
+References: bnc#1012382
+Patch-mainline: 4.4.119
+Git-commit: 458d876eb869d5a88b53074c6c271b8b9adc0f07
+
+commit 458d876eb869d5a88b53074c6c271b8b9adc0f07 upstream.
+
+We only support vga_switcheroo and runtime pm on PX/HG systems
+so forcing runpm to 1 doesn't do anything useful anyway.
+
+Only call vga_switcheroo_init_domain_pm_ops() for PX/HG so
+that the cleanup path is correct as well.  This mirrors what
+radeon does as well.
+
+v2: rework the patch originally sent by Lukas (Alex)
+
+Acked-by: Lukas Wunner <lukas@wunner.de>
+Reported-by: Lukas Wunner <lukas@wunner.de>
+Signed-off-by: Alex Deucher <alexander.deucher@amd.com>
+Signed-off-by: Lukas Wunner <lukas@wunner.de> (v1)
+Cc: stable@vger.kernel.org
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/gpu/drm/amd/amdgpu/amdgpu_device.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
+index fc9f14747f70..a36230d1331c 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
+@@ -1467,8 +1467,6 @@ int amdgpu_device_init(struct amdgpu_device *adev,
+ 	 * ignore it */
+ 	vga_client_register(adev->pdev, adev, NULL, amdgpu_vga_set_decode);
+ 
+-	if (amdgpu_runtime_pm == 1)
+-		runtime = true;
+ 	if (amdgpu_device_is_px(ddev))
+ 		runtime = true;
+ 	vga_switcheroo_register_client(adev->pdev, &amdgpu_switcheroo_ops, runtime);
+-- 
+2.16.2
+
