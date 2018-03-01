@@ -1,0 +1,85 @@
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: kABI: protect struct ip_tunnel and reintroduce ip_tunnel_dst_reset_all
+Patch-mainline: never, kabi
+References: kabi
+
+In 4.4.119, commit e6454536ad45f9e6a16da63f423bafc7a2bbdba1 (ip_tunnel:
+replace dst_cache with generic implementation), upstream commit
+e09acddf873bf775b208b452a4c3a3fd26fa9427 switched ip_tunnel to generic
+dst_cache implementation. This removed an exported function
+(ip_tunnel_dst_reset_all) and changed also the layout of struct
+ip_tunnel.  It made the kABI checker to complain.
+
+Reintroduce ip_tunnel_dst_reset_all as a simple wrapper to
+dst_cache_reset.
+
+And reorder the members of struct ip_tunnel, so that everything is fine
+(thanks to allocation via netdev_alloc). Finally, hide the changes from
+the kABI checker.
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ include/net/ip_tunnels.h |   15 ++++++++++++++-
+ net/ipv4/ip_tunnel.c     |    6 ++++++
+ 2 files changed, 20 insertions(+), 1 deletion(-)
+
+--- a/include/net/ip_tunnels.h
++++ b/include/net/ip_tunnels.h
+@@ -86,6 +86,11 @@ struct ip_tunnel_prl_entry {
+ 	struct rcu_head			rcu_head;
+ };
+ 
++struct ip_tunnel_dst {
++	struct dst_entry __rcu		*dst;
++	__be32				saddr;
++};
++
+ struct metadata_dst;
+ 
+ struct ip_tunnel {
+@@ -104,7 +109,11 @@ struct ip_tunnel {
+ 	int		tun_hlen;	/* Precalculated header length */
+ 	int		mlink;
+ 
+-	struct dst_cache dst_cache;
++#ifdef __GENKSYMS__
++	struct ip_tunnel_dst __percpu *dst_cache;
++#else
++	void *__unused;			/* kABI padding to preserve layout */
++#endif
+ 
+ 	struct ip_tunnel_parm parms;
+ 
+@@ -122,6 +131,9 @@ struct ip_tunnel {
+ 	int			ip_tnl_net_id;
+ 	struct gro_cells	gro_cells;
+ 	bool			collect_md;
++#ifndef __GENKSYMS__
++	struct dst_cache dst_cache;
++#endif
+ };
+ 
+ #define TUNNEL_CSUM		__cpu_to_be16(0x01)
+@@ -244,6 +256,7 @@ int ip_tunnel_changelink(struct net_devi
+ int ip_tunnel_newlink(struct net_device *dev, struct nlattr *tb[],
+ 		      struct ip_tunnel_parm *p);
+ void ip_tunnel_setup(struct net_device *dev, int net_id);
++void ip_tunnel_dst_reset_all(struct ip_tunnel *t);
+ int ip_tunnel_encap_setup(struct ip_tunnel *t,
+ 			  struct ip_tunnel_encap *ipencap);
+ 
+--- a/net/ipv4/ip_tunnel.c
++++ b/net/ipv4/ip_tunnel.c
+@@ -69,6 +69,12 @@ static unsigned int ip_tunnel_hash(__be3
+ 			 IP_TNL_HASH_BITS);
+ }
+ 
++void ip_tunnel_dst_reset_all(struct ip_tunnel *t)
++{
++	dst_cache_reset(&t->dst_cache);
++}
++EXPORT_SYMBOL(ip_tunnel_dst_reset_all);
++
+ static bool ip_tunnel_key_match(const struct ip_tunnel_parm *p,
+ 				__be16 flags, __be32 key)
+ {
