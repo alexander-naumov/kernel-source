@@ -1,0 +1,42 @@
+From: Eric Biggers <ebiggers@google.com>
+Date: Mon, 26 Feb 2018 10:56:45 -0800
+Subject: [PATCH] binder: add missing binder_unlock()
+References: bnc#1012382
+Patch-mainline: 4.4.119
+Git-commit: bf5a6a7256834ad88104d3a99cc935c9ac49b527
+
+When commit 4be5a2810489 ("binder: check for binder_thread allocation
+failure in binder_poll()") was applied to 4.4-stable and 4.9-stable it
+was forgotten to release the global binder lock in the new error path.
+The global binder lock wasn't removed until v4.14, by commit
+a60b890f607d ("binder: remove global binder lock").
+
+Fix the new error path to release the lock.
+
+Reported-by: Guenter Roeck <linux@roeck-us.net>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/android/binder.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/android/binder.c b/drivers/android/binder.c
+index 55613f6f7c0e..260ce0e60187 100644
+--- a/drivers/android/binder.c
++++ b/drivers/android/binder.c
+@@ -2622,8 +2622,10 @@ static unsigned int binder_poll(struct file *filp,
+ 	binder_lock(__func__);
+ 
+ 	thread = binder_get_thread(proc);
+-	if (!thread)
++	if (!thread) {
++		binder_unlock(__func__);
+ 		return POLLERR;
++	}
+ 
+ 	wait_for_proc_work = thread->transaction_stack == NULL &&
+ 		list_empty(&thread->todo) && thread->return_error == BR_OK;
+-- 
+2.16.2
+
