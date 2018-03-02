@@ -1,7 +1,7 @@
 From: Daniel Mentz <danielmentz@google.com>
 Date: Wed, 14 Feb 2018 12:52:40 +0100
 Subject: [PATCH] media: v4l2-compat-ioctl32.c: refactor compat ioctl32 logic
-References: bnc#1012382
+References: bnc#1012382 CVE-2017-13166 bsc#1072865
 Patch-mainline: 4.4.116
 Git-commit: a1dfb4c48cc1e64eeb7800a27c66a6f7e88d075a
 
