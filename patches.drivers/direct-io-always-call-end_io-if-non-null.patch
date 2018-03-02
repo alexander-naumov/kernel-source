@@ -15,19 +15,17 @@ Reviewed-by: Dave Chinner <dchinner@redhat.com>
 Signed-off-by: Dave Chinner <david@fromorbit.com>
 Acked-by: Jeff Mahoney <jeffm@suse.com>
 ---
- fs/dax.c           |  9 +++++++--
- fs/direct-io.c     |  9 +++++++--
- fs/ext4/inode.c    |  9 +++++++--
- fs/ocfs2/aops.c    |  7 ++++++-
- fs/xfs/xfs_aops.c  | 13 +++++++------
- include/linux/fs.h |  2 +-
+ fs/dax.c           |    9 +++++++--
+ fs/direct-io.c     |    9 +++++++--
+ fs/ext4/inode.c    |    9 +++++++--
+ fs/ocfs2/aops.c    |    7 ++++++-
+ fs/xfs/xfs_aops.c  |   13 +++++++------
+ include/linux/fs.h |    2 +-
  6 files changed, 35 insertions(+), 14 deletions(-)
 
-diff --git a/fs/dax.c b/fs/dax.c
-index 4fd6b0c..e38b2c5 100644
 --- a/fs/dax.c
 +++ b/fs/dax.c
-@@ -267,8 +267,13 @@ ssize_t dax_do_io(struct kiocb *iocb, struct inode *inode,
+@@ -287,8 +287,13 @@ ssize_t dax_do_io(struct kiocb *iocb, st
  	if ((flags & DIO_LOCKING) && iov_iter_rw(iter) == READ)
  		mutex_unlock(&inode->i_mutex);
  
@@ -43,11 +41,9 @@ index 4fd6b0c..e38b2c5 100644
  
  	if (!(flags & DIO_SKIP_DIO_COUNT))
  		inode_dio_end(inode);
-diff --git a/fs/direct-io.c b/fs/direct-io.c
-index 1b2f7ff..9c6f885 100644
 --- a/fs/direct-io.c
 +++ b/fs/direct-io.c
-@@ -253,8 +253,13 @@ static ssize_t dio_complete(struct dio *dio, loff_t offset, ssize_t ret,
+@@ -253,8 +253,13 @@ static ssize_t dio_complete(struct dio *
  	if (ret == 0)
  		ret = transferred;
  
@@ -63,11 +59,9 @@ index 1b2f7ff..9c6f885 100644
  
  	if (!(dio->flags & DIO_SKIP_DIO_COUNT))
  		inode_dio_end(dio->inode);
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 83bc8bf..9db04dd 100644
 --- a/fs/ext4/inode.c
 +++ b/fs/ext4/inode.c
-@@ -3161,14 +3161,17 @@ out:
+@@ -3305,14 +3305,17 @@ out:
  }
  #endif
  
@@ -75,7 +69,7 @@ index 83bc8bf..9db04dd 100644
 +static int ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
  			    ssize_t size, void *private)
  {
-         ext4_io_end_t *io_end = private;
+         ext4_io_end_t *io_end = iocb->private;
  
 +	if (size <= 0)
 +		return 0;
@@ -87,7 +81,7 @@ index 83bc8bf..9db04dd 100644
  
  	ext_debug("ext4_end_io_dio(): io_end 0x%p "
  		  "for inode %lu, iocb 0x%p, offset %llu, size %zd\n",
-@@ -3179,6 +3182,8 @@ static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
+@@ -3323,6 +3326,8 @@ static void ext4_end_io_dio(struct kiocb
  	io_end->offset = offset;
  	io_end->size = size;
  	ext4_put_io_end(io_end);
@@ -96,8 +90,6 @@ index 83bc8bf..9db04dd 100644
  }
  
  /*
-diff --git a/fs/ocfs2/aops.c b/fs/ocfs2/aops.c
-index 794fd15..5dcc5f5 100644
 --- a/fs/ocfs2/aops.c
 +++ b/fs/ocfs2/aops.c
 @@ -620,7 +620,7 @@ bail:
@@ -109,7 +101,7 @@ index 794fd15..5dcc5f5 100644
  			     loff_t offset,
  			     ssize_t bytes,
  			     void *private)
-@@ -628,6 +628,9 @@ static void ocfs2_dio_end_io(struct kiocb *iocb,
+@@ -628,6 +628,9 @@ static void ocfs2_dio_end_io(struct kioc
  	struct inode *inode = file_inode(iocb->ki_filp);
  	int level;
  
@@ -119,7 +111,7 @@ index 794fd15..5dcc5f5 100644
  	/* this io's submitter should not have unlocked this before we could */
  	BUG_ON(!ocfs2_iocb_is_rw_locked(iocb));
  
-@@ -644,6 +647,8 @@ static void ocfs2_dio_end_io(struct kiocb *iocb,
+@@ -644,6 +647,8 @@ static void ocfs2_dio_end_io(struct kioc
  		level = ocfs2_iocb_rw_locked_level(iocb);
  		ocfs2_rw_unlock(inode, level);
  	}
@@ -128,11 +120,9 @@ index 794fd15..5dcc5f5 100644
  }
  
  static int ocfs2_releasepage(struct page *page, gfp_t wait)
-diff --git a/fs/xfs/xfs_aops.c b/fs/xfs/xfs_aops.c
-index 379c089..295aaff 100644
 --- a/fs/xfs/xfs_aops.c
 +++ b/fs/xfs/xfs_aops.c
-@@ -1645,7 +1645,7 @@ out_end_io:
+@@ -1469,7 +1469,7 @@ out_end_io:
   * case the completion can be called in interrupt context, whereas if we have an
   * ioend we will always be called in task context (i.e. from a workqueue).
   */
@@ -141,7 +131,7 @@ index 379c089..295aaff 100644
  xfs_end_io_direct_write(
  	struct kiocb		*iocb,
  	loff_t			offset,
-@@ -1655,15 +1655,19 @@ xfs_end_io_direct_write(
+@@ -1479,15 +1479,19 @@ xfs_end_io_direct_write(
  	struct inode		*inode = file_inode(iocb->ki_filp);
  	struct xfs_ioend	*ioend = private;
  
@@ -162,7 +152,7 @@ index 379c089..295aaff 100644
  }
  
  static inline ssize_t
-@@ -1672,10 +1676,7 @@ xfs_vm_do_dio(
+@@ -1496,10 +1500,7 @@ xfs_vm_do_dio(
  	struct kiocb		*iocb,
  	struct iov_iter		*iter,
  	loff_t			offset,
@@ -174,11 +164,9 @@ index 379c089..295aaff 100644
  	int			flags)
  {
  	struct block_device	*bdev;
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 1a20462..d7f37bf 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -70,7 +70,7 @@ extern int sysctl_protected_hardlinks;
+@@ -69,7 +69,7 @@ extern int sysctl_protected_hardlinks;
  struct buffer_head;
  typedef int (get_block_t)(struct inode *inode, sector_t iblock,
  			struct buffer_head *bh_result, int create);
@@ -187,5 +175,3 @@ index 1a20462..d7f37bf 100644
  			ssize_t bytes, void *private);
  typedef void (dax_iodone_t)(struct buffer_head *bh_map, int uptodate);
  
-
-

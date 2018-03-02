@@ -43,7 +43,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
 
 --- a/fs/ext4/ext4.h
 +++ b/fs/ext4/ext4.h
-@@ -2467,8 +2467,8 @@ struct buffer_head *ext4_getblk(handle_t
+@@ -2450,8 +2450,8 @@ struct buffer_head *ext4_getblk(handle_t
  struct buffer_head *ext4_bread(handle_t *, struct inode *, ext4_lblk_t, int);
  int ext4_get_block_unwritten(struct inode *inode, sector_t iblock,
  			     struct buffer_head *bh_result, int create);
@@ -54,9 +54,9 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  int ext4_get_block(struct inode *inode, sector_t iblock,
  		   struct buffer_head *bh_result, int create);
  int ext4_dio_get_block(struct inode *inode, sector_t iblock,
-@@ -3256,6 +3256,13 @@ extern struct mutex ext4__aio_mutex[EXT4
- extern int ext4_resize_begin(struct super_block *sb);
- extern void ext4_resize_end(struct super_block *sb);
+@@ -3260,6 +3260,13 @@ static inline void ext4_clear_io_unwritt
+ 	}
+ }
  
 +static inline bool ext4_aligned_io(struct inode *inode, loff_t off, loff_t len)
 +{
@@ -70,7 +70,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  #define EFSBADCRC	EBADMSG		/* Bad CRC detected */
 --- a/fs/ext4/file.c
 +++ b/fs/ext4/file.c
-@@ -213,7 +213,7 @@ static int ext4_dax_fault(struct vm_area
+@@ -208,7 +208,7 @@ static int ext4_dax_fault(struct vm_area
  	if (IS_ERR(handle))
  		result = VM_FAULT_SIGBUS;
  	else
@@ -79,7 +79,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  
  	if (write) {
  		if (!IS_ERR(handle))
-@@ -249,7 +249,7 @@ static int ext4_dax_pmd_fault(struct vm_
+@@ -244,7 +244,7 @@ static int ext4_dax_pmd_fault(struct vm_
  		result = VM_FAULT_SIGBUS;
  	else
  		result = __dax_pmd_fault(vma, addr, pmd, flags,
@@ -90,7 +90,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  		if (!IS_ERR(handle))
 --- a/fs/ext4/inode.c
 +++ b/fs/ext4/inode.c
-@@ -3218,13 +3218,17 @@ static int ext4_releasepage(struct page
+@@ -3279,13 +3279,17 @@ static int ext4_releasepage(struct page
  }
  
  #ifdef CONFIG_FS_DAX
@@ -112,7 +112,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  	if (!create)
  		return _ext4_get_block(inode, iblock, bh_result, 0);
  
-@@ -3236,9 +3240,9 @@ int ext4_dax_mmap_get_block(struct inode
+@@ -3297,9 +3301,9 @@ int ext4_dax_mmap_get_block(struct inode
  
  	if (buffer_unwritten(bh_result)) {
  		/*
@@ -125,7 +125,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  		 */
  		ret = ext4_get_block_trans(inode, iblock, bh_result,
  					   EXT4_GET_BLOCKS_CONVERT |
-@@ -3253,6 +3257,14 @@ int ext4_dax_mmap_get_block(struct inode
+@@ -3314,6 +3318,14 @@ int ext4_dax_mmap_get_block(struct inode
  	clear_buffer_new(bh_result);
  	return 0;
  }
@@ -140,7 +140,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  #endif
  
  static int ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
-@@ -3369,8 +3381,20 @@ static ssize_t ext4_direct_IO_write(stru
+@@ -3438,8 +3450,20 @@ static ssize_t ext4_direct_IO_write(stru
  	iocb->private = NULL;
  	if (overwrite)
  		get_block_func = ext4_dio_get_block_overwrite;
@@ -163,7 +163,7 @@ Signed-off-by: Jan Kara <jack@suse.cz>
  		get_block_func = ext4_dio_get_block;
  		dio_flags = DIO_LOCKING | DIO_SKIP_HOLES;
  	} else if (is_sync_kiocb(iocb)) {
-@@ -3384,7 +3408,6 @@ static ssize_t ext4_direct_IO_write(stru
+@@ -3453,7 +3477,6 @@ static ssize_t ext4_direct_IO_write(stru
  	BUG_ON(ext4_encrypted_inode(inode) && S_ISREG(inode->i_mode));
  #endif
  	if (IS_DAX(inode)) {
