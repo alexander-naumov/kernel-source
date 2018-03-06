@@ -1,0 +1,41 @@
+From: Dan Williams <dan.j.williams@intel.com>
+Date: Mon, 29 Jan 2018 17:02:59 -0800
+Subject: x86/syscall: Sanitize syscall table de-references under speculation
+Git-commit: 2fbd7af5af8665d18bcefae3e9700be07e22b681
+Patch-mainline: v4.16-rc1
+References: bsc#1068032 CVE-2017-5753
+
+In 4.4.118:
+patches.kernel.org/4.4.118-176-x86-syscall-Sanitize-syscall-table-de-referen.patch
+fixed only the C part of the upstream patch. So it ommitted completely
+the assembly part. Fix that in this patch.
+
+It was reported, so I am awaiting stable to fix it up eventually.
+
+Reported-by: Jan Beulich <JBeulich@suse.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/x86/entry/common.c   |    2 ++
+ arch/x86/entry/entry_64.S |    4 ++++
+ 2 files changed, 6 insertions(+)
+
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -184,6 +184,8 @@ entry_SYSCALL_64_fastpath:
+ 	cmpl	$__NR_syscall_max, %eax
+ #endif
+ 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
++	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
++	and	%rcx, %rax
+ 	movq	%r10, %rcx
+ #ifdef CONFIG_RETPOLINE
+ 	movq	sys_call_table(, %rax, 8), %rax
+@@ -282,6 +284,8 @@ tracesys_phase2:
+ 	cmpl	$__NR_syscall_max, %eax
+ #endif
+ 	ja	1f				/* return -ENOSYS (already in pt_regs->ax) */
++	sbb	%rcx, %rcx			/* array_index_mask_nospec() */
++	and	%rcx, %rax
+ 	movq	%r10, %rcx			/* fixup for C */
+ #ifdef CONFIG_RETPOLINE
+ 	movq	sys_call_table(, %rax, 8), %rax
