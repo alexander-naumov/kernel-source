@@ -1,0 +1,31 @@
+From: Hannes Reinecke <hare@suse.de>
+Date: Tue, 6 Mar 2018 13:07:57 +0100
+Subject: [PATCH] qla2xxx: asynchronous pci probing
+References: bsc#1034503
+Patch-Mainline: never, SLE12 SP3 specific
+
+On large installations the driver might fail to initialize as
+the pci driver initialisation takes too long, causing systemd
+to abort the 'modprobe' process.
+So register the pci driver for asynchronous probing.
+
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+---
+ drivers/scsi/qla2xxx/qla_os.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/scsi/qla2xxx/qla_os.c b/drivers/scsi/qla2xxx/qla_os.c
+index 39f949a23e8a..a1ebbce2e83c 100644
+--- a/drivers/scsi/qla2xxx/qla_os.c
++++ b/drivers/scsi/qla2xxx/qla_os.c
+@@ -6853,6 +6853,7 @@ static struct pci_driver qla2xxx_pci_driver = {
+ 	.name		= QLA2XXX_DRIVER_NAME,
+ 	.driver		= {
+ 		.owner		= THIS_MODULE,
++		.probe_type	= PROBE_PREFER_ASYNCHRONOUS,
+ 	},
+ 	.id_table	= qla2xxx_pci_tbl,
+ 	.probe		= qla2x00_probe_one,
+-- 
+2.12.3
+
