@@ -1,0 +1,59 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Thu, 21 Dec 2017 22:35:19 +0100
+Subject: [PATCH] ARM: dts: ls1021a: fix incorrect clock references
+References: bnc#1012382
+Patch-mainline: 4.4.120
+Git-commit: 506e8a912661c97b41adc8a286b875d01323ec45
+
+[ Upstream commit 506e8a912661c97b41adc8a286b875d01323ec45 ]
+
+dtc warns about two 'clocks' properties that have an extraneous '1'
+at the end:
+
+arch/arm/boot/dts/ls1021a-qds.dtb: Warning (clocks_property): arch/arm/boot/dts/ls1021a-twr.dtb: Warning (clocks_property): Property 'clocks', cell 1 is not a phandle reference in /soc/i2c@2180000/mux@77/i2c@4/sgtl5000@2a
+arch/arm/boot/dts/ls1021a-qds.dtb: Warning (clocks_property): Missing property '#clock-cells' in node /soc/interrupt-controller@1400000 or bad phandle (referred from /soc/i2c@2180000/mux@77/i2c@4/sgtl5000@2a:clocks[1])
+Property 'clocks', cell 1 is not a phandle reference in /soc/i2c@2190000/sgtl5000@a
+arch/arm/boot/dts/ls1021a-twr.dtb: Warning (clocks_property): Missing property '#clock-cells' in node /soc/interrupt-controller@1400000 or bad phandle (referred from /soc/i2c@2190000/sgtl5000@a:clocks[1])
+
+The clocks that get referenced here are fixed-rate, so they do not
+take any argument, and dtc interprets the next cell as a phandle, which
+is invalid.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ arch/arm/boot/dts/ls1021a-qds.dts | 2 +-
+ arch/arm/boot/dts/ls1021a-twr.dts | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/ls1021a-qds.dts b/arch/arm/boot/dts/ls1021a-qds.dts
+index 0521e6864cb7..76fce89d4f69 100644
+--- a/arch/arm/boot/dts/ls1021a-qds.dts
++++ b/arch/arm/boot/dts/ls1021a-qds.dts
+@@ -215,7 +215,7 @@
+ 				reg = <0x2a>;
+ 				VDDA-supply = <&reg_3p3v>;
+ 				VDDIO-supply = <&reg_3p3v>;
+-				clocks = <&sys_mclk 1>;
++				clocks = <&sys_mclk>;
+ 			};
+ 		};
+ 	};
+diff --git a/arch/arm/boot/dts/ls1021a-twr.dts b/arch/arm/boot/dts/ls1021a-twr.dts
+index fbb89d13401e..674df87629bd 100644
+--- a/arch/arm/boot/dts/ls1021a-twr.dts
++++ b/arch/arm/boot/dts/ls1021a-twr.dts
+@@ -167,7 +167,7 @@
+ 		reg = <0x0a>;
+ 		VDDA-supply = <&reg_3p3v>;
+ 		VDDIO-supply = <&reg_3p3v>;
+-		clocks = <&sys_mclk 1>;
++		clocks = <&sys_mclk>;
+ 	};
+ };
+ 
+-- 
+2.16.2
+

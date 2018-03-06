@@ -1,9 +1,11 @@
 From: Yunlei He <heyunlei@huawei.com>
 Date: Fri, 19 May 2017 15:06:12 +0800
-Subject: f2fs: fix a bug caused by NULL extent tree
+Subject: [PATCH] f2fs: fix a bug caused by NULL extent tree
+Patch-mainline: 4.4.120
+References: bnc#1012382 bsc#1082478
 Git-commit: dad48e73127ba10279ea33e6dbc8d3905c4d31c0
-Patch-mainline: v4.13-rc1
-References: bsc#1082478
+
+commit dad48e73127ba10279ea33e6dbc8d3905c4d31c0 upstream.
 
 Thread A:					Thread B:
 
@@ -23,7 +25,9 @@ The same problem with f2fs_new_inode.
 
 Signed-off-by: Yunlei He <heyunlei@huawei.com>
 Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Acked-by: Nikolay Borisov <nborisov@suse.com>
+Signed-off-by: Nikolay Borisov <nborisov@suse.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
  fs/f2fs/extent_cache.c | 10 +++++++++-
  1 file changed, 9 insertions(+), 1 deletion(-)
@@ -57,5 +61,5 @@ index 7ddba812e11b..6827b9c942dc 100644
  							struct extent_info *ei)
  {
 -- 
-2.7.4
+2.16.2
 

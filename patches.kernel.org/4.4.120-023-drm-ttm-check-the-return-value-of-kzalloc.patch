@@ -1,0 +1,41 @@
+From: Xiongwei Song <sxwjean@gmail.com>
+Date: Tue, 2 Jan 2018 21:24:55 +0800
+Subject: [PATCH] drm/ttm: check the return value of kzalloc
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+References: bnc#1012382
+Patch-mainline: 4.4.120
+Git-commit: 19d859a7205bc59ffc38303eb25ae394f61d21dc
+
+[ Upstream commit 19d859a7205bc59ffc38303eb25ae394f61d21dc ]
+
+In the function ttm_page_alloc_init, kzalloc call is made for variable
+_manager, we need to check its return value, it may return NULL.
+
+Signed-off-by: Xiongwei Song <sxwjean@gmail.com>
+Reviewed-by: Christian König <christian.koenig@amd.com>
+Signed-off-by: Alex Deucher <alexander.deucher@amd.com>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/gpu/drm/ttm/ttm_page_alloc.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/ttm/ttm_page_alloc.c b/drivers/gpu/drm/ttm/ttm_page_alloc.c
+index 5d8dfe027b30..75d51ec98e06 100644
+--- a/drivers/gpu/drm/ttm/ttm_page_alloc.c
++++ b/drivers/gpu/drm/ttm/ttm_page_alloc.c
+@@ -818,6 +818,8 @@ int ttm_page_alloc_init(struct ttm_mem_global *glob, unsigned max_pages)
+ 	pr_info("Initializing pool allocator\n");
+ 
+ 	_manager = kzalloc(sizeof(*_manager), GFP_KERNEL);
++	if (!_manager)
++		return -ENOMEM;
+ 
+ 	ttm_page_pool_init_locked(&_manager->wc_pool, GFP_HIGHUSER, "wc");
+ 
+-- 
+2.16.2
+

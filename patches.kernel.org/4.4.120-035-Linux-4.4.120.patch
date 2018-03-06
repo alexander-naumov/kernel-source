@@ -1,0 +1,27 @@
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Date: Sat, 3 Mar 2018 10:19:46 +0100
+Subject: [PATCH] Linux 4.4.120
+References: bnc#1012382
+Patch-mainline: 4.4.120
+Git-commit: 47356cfded444826565f2430bce8ba294372b861
+
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 87f925192c77..d874d7de0cde 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,6 +1,6 @@
+ VERSION = 4
+ PATCHLEVEL = 4
+-SUBLEVEL = 119
++SUBLEVEL = 120
+ EXTRAVERSION =
+ NAME = Blurry Fish Butt
+ 
+-- 
+2.16.2
+

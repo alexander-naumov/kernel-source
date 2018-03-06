@@ -1,0 +1,41 @@
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Tue, 9 Jan 2018 12:10:21 +0000
+Subject: [PATCH] xen/gntdev: Fix off-by-one error when unmapping with holes
+References: bnc#1012382
+Patch-mainline: 4.4.120
+Git-commit: 951a010233625b77cde3430b4b8785a9a22968d1
+
+[ Upstream commit 951a010233625b77cde3430b4b8785a9a22968d1 ]
+
+If the requested range has a hole, the calculation of the number of
+pages to unmap is off by one. Fix it.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+Reviewed-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/xen/gntdev.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/xen/gntdev.c b/drivers/xen/gntdev.c
+index a4d749665c9f..44a9d8eb0eb4 100644
+--- a/drivers/xen/gntdev.c
++++ b/drivers/xen/gntdev.c
+@@ -378,10 +378,8 @@ static int unmap_grant_pages(struct grant_map *map, int offset, int pages)
+ 		}
+ 		range = 0;
+ 		while (range < pages) {
+-			if (map->unmap_ops[offset+range].handle == -1) {
+-				range--;
++			if (map->unmap_ops[offset+range].handle == -1)
+ 				break;
+-			}
+ 			range++;
+ 		}
+ 		err = __unmap_grant_pages(map, offset, range);
+-- 
+2.16.2
+
