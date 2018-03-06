@@ -160,7 +160,7 @@ Acked-by: David Chang <dchang@suse.com>
  		min_tx_space >>= 10;
  		/* software strips receive CRC, so leave room for it */
 @@ -943,8 +943,8 @@ static int e1000_probe(struct pci_dev *p
- 	struct e1000_adapter *adapter;
+ 	struct e1000_adapter *adapter = NULL;
  	struct e1000_hw *hw;
  
 -	static int cards_found = 0;
@@ -170,7 +170,7 @@ Acked-by: David Chang <dchang@suse.com>
  	int i, err, pci_using_dac;
  	u16 eeprom_data = 0;
  	u16 tmp = 0;
-@@ -1046,7 +1046,7 @@ static int e1000_probe(struct pci_dev *p
+@@ -1047,7 +1047,7 @@ static int e1000_probe(struct pci_dev *p
  	if (hw->mac_type == e1000_ce4100) {
  		hw->ce4100_gbe_mdio_base_virt =
  					ioremap(pci_resource_start(pdev, BAR_1),
@@ -179,7 +179,7 @@ Acked-by: David Chang <dchang@suse.com>
  
  		if (!hw->ce4100_gbe_mdio_base_virt)
  			goto err_mdio_ioremap;
-@@ -1148,7 +1148,7 @@ static int e1000_probe(struct pci_dev *p
+@@ -1149,7 +1149,7 @@ static int e1000_probe(struct pci_dev *p
  		break;
  	case e1000_82546:
  	case e1000_82546_rev_3:
@@ -188,7 +188,7 @@ Acked-by: David Chang <dchang@suse.com>
  			e1000_read_eeprom(hw,
  				EEPROM_INIT_CONTROL3_PORT_B, 1, &eeprom_data);
  			break;
-@@ -1334,12 +1334,12 @@ static int e1000_sw_init(struct e1000_ad
+@@ -1340,12 +1340,12 @@ static int e1000_sw_init(struct e1000_ad
  static int e1000_alloc_queues(struct e1000_adapter *adapter)
  {
  	adapter->tx_ring = kcalloc(adapter->num_tx_queues,
@@ -203,7 +203,7 @@ Acked-by: David Chang <dchang@suse.com>
  	if (!adapter->rx_ring) {
  		kfree(adapter->tx_ring);
  		return -ENOMEM;
-@@ -1811,20 +1811,20 @@ static void e1000_setup_rctl(struct e100
+@@ -1817,20 +1817,20 @@ static void e1000_setup_rctl(struct e100
  	rctl &= ~E1000_RCTL_SZ_4096;
  	rctl |= E1000_RCTL_BSEX;
  	switch (adapter->rx_buffer_len) {
@@ -238,7 +238,7 @@ Acked-by: David Chang <dchang@suse.com>
  	}
  
  	/* This is useful for sniffing bad packets. */
-@@ -1861,12 +1861,12 @@ static void e1000_configure_rx(struct e1
+@@ -1867,12 +1867,12 @@ static void e1000_configure_rx(struct e1
  
  	if (adapter->netdev->mtu > ETH_DATA_LEN) {
  		rdlen = adapter->rx_ring[0].count *
@@ -253,7 +253,7 @@ Acked-by: David Chang <dchang@suse.com>
  		adapter->clean_rx = e1000_clean_rx_irq;
  		adapter->alloc_rx_buf = e1000_alloc_rx_buffers;
  	}
-@@ -2761,7 +2761,9 @@ static int e1000_tso(struct e1000_adapte
+@@ -2767,7 +2767,9 @@ static int e1000_tso(struct e1000_adapte
  		buffer_info->time_stamp = jiffies;
  		buffer_info->next_to_watch = i;
  
@@ -264,7 +264,7 @@ Acked-by: David Chang <dchang@suse.com>
  		tx_ring->next_to_use = i;
  
  		return true;
-@@ -2816,7 +2818,9 @@ static bool e1000_tx_csum(struct e1000_a
+@@ -2822,7 +2824,9 @@ static bool e1000_tx_csum(struct e1000_a
  	buffer_info->time_stamp = jiffies;
  	buffer_info->next_to_watch = i;
  
@@ -275,7 +275,7 @@ Acked-by: David Chang <dchang@suse.com>
  	tx_ring->next_to_use = i;
  
  	return true;
-@@ -2865,8 +2869,8 @@ static int e1000_tx_map(struct e1000_ada
+@@ -2871,8 +2875,8 @@ static int e1000_tx_map(struct e1000_ada
  		 * packet is smaller than 2048 - 16 - 16 (or 2016) bytes
  		 */
  		if (unlikely((hw->bus_type == e1000_bus_type_pcix) &&
@@ -286,7 +286,7 @@ Acked-by: David Chang <dchang@suse.com>
  
  		/* Workaround for potential 82544 hang in PCI-X.  Avoid
  		 * terminating buffers within evenly-aligned dwords.
-@@ -2963,7 +2967,7 @@ dma_error:
+@@ -2969,7 +2973,7 @@ dma_error:
  		count--;
  
  	while (count--) {
@@ -295,7 +295,7 @@ Acked-by: David Chang <dchang@suse.com>
  			i += tx_ring->count;
  		i--;
  		buffer_info = &tx_ring->buffer_info[i];
-@@ -3013,7 +3017,8 @@ static void e1000_tx_queue(struct e1000_
+@@ -3019,7 +3023,8 @@ static void e1000_tx_queue(struct e1000_
  		tx_desc->lower.data =
  			cpu_to_le32(txd_lower | buffer_info->length);
  		tx_desc->upper.data = cpu_to_le32(txd_upper);
@@ -305,7 +305,7 @@ Acked-by: David Chang <dchang@suse.com>
  	}
  
  	tx_desc->lower.data |= cpu_to_le32(adapter->txd_cmd);
-@@ -3101,7 +3106,7 @@ static int e1000_maybe_stop_tx(struct ne
+@@ -3107,7 +3112,7 @@ static int e1000_maybe_stop_tx(struct ne
  	return __e1000_maybe_stop_tx(netdev, size);
  }
  
@@ -314,7 +314,7 @@ Acked-by: David Chang <dchang@suse.com>
  static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
  				    struct net_device *netdev)
  {
-@@ -3841,7 +3846,7 @@ static bool e1000_clean_tx_irq(struct e1
+@@ -3847,7 +3852,7 @@ static bool e1000_clean_tx_irq(struct e1
  	struct e1000_tx_buffer *buffer_info;
  	unsigned int i, eop;
  	unsigned int count = 0;
@@ -323,7 +323,7 @@ Acked-by: David Chang <dchang@suse.com>
  	unsigned int bytes_compl = 0, pkts_compl = 0;
  
  	i = tx_ring->next_to_clean;
-@@ -3869,7 +3874,8 @@ static bool e1000_clean_tx_irq(struct e1
+@@ -3875,7 +3880,8 @@ static bool e1000_clean_tx_irq(struct e1
  			e1000_unmap_and_free_tx_resource(adapter, buffer_info);
  			tx_desc->upper.data = 0;
  
@@ -333,7 +333,7 @@ Acked-by: David Chang <dchang@suse.com>
  		}
  
  		eop = tx_ring->buffer_info[i].next_to_watch;
-@@ -3957,9 +3963,11 @@ static void e1000_rx_checksum(struct e10
+@@ -3963,9 +3969,11 @@ static void e1000_rx_checksum(struct e10
  	skb_checksum_none_assert(skb);
  
  	/* 82543 or newer only */
@@ -347,7 +347,7 @@ Acked-by: David Chang <dchang@suse.com>
  	/* TCP/UDP checksum error bit is set */
  	if (unlikely(errors & E1000_RXD_ERR_TCPE)) {
  		/* let the stack verify checksum errors */
-@@ -4139,7 +4147,7 @@ static bool e1000_clean_jumbo_rx_irq(str
+@@ -4145,7 +4153,7 @@ static bool e1000_clean_jumbo_rx_irq(str
  	unsigned int i;
  	int cleaned_count = 0;
  	bool cleaned = false;
@@ -356,7 +356,7 @@ Acked-by: David Chang <dchang@suse.com>
  
  	i = rx_ring->next_to_clean;
  	rx_desc = E1000_RX_DESC(*rx_ring, i);
-@@ -4156,7 +4164,9 @@ static bool e1000_clean_jumbo_rx_irq(str
+@@ -4162,7 +4170,9 @@ static bool e1000_clean_jumbo_rx_irq(str
  
  		status = rx_desc->status;
  
@@ -367,7 +367,7 @@ Acked-by: David Chang <dchang@suse.com>
  		next_rxd = E1000_RX_DESC(*rx_ring, i);
  		prefetch(next_rxd);
  
-@@ -4359,7 +4369,7 @@ static bool e1000_clean_rx_irq(struct e1
+@@ -4365,7 +4375,7 @@ static bool e1000_clean_rx_irq(struct e1
  	unsigned int i;
  	int cleaned_count = 0;
  	bool cleaned = false;
@@ -376,7 +376,7 @@ Acked-by: David Chang <dchang@suse.com>
  
  	i = rx_ring->next_to_clean;
  	rx_desc = E1000_RX_DESC(*rx_ring, i);
-@@ -4398,7 +4408,9 @@ static bool e1000_clean_rx_irq(struct e1
+@@ -4404,7 +4414,9 @@ static bool e1000_clean_rx_irq(struct e1
  			buffer_info->rxbuf.data = NULL;
  		}
  
@@ -387,7 +387,7 @@ Acked-by: David Chang <dchang@suse.com>
  		next_rxd = E1000_RX_DESC(*rx_ring, i);
  		prefetch(next_rxd);
  
-@@ -4686,9 +4698,11 @@ static void e1000_smartspeed(struct e100
+@@ -4692,9 +4704,11 @@ static void e1000_smartspeed(struct e100
  		 * we assume back-to-back
  		 */
  		e1000_read_phy_reg(hw, PHY_1000T_STATUS, &phy_status);

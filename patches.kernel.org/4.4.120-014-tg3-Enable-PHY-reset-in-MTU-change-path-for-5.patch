@@ -1,0 +1,41 @@
+From: Siva Reddy Kallam <siva.kallam@broadcom.com>
+Date: Fri, 22 Dec 2017 16:05:29 +0530
+Subject: [PATCH] tg3: Enable PHY reset in MTU change path for 5720
+References: bnc#1012382
+Patch-mainline: 4.4.120
+Git-commit: e60ee41aaf898584205a6af5c996860d0fe6a836
+
+[ Upstream commit e60ee41aaf898584205a6af5c996860d0fe6a836 ]
+
+A customer noticed RX path hang when MTU is changed on the fly while
+running heavy traffic with NCSI enabled for 5717 and 5719. Since 5720
+belongs to same ASIC family, we observed same issue and same fix
+could solve this problem for 5720.
+
+Signed-off-by: Siva Reddy Kallam <siva.kallam@broadcom.com>
+Signed-off-by: Michael Chan <michael.chan@broadcom.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/net/ethernet/broadcom/tg3.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/broadcom/tg3.c b/drivers/net/ethernet/broadcom/tg3.c
+index 1594dfb2fa92..3bba92fc9c1a 100644
+--- a/drivers/net/ethernet/broadcom/tg3.c
++++ b/drivers/net/ethernet/broadcom/tg3.c
+@@ -14240,7 +14240,8 @@ static int tg3_change_mtu(struct net_device *dev, int new_mtu)
+ 	 */
+ 	if (tg3_asic_rev(tp) == ASIC_REV_57766 ||
+ 	    tg3_asic_rev(tp) == ASIC_REV_5717 ||
+-	    tg3_asic_rev(tp) == ASIC_REV_5719)
++	    tg3_asic_rev(tp) == ASIC_REV_5719 ||
++	    tg3_asic_rev(tp) == ASIC_REV_5720)
+ 		reset_phy = true;
+ 
+ 	err = tg3_restart_hw(tp, reset_phy);
+-- 
+2.16.2
+
