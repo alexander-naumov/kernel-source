@@ -11,32 +11,13 @@ Carved out from a patch by Tim Chen <tim.c.chen@linux.intel.com>
 
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
- Documentation/kernel-parameters.txt |  6 ++++++
- arch/x86/kernel/cpu/spec_ctrl.c     | 10 ++++++++++
+ Documentation/kernel-parameters.txt |    6 ++++++
+ arch/x86/kernel/cpu/spec_ctrl.c     |   10 ++++++++++
  2 files changed, 16 insertions(+)
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index 8eb059fcf63f..47de3730509b 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -2521,6 +2521,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 	nosmep		[X86]
- 			Disable SMEP (Supervisor Mode Execution Prevention)
- 			even if it is supported by processor.
-+			
-+	nospec		[X86]
-+			Disable indirect branch restricted speculation and
-+			indirect branch prediction barrier to avoid performance
-+			penalties in trusted environments.
-+
- 
- 	noexec32	[X86-64]
- 			This affects only 32-bit executables.
-diff --git a/arch/x86/kernel/cpu/spec_ctrl.c b/arch/x86/kernel/cpu/spec_ctrl.c
-index dbf00ab91589..2bd52f35ac9a 100644
 --- a/arch/x86/kernel/cpu/spec_ctrl.c
 +++ b/arch/x86/kernel/cpu/spec_ctrl.c
-@@ -65,3 +65,13 @@ void x86_spec_check(void)
+@@ -54,3 +54,13 @@ void x86_spec_check(void)
  	}
  }
  EXPORT_SYMBOL_GPL(x86_spec_check);
@@ -50,4 +31,18 @@ index dbf00ab91589..2bd52f35ac9a 100644
 +	return 0;
 +}
 +early_param("nospec", nospec);
-
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -2474,6 +2474,12 @@ bytes respectively. Such letter suffixes
+ 	nosmep		[X86]
+ 			Disable SMEP (Supervisor Mode Execution Prevention)
+ 			even if it is supported by processor.
++			
++	nospec		[X86]
++			Disable indirect branch restricted speculation and
++			indirect branch prediction barrier to avoid performance
++			penalties in trusted environments.
++
+ 
+ 	noexec32	[X86-64]
+ 			This affects only 32-bit executables.

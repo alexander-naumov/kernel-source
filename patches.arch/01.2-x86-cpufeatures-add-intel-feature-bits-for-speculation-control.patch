@@ -1,0 +1,56 @@
+From: David Woodhouse <dwmw@amazon.co.uk>
+Date: Thu, 25 Jan 2018 16:14:10 +0000
+Subject: x86/cpufeatures: Add Intel feature bits for Speculation Control
+Git-commit: fc67dd70adb711a45d2ef34e12d1a8be75edde61
+Patch-mainline: v4.16-rc1
+References: bsc#1068032 CVE-2017-5754
+
+Add three feature bits exposed by new microcode on Intel CPUs for
+speculation control.
+
+Signed-off-by: David Woodhouse <dwmw@amazon.co.uk>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Reviewed-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Reviewed-by: Borislav Petkov <bp@suse.de>
+Cc: gnomes@lxorguk.ukuu.org.uk
+Cc: ak@linux.intel.com
+Cc: ashok.raj@intel.com
+Cc: dave.hansen@intel.com
+Cc: karahmed@amazon.de
+Cc: arjan@linux.intel.com
+Cc: torvalds@linux-foundation.org
+Cc: peterz@infradead.org
+Cc: bp@alien8.de
+Cc: pbonzini@redhat.com
+Cc: tim.c.chen@linux.intel.com
+Cc: gregkh@linux-foundation.org
+Link: https://lkml.kernel.org/r/1516896855-7642-3-git-send-email-dwmw@amazon.co.uk
+
+Acked-by: Borislav Petkov <bp@suse.de>
+---
+ arch/x86/include/asm/cpufeature.h |    2 ++
+ arch/x86/kernel/cpu/scattered.c   |    2 ++
+ 2 files changed, 4 insertions(+)
+
+--- a/arch/x86/include/asm/cpufeature.h
++++ b/arch/x86/include/asm/cpufeature.h
+@@ -203,6 +203,8 @@
+ #define X86_FEATURE_INTEL_PT	( 7*32+15) /* Intel Processor Trace */
+ #define X86_FEATURE_RSB_CTXSW	( 7*32+19) /* Fill RSB on context switches */
+ #define X86_FEATURE_SPEC_CTRL	( 7*32+20) /* Control Speculation Control */
++#define X86_FEATURE_STIBP		(7*32+21) /* Single Thread Indirect Branch Predictors */
++#define X86_FEATURE_ARCH_CAPABILITIES	(7*32+22) /* IA32_ARCH_CAPABILITIES MSR (Intel) */
+ 
+ #define X86_FEATURE_RETPOLINE	( 7*32+29) /* Generic Retpoline mitigation for Spectre variant 2 */
+ #define X86_FEATURE_RETPOLINE_AMD ( 7*32+30) /* AMD Retpoline mitigation for Spectre variant 2 */
+--- a/arch/x86/kernel/cpu/scattered.c
++++ b/arch/x86/kernel/cpu/scattered.c
+@@ -43,6 +43,8 @@ void init_scattered_cpuid_features(struc
+ 		{ X86_FEATURE_HWP_PKG_REQ,	CR_EAX,11, 0x00000006, 0 },
+ 		{ X86_FEATURE_INTEL_PT,		CR_EBX,25, 0x00000007, 0 },
+ 		{ X86_FEATURE_SPEC_CTRL,	CR_EDX,26, 0x00000007, 0 },
++		{ X86_FEATURE_STIBP,		CR_EDX,27, 0x00000007, 0 },
++		{ X86_FEATURE_ARCH_CAPABILITIES, CR_EDX,29, 0x00000007, 0 },	
+ 		{ X86_FEATURE_APERFMPERF,	CR_ECX, 0, 0x00000006, 0 },
+ 		{ X86_FEATURE_EPB,		CR_ECX, 3, 0x00000006, 0 },
+ 		{ X86_FEATURE_HW_PSTATE,	CR_EDX, 7, 0x80000007, 0 },

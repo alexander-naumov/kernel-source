@@ -21,25 +21,26 @@ Signed-off-by: Tom Lendacky <thomas.lendacky@amd.com>
 [ Move everything to spec_ctrl.c ]
 Signed-off-by: Borislav Petkov <bp@suse.de>
 ---
- arch/x86/include/asm/cpufeature.h |    1 +
+ arch/x86/include/asm/cpufeature.h |    2 +-
  arch/x86/include/asm/msr-index.h  |    1 +
  arch/x86/kernel/cpu/amd.c         |    3 +++
  arch/x86/kernel/cpu/spec_ctrl.c   |   16 ++++++++++++++++
- 4 files changed, 21 insertions(+)
+ 4 files changed, 21 insertions(+), 1 deletion(-)
 
 --- a/arch/x86/include/asm/cpufeature.h
 +++ b/arch/x86/include/asm/cpufeature.h
-@@ -269,6 +269,7 @@
+@@ -274,7 +274,7 @@
  /* AMD-defined CPU features, CPUID level 0x80000008 (ebx), word 13 */
  #define X86_FEATURE_CLZERO	(13*32+0) /* CLZERO instruction */
  #define X86_FEATURE_IRPERF	(13*32+1) /* Instructions Retired Count */
-+#define X86_FEATURE_IBPB       (13*32+12) /* Indirect Branch Prediction Barrier */
+-#define X86_FEATURE_AMD_PRED_CMD	(13*32+12) /* Prediction Command MSR (AMD) */
++#define X86_FEATURE_IBPB	(13*32+12) /* Prediction Command MSR (AMD) */
+ #define X86_FEATURE_AMD_SPEC_CTRL	(13*32+14) /* Speculation Control MSR only (AMD) */
+ #define X86_FEATURE_AMD_STIBP		(13*32+15) /* Single Thread Indirect Branch Predictors (AMD) */
  
- /* AMD-defined CPU features, CPUID level 0x80000007 (ebx), word 17 */
- #define X86_FEATURE_OVERFLOW_RECOV (17*32+0) /* MCA overflow recovery support */
 --- a/arch/x86/include/asm/msr-index.h
 +++ b/arch/x86/include/asm/msr-index.h
-@@ -328,6 +328,7 @@
+@@ -333,6 +333,7 @@
  #define MSR_F15H_NB_PERF_CTL		0xc0010240
  #define MSR_F15H_NB_PERF_CTR		0xc0010241
  #define MSR_F15H_PTSC			0xc0010280
@@ -57,7 +58,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  
  #ifdef CONFIG_X86_64
  # include <asm/mmconfig.h>
-@@ -777,6 +778,8 @@ static void init_amd(struct cpuinfo_x86
+@@ -801,6 +802,8 @@ static void init_amd(struct cpuinfo_x86
  
  	/* AMD CPUs don't reset SS attributes on SYSRET */
  	set_cpu_bug(c, X86_BUG_SYSRET_SS_ATTRS);
@@ -68,7 +69,7 @@ Signed-off-by: Borislav Petkov <bp@suse.de>
  #ifdef CONFIG_X86_32
 --- a/arch/x86/kernel/cpu/spec_ctrl.c
 +++ b/arch/x86/kernel/cpu/spec_ctrl.c
-@@ -62,6 +62,22 @@ void x86_spec_check(void)
+@@ -51,6 +51,22 @@ void x86_spec_check(void)
  
  			setup_force_cpu_cap(X86_FEATURE_SPEC_CTRL);
  		}
