@@ -31,17 +31,15 @@ case.
 Signed-off-by: Jan Kara <jack@suse.cz>
 Acked-by: Jeff Mahoney <jeffm@suse.com>
 ---
- fs/ext4/ext4.h    |  10 ----
- fs/ext4/extents.c |  35 +++-----------
- fs/ext4/inode.c   | 133 ++++++++++++++++++++++++++++--------------------------
- 3 files changed, 74 insertions(+), 104 deletions(-)
+ fs/ext4/ext4.h    |   10 ----
+ fs/ext4/extents.c |   35 ++-------------
+ fs/ext4/inode.c   |  121 +++++++++++++++++++++++++++++-------------------------
+ 3 files changed, 73 insertions(+), 93 deletions(-)
 
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index d60db18..9f3156c 100644
 --- a/fs/ext4/ext4.h
 +++ b/fs/ext4/ext4.h
-@@ -1513,16 +1513,6 @@ static inline void ext4_set_io_unwritten_flag(struct inode *inode,
- 	}
+@@ -1481,16 +1481,6 @@ static inline int ext4_valid_inum(struct
+ 		 ino <= le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count));
  }
  
 -static inline ext4_io_end_t *ext4_inode_aio(struct inode *inode)
@@ -57,11 +55,9 @@ index d60db18..9f3156c 100644
  /*
   * Inode dynamic state flags
   */
-diff --git a/fs/ext4/extents.c b/fs/ext4/extents.c
-index 73a48c1..f1b3c25 100644
 --- a/fs/ext4/extents.c
 +++ b/fs/ext4/extents.c
-@@ -1736,6 +1736,12 @@ ext4_can_extents_be_merged(struct inode *inode, struct ext4_extent *ex1,
+@@ -1744,6 +1744,12 @@ ext4_can_extents_be_merged(struct inode
  	 */
  	if (ext1_ee_len + ext2_ee_len > EXT_INIT_MAX_LEN)
  		return 0;
@@ -74,7 +70,7 @@ index 73a48c1..f1b3c25 100644
  	if (ext4_ext_is_unwritten(ex1) &&
  	    (ext4_test_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN) ||
  	     atomic_read(&EXT4_I(inode)->i_unwritten) ||
-@@ -4007,7 +4013,6 @@ ext4_ext_handle_unwritten_extents(handle_t *handle, struct inode *inode,
+@@ -4025,7 +4031,6 @@ ext4_ext_handle_unwritten_extents(handle
  	struct ext4_ext_path *path = *ppath;
  	int ret = 0;
  	int err = 0;
@@ -82,7 +78,7 @@ index 73a48c1..f1b3c25 100644
  
  	ext_debug("ext4_ext_handle_unwritten_extents: inode %lu, logical "
  		  "block %llu, max_blocks %u, flags %x, allocated %u\n",
-@@ -4030,15 +4035,6 @@ ext4_ext_handle_unwritten_extents(handle_t *handle, struct inode *inode,
+@@ -4048,15 +4053,6 @@ ext4_ext_handle_unwritten_extents(handle
  					 flags | EXT4_GET_BLOCKS_CONVERT);
  		if (ret <= 0)
  			goto out;
@@ -98,7 +94,7 @@ index 73a48c1..f1b3c25 100644
  		map->m_flags |= EXT4_MAP_UNWRITTEN;
  		goto out;
  	}
-@@ -4283,9 +4279,7 @@ int ext4_ext_map_blocks(handle_t *handle, struct inode *inode,
+@@ -4301,9 +4297,7 @@ int ext4_ext_map_blocks(handle_t *handle
  	unsigned int allocated = 0, offset = 0;
  	unsigned int allocated_clusters = 0;
  	struct ext4_allocation_request ar;
@@ -108,7 +104,7 @@ index 73a48c1..f1b3c25 100644
  	bool map_from_cluster = false;
  
  	ext_debug("blocks %u/%u requested for inode %lu\n",
-@@ -4482,15 +4476,6 @@ got_allocated_blocks:
+@@ -4511,15 +4505,6 @@ got_allocated_blocks:
  	if (flags & EXT4_GET_BLOCKS_UNWRIT_EXT){
  		ext4_ext_mark_unwritten(&newex);
  		map->m_flags |= EXT4_MAP_UNWRITTEN;
@@ -124,7 +120,7 @@ index 73a48c1..f1b3c25 100644
  	}
  
  	err = 0;
-@@ -4501,14 +4486,6 @@ got_allocated_blocks:
+@@ -4530,14 +4515,6 @@ got_allocated_blocks:
  		err = ext4_ext_insert_extent(handle, inode, &path,
  					     &newex, flags);
  
@@ -139,11 +135,9 @@ index 73a48c1..f1b3c25 100644
  	if (err && free_on_err) {
  		int fb_flags = flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE ?
  			EXT4_FREE_BLOCKS_NO_QUOT_UPDATE : 0;
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index aea67d9..c67c16e 100644
 --- a/fs/ext4/inode.c
 +++ b/fs/ext4/inode.c
-@@ -797,18 +797,16 @@ int ext4_dio_get_block(struct inode *inode, sector_t iblock,
+@@ -822,18 +822,16 @@ int ext4_dio_get_block(struct inode *ino
  }
  
  /*
@@ -165,13 +159,11 @@ index aea67d9..c67c16e 100644
  	/* We don't expect handle for direct IO */
  	WARN_ON_ONCE(ext4_journal_current_handle());
  
-@@ -818,16 +816,62 @@ static int ext4_dio_get_block_unwritten(struct inode *inode, sector_t iblock,
+@@ -843,16 +841,62 @@ static int ext4_dio_get_block_unwritten(
  	ret = _ext4_get_block(inode, iblock, bh_result,
  			      EXT4_GET_BLOCKS_IO_CREATE_EXT);
  	ext4_journal_stop(handle);
--	if (!ret && buffer_unwritten(bh_result)) {
--		ext4_io_end_t *io_end = ext4_inode_aio(inode);
- 
++
 +	/*
 +	 * When doing DIO using unwritten extents, we need io_end to convert
 +	 * unwritten extents to written on IO completion. We allocate io_end
@@ -179,10 +171,11 @@ index aea67d9..c67c16e 100644
 +	 * DIO code keeps b_private set and furthermore passes the value to
 +	 * our completion callback in 'private' argument.
 +	 */
-+	if (!ret && buffer_unwritten(bh_result)) {
+ 	if (!ret && buffer_unwritten(bh_result)) {
+-		ext4_io_end_t *io_end = ext4_inode_aio(inode);
 +		if (!bh_result->b_private) {
 +			ext4_io_end_t *io_end;
-+
+ 
 +			io_end = ext4_init_io_end(inode, GFP_KERNEL);
 +			if (!io_end)
 +				return -ENOMEM;
@@ -231,8 +224,8 @@ index aea67d9..c67c16e 100644
  static int ext4_dio_get_block_overwrite(struct inode *inode, sector_t iblock,
  		   struct buffer_head *bh_result, int create)
  {
-@@ -3243,7 +3287,7 @@ out:
- static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
+@@ -3308,7 +3352,7 @@ out:
+ static int ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
  			    ssize_t size, void *private)
  {
 -        ext4_io_end_t *io_end = iocb->private;
@@ -240,19 +233,19 @@ index aea67d9..c67c16e 100644
  
  	/* if not async direct IO just return */
  	if (!io_end)
-@@ -3251,10 +3295,8 @@ static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
+@@ -3316,10 +3360,8 @@ static int ext4_end_io_dio(struct kiocb
  
  	ext_debug("ext4_end_io_dio(): io_end 0x%p "
  		  "for inode %lu, iocb 0x%p, offset %llu, size %zd\n",
 - 		  iocb->private, io_end->inode->i_ino, iocb, offset,
 -		  size);
-+		  io_end, io_end->inode->i_ino, iocb, offset, size);
++ 		  io_end, io_end->inode->i_ino, iocb, offset, size);
  
 -	iocb->private = NULL;
- 	io_end->offset = offset;
- 	io_end->size = size;
- 	ext4_put_io_end(io_end);
-@@ -3290,7 +3332,6 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+ 	/*
+ 	 * Error during AIO DIO. We cannot convert unwritten extents as the
+ 	 * data was not written. Just clear the unwritten flag and drop io_end.
+@@ -3365,7 +3407,6 @@ static ssize_t ext4_ext_direct_IO(struct
  	get_block_t *get_block_func = NULL;
  	int dio_flags = 0;
  	loff_t final_size = offset + count;
@@ -260,7 +253,7 @@ index aea67d9..c67c16e 100644
  
  	/* Use the old path for reads and writes beyond i_size. */
  	if (iov_iter_rw(iter) != WRITE || final_size > inode->i_size)
-@@ -3315,16 +3356,17 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+@@ -3390,16 +3431,17 @@ static ssize_t ext4_ext_direct_IO(struct
  	/*
  	 * We could direct write to holes and fallocate.
  	 *
@@ -286,7 +279,7 @@ index aea67d9..c67c16e 100644
  	 *
  	 * For async DIO, the conversion needs to be deferred when the
  	 * IO is completed. The ext4 end_io callback function will be
-@@ -3332,30 +3374,13 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+@@ -3407,30 +3449,13 @@ static ssize_t ext4_ext_direct_IO(struct
  	 * case, we allocate an io_end structure to hook to the iocb.
  	 */
  	iocb->private = NULL;
@@ -322,7 +315,7 @@ index aea67d9..c67c16e 100644
  		dio_flags = DIO_LOCKING;
  	}
  #ifdef CONFIG_EXT4_FS_ENCRYPTION
-@@ -3370,27 +3395,6 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+@@ -3445,17 +3470,6 @@ static ssize_t ext4_ext_direct_IO(struct
  					   get_block_func,
  					   ext4_end_io_dio, NULL, dio_flags);
  
@@ -336,21 +329,11 @@ index aea67d9..c67c16e 100644
 -	if (io_end) {
 -		ext4_inode_aio_set(inode, NULL);
 -		ext4_put_io_end(io_end);
--		/*
--		 * When no IO was submitted ext4_end_io_dio() was not
--		 * called so we have to put iocb's reference.
--		 */
--		if (ret <= 0 && ret != -EIOCBQUEUED && iocb->private) {
--			WARN_ON(iocb->private != io_end);
--			WARN_ON(io_end->flag & EXT4_IO_END_UNWRITTEN);
--			ext4_put_io_end(io_end);
--			iocb->private = NULL;
--		}
 -	}
  	if (ret > 0 && !overwrite && ext4_test_inode_state(inode,
  						EXT4_STATE_DIO_UNWRITTEN)) {
  		int err;
-@@ -3405,7 +3409,6 @@ static ssize_t ext4_ext_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+@@ -3470,7 +3484,6 @@ static ssize_t ext4_ext_direct_IO(struct
  		ext4_clear_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN);
  	}
  
@@ -358,6 +341,3 @@ index aea67d9..c67c16e 100644
  	if (iov_iter_rw(iter) == WRITE)
  		inode_dio_end(inode);
  	/* take i_mutex locking again if we do a ovewrite dio */
-
-
-

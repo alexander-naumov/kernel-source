@@ -1,0 +1,134 @@
+From 74c66bcb7eda551f3b8588659c58fe29184af903 Mon Sep 17 00:00:00 2001
+From: Jan Kara <jack@suse.cz>
+Date: Mon, 29 Feb 2016 08:36:38 +1100
+Subject: [PATCH] ext4: Fix data exposure after failed AIO DIO
+Git-commit: 74c66bcb7eda551f3b8588659c58fe29184af903
+Patch-mainline: v4.6-rc1
+References: bsc#1069135 bsc#1082864
+
+When AIO DIO fails e.g. due to IO error, we must not convert unwritten
+extents as that will expose uninitialized data. Handle this case
+by clearing unwritten flag from io_end in case of error and thus
+preventing extent conversion.
+
+Signed-off-by: Jan Kara <jack@suse.cz>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Dave Chinner <david@fromorbit.com>
+Acked-by: Jan Kara <jack@suse.cz>
+
+---
+ fs/ext4/ext4.h    |   30 +++++++++++++++++++++---------
+ fs/ext4/inode.c   |   21 ++++++++-------------
+ fs/ext4/page-io.c |   10 ----------
+ 3 files changed, 29 insertions(+), 32 deletions(-)
+
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -1481,15 +1481,6 @@ static inline int ext4_valid_inum(struct
+ 		 ino <= le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count));
+ }
+ 
+-static inline void ext4_set_io_unwritten_flag(struct inode *inode,
+-					      struct ext4_io_end *io_end)
+-{
+-	if (!(io_end->flag & EXT4_IO_END_UNWRITTEN)) {
+-		io_end->flag |= EXT4_IO_END_UNWRITTEN;
+-		atomic_inc(&EXT4_I(inode)->i_unwritten);
+-	}
+-}
+-
+ static inline ext4_io_end_t *ext4_inode_aio(struct inode *inode)
+ {
+ 	return inode->i_private;
+@@ -3260,6 +3251,27 @@ extern struct mutex ext4__aio_mutex[EXT4
+ extern int ext4_resize_begin(struct super_block *sb);
+ extern void ext4_resize_end(struct super_block *sb);
+ 
++static inline void ext4_set_io_unwritten_flag(struct inode *inode,
++					      struct ext4_io_end *io_end)
++{
++	if (!(io_end->flag & EXT4_IO_END_UNWRITTEN)) {
++		io_end->flag |= EXT4_IO_END_UNWRITTEN;
++		atomic_inc(&EXT4_I(inode)->i_unwritten);
++	}
++}
++
++static inline void ext4_clear_io_unwritten_flag(ext4_io_end_t *io_end)
++{
++	struct inode *inode = io_end->inode;
++
++	if (io_end->flag & EXT4_IO_END_UNWRITTEN) {
++		io_end->flag &= ~EXT4_IO_END_UNWRITTEN;
++		/* Wake up anyone waiting on unwritten extent conversion */
++		if (atomic_dec_and_test(&EXT4_I(inode)->i_unwritten))
++			wake_up_all(ext4_ioend_wq(inode));
++	}
++}
++
+ #endif	/* __KERNEL__ */
+ 
+ #define EFSBADCRC	EBADMSG		/* Bad CRC detected */
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -3310,9 +3310,6 @@ static int ext4_end_io_dio(struct kiocb
+ {
+         ext4_io_end_t *io_end = iocb->private;
+ 
+-	if (size <= 0)
+-		return 0;
+-
+ 	/* if not async direct IO just return */
+ 	if (!io_end)
+ 		return 0;
+@@ -3323,6 +3320,14 @@ static int ext4_end_io_dio(struct kiocb
+ 		  size);
+ 
+ 	iocb->private = NULL;
++	/*
++	 * Error during AIO DIO. We cannot convert unwritten extents as the
++	 * data was not written. Just clear the unwritten flag and drop io_end.
++	 */
++	if (size <= 0) {
++		ext4_clear_io_unwritten_flag(io_end);
++		size = 0;
++	}
+ 	io_end->offset = offset;
+ 	io_end->size = size;
+ 	ext4_put_io_end(io_end);
+@@ -3450,16 +3455,6 @@ static ssize_t ext4_ext_direct_IO(struct
+ 	if (io_end) {
+ 		ext4_inode_aio_set(inode, NULL);
+ 		ext4_put_io_end(io_end);
+-		/*
+-		 * When no IO was submitted ext4_end_io_dio() was not
+-		 * called so we have to put iocb's reference.
+-		 */
+-		if (ret <= 0 && ret != -EIOCBQUEUED && iocb->private) {
+-			WARN_ON(iocb->private != io_end);
+-			WARN_ON(io_end->flag & EXT4_IO_END_UNWRITTEN);
+-			ext4_put_io_end(io_end);
+-			iocb->private = NULL;
+-		}
+ 	}
+ 	if (ret > 0 && !overwrite && ext4_test_inode_state(inode,
+ 						EXT4_STATE_DIO_UNWRITTEN)) {
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -141,16 +141,6 @@ static void ext4_release_io_end(ext4_io_
+ 	kmem_cache_free(io_end_cachep, io_end);
+ }
+ 
+-static void ext4_clear_io_unwritten_flag(ext4_io_end_t *io_end)
+-{
+-	struct inode *inode = io_end->inode;
+-
+-	io_end->flag &= ~EXT4_IO_END_UNWRITTEN;
+-	/* Wake up anyone waiting on unwritten extent conversion */
+-	if (atomic_dec_and_test(&EXT4_I(inode)->i_unwritten))
+-		wake_up_all(ext4_ioend_wq(inode));
+-}
+-
+ /*
+  * Check a range of space and convert unwritten extents to written. Note that
+  * we are protected from truncate touching same part of extent tree by the
