@@ -1,0 +1,31 @@
+From: Borislav Petkov <bp@suse.de>
+Date: Fri Mar  9 13:39:23 CET 2018
+Subject: x86/pti: Fix kabi breakage from x86_match_cpu()
+Patch-mainline: no, KABI fix
+References: bsc#1068032 CVE-2017-5754
+
+Fix:
+
+arch/x86/kernel/cpu/common.c:1340: warning: current_task: modversion changed
+because of changes in struct acpi_device_id (became defined), struct
+of_device_id (became defined)
+
+
+Signed-off-by: Borislav Petkov <bp@suse.de>
+
+---
+ arch/x86/kernel/cpu/common.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -45,7 +45,9 @@
+ #include <asm/microcode.h>
+ #include <asm/microcode_intel.h>
+ #include <asm/intel-family.h>
++#ifndef __GENKSYMS__
+ #include <asm/cpu_device_id.h>
++#endif
+ 
+ #ifdef CONFIG_X86_LOCAL_APIC
+ #include <asm/uv/uv.h>
