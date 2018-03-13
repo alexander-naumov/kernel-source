@@ -1,0 +1,79 @@
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Fri, 5 Feb 2016 10:20:21 +0100
+Subject: netfilter: tee: select NF_DUP_IPV6 unconditionally
+Patch-mainline: v4.5-rc6
+Git-commit: 08a7f5d3f5c38ed745c3e99ee91975f20562d272
+References: bsc#1042286
+
+The NETFILTER_XT_TARGET_TEE option selects NF_DUP_IPV6 whenever
+IP6_NF_IPTABLES is enabled, and it ensures that it cannot be
+builtin itself if NF_CONNTRACK is a loadable module, as that
+is a dependency for NF_DUP_IPV6.
+
+However, NF_DUP_IPV6 can be enabled even if IP6_NF_IPTABLES is
+turned off, and it only really depends on IPV6. With the current
+check in tee_tg6, we call nf_dup_ipv6() whenever NF_DUP_IPV6
+is enabled. This can however be a loadable module which is
+unreachable from a built-in xt_TEE:
+
+net/built-in.o: In function `tee_tg6':
+:(.text+0x67728): undefined reference to `nf_dup_ipv6'
+
+The bug was originally introduced in the split of the xt_TEE module
+into separate modules for ipv4 and ipv6, and two patches tried
+to fix it unsuccessfully afterwards.
+
+This is a revert of the the first incorrect attempt to fix it,
+going back to depending on IPV6 as the dependency, and we
+adapt the 'select' condition accordingly.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Fixes: bbde9fc1824a ("netfilter: factor out packet duplication for IPv4/IPv6")
+Fixes: 116984a316c3 ("netfilter: xt_TEE: use IS_ENABLED(CONFIG_NF_DUP_IPV6)")
+Fixes: 74ec4d55c4d2 ("netfilter: fix xt_TEE and xt_TPROXY dependencies")
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/netfilter/Kconfig  | 2 +-
+ net/netfilter/xt_TEE.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/net/netfilter/Kconfig b/net/netfilter/Kconfig
+index 82b6aed2bf4b..966143589893 100644
+--- a/net/netfilter/Kconfig
++++ b/net/netfilter/Kconfig
+@@ -884,7 +884,7 @@ config NETFILTER_XT_TARGET_TEE
+ 	depends on IPV6 || IPV6=n
+ 	depends on !NF_CONNTRACK || NF_CONNTRACK
+ 	select NF_DUP_IPV4
+-	select NF_DUP_IPV6 if IP6_NF_IPTABLES != n
++	select NF_DUP_IPV6 if IPV6
+ 	---help---
+ 	This option adds a "TEE" target with which a packet can be cloned and
+ 	this clone be rerouted to another nexthop.
+diff --git a/net/netfilter/xt_TEE.c b/net/netfilter/xt_TEE.c
+index 3eff7b67cdf2..6e57a3966dc5 100644
+--- a/net/netfilter/xt_TEE.c
++++ b/net/netfilter/xt_TEE.c
+@@ -38,7 +38,7 @@ tee_tg4(struct sk_buff *skb, const struct xt_action_param *par)
+ 	return XT_CONTINUE;
+ }
+ 
+-#if IS_ENABLED(CONFIG_NF_DUP_IPV6)
++#if IS_ENABLED(CONFIG_IPV6)
+ static unsigned int
+ tee_tg6(struct sk_buff *skb, const struct xt_action_param *par)
+ {
+@@ -131,7 +131,7 @@ static struct xt_target tee_tg_reg[] __read_mostly = {
+ 		.destroy    = tee_tg_destroy,
+ 		.me         = THIS_MODULE,
+ 	},
+-#if IS_ENABLED(CONFIG_NF_DUP_IPV6)
++#if IS_ENABLED(CONFIG_IPV6)
+ 	{
+ 		.name       = "TEE",
+ 		.revision   = 1,
+-- 
+2.16.2
+

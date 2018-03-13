@@ -1,0 +1,37 @@
+From: Daniel Borkmann <daniel@iogearbox.net>
+Date: Fri, 18 Mar 2016 18:37:57 +0100
+Subject: add ip6_make_flowinfo helper
+Patch-mainline: v4.6-rc1
+Git-commit: eaa93bf4c6090809395605d1775a0db9970eda5e (partial)
+References: bsc#1042286
+
+Signed-off-by: Daniel Borkmann <daniel@iogearbox.net>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+SLE12-SP2/3: only take the helper function, not the actual commit
+
+---
+ include/net/ipv6.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/include/net/ipv6.h b/include/net/ipv6.h
+index f1aa5583f569..c841ab57edad 100644
+--- a/include/net/ipv6.h
++++ b/include/net/ipv6.h
+@@ -822,6 +822,12 @@ static inline u8 ip6_tclass(__be32 flowinfo)
+ {
+ 	return ntohl(flowinfo & IPV6_TCLASS_MASK) >> IPV6_TCLASS_SHIFT;
+ }
++
++static inline __be32 ip6_make_flowinfo(unsigned int tclass, __be32 flowlabel)
++{
++	return htonl(tclass << IPV6_TCLASS_SHIFT) | flowlabel;
++}
++
+ /*
+  *	Prototypes exported by ipv6
+  */
+-- 
+2.16.2
+

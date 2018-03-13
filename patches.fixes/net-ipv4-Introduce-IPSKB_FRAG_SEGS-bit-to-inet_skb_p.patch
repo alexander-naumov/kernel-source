@@ -1,0 +1,84 @@
+From: Shmulik Ladkani <shmulik.ladkani@gmail.com>
+Date: Mon, 18 Jul 2016 14:49:33 +0300
+Subject: net/ipv4: Introduce IPSKB_FRAG_SEGS bit to inet_skb_parm.flags
+Patch-mainline: v4.8-rc1
+Git-commit: 359ebda25aa06fe3a1d028f7e338a849165e661b
+References: bsc#1042286
+
+This flag indicates whether fragmentation of segments is allowed.
+
+Formerly this policy was hardcoded according to IPSKB_FORWARDED (set by
+either ip_forward or ipmr_forward).
+
+Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Cc: Florian Westphal <fw@strlen.de>
+Signed-off-by: Shmulik Ladkani <shmulik.ladkani@gmail.com>
+Acked-by: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ include/net/ip.h      | 1 +
+ net/ipv4/ip_forward.c | 2 +-
+ net/ipv4/ip_output.c  | 6 ++++--
+ net/ipv4/ipmr.c       | 2 +-
+ 4 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/include/net/ip.h b/include/net/ip.h
+index 8f45eb3bbdab..55edcd61daa0 100644
+--- a/include/net/ip.h
++++ b/include/net/ip.h
+@@ -48,6 +48,7 @@ struct inet_skb_parm {
+ #define IPSKB_REROUTED		BIT(4)
+ #define IPSKB_DOREDIRECT	BIT(5)
+ #define IPSKB_FRAG_PMTU		BIT(6)
++#define IPSKB_FRAG_SEGS		BIT(7)
+ 
+ 	u16			frag_max_size;
+ };
+diff --git a/net/ipv4/ip_forward.c b/net/ipv4/ip_forward.c
+index da0d7ce85844..76a89350a8f1 100644
+--- a/net/ipv4/ip_forward.c
++++ b/net/ipv4/ip_forward.c
+@@ -118,7 +118,7 @@ int ip_forward(struct sk_buff *skb)
+ 	if (opt->is_strictroute && rt->rt_uses_gateway)
+ 		goto sr_failed;
+ 
+-	IPCB(skb)->flags |= IPSKB_FORWARDED;
++	IPCB(skb)->flags |= IPSKB_FORWARDED | IPSKB_FRAG_SEGS;
+ 	mtu = ip_dst_mtu_maybe_forward(&rt->dst, true);
+ 	if (ip_exceeds_mtu(skb, mtu)) {
+ 		IP_INC_STATS(net, IPSTATS_MIB_FRAGFAILS);
+diff --git a/net/ipv4/ip_output.c b/net/ipv4/ip_output.c
+index 22e6ded344c1..4dee863c6feb 100644
+--- a/net/ipv4/ip_output.c
++++ b/net/ipv4/ip_output.c
+@@ -230,8 +230,10 @@ static int ip_finish_output_gso(struct net *net, struct sock *sk,
+ 	struct sk_buff *segs;
+ 	int ret = 0;
+ 
+-	/* common case: locally created skb or seglen is <= mtu */
+-	if (((IPCB(skb)->flags & IPSKB_FORWARDED) == 0) ||
++	/* common case: fragmentation of segments is not allowed,
++	 * or seglen is <= mtu
++	 */
++	if (((IPCB(skb)->flags & IPSKB_FRAG_SEGS) == 0) ||
+ 	      skb_gso_network_seglen(skb) <= mtu)
+ 		return ip_finish_output2(net, sk, skb);
+ 
+diff --git a/net/ipv4/ipmr.c b/net/ipv4/ipmr.c
+index 8e77786549c6..ef0576a83518 100644
+--- a/net/ipv4/ipmr.c
++++ b/net/ipv4/ipmr.c
+@@ -1770,7 +1770,7 @@ static void ipmr_queue_xmit(struct net *net, struct mr_table *mrt,
+ 		vif->dev->stats.tx_bytes += skb->len;
+ 	}
+ 
+-	IPCB(skb)->flags |= IPSKB_FORWARDED;
++	IPCB(skb)->flags |= IPSKB_FORWARDED | IPSKB_FRAG_SEGS;
+ 
+ 	/*
+ 	 * RFC1584 teaches, that DVMRP/PIM router must deliver packets locally
+-- 
+2.16.2
+

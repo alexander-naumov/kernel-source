@@ -1,0 +1,62 @@
+From: Liping Zhang <zlpnobody@gmail.com>
+Date: Sat, 22 Oct 2016 18:51:26 +0800
+Subject: netfilter: nf_tables: fix race when create new element in dynset
+Patch-mainline: v4.9-rc6
+Git-commit: dab45060a56a9732b027d2031c1b6100bc75eea2
+References: bsc#1042286
+
+Packets may race when create the new element in nft_hash_update:
+       CPU0                 CPU1
+  lookup_fast - fail     lookup_fast - fail
+       new - ok             new - ok
+     insert - ok         insert - fail(EEXIST)
+
+So when race happened, we reuse the existing element. Otherwise,
+these *racing* packets will not be handled properly.
+
+Fixes: 22fe54d5fefc ("netfilter: nf_tables: add support for dynamic set updates")
+Signed-off-by: Liping Zhang <zlpnobody@gmail.com>
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/netfilter/nft_hash.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/net/netfilter/nft_hash.c b/net/netfilter/nft_hash.c
+index 3f9d45d3d9b7..21db8de3e804 100644
+--- a/net/netfilter/nft_hash.c
++++ b/net/netfilter/nft_hash.c
+@@ -98,7 +98,7 @@ static bool nft_hash_update(struct nft_set *set, const u32 *key,
+ 			    const struct nft_set_ext **ext)
+ {
+ 	struct nft_hash *priv = nft_set_priv(set);
+-	struct nft_hash_elem *he;
++	struct nft_hash_elem *he, *prev;
+ 	struct nft_hash_cmp_arg arg = {
+ 		.genmask = NFT_GENMASK_ANY,
+ 		.set	 = set,
+@@ -112,9 +112,18 @@ static bool nft_hash_update(struct nft_set *set, const u32 *key,
+ 	he = new(set, expr, regs);
+ 	if (he == NULL)
+ 		goto err1;
+-	if (rhashtable_lookup_insert_key(&priv->ht, &arg, &he->node,
+-					 nft_hash_params))
++
++	prev = rhashtable_lookup_get_insert_key(&priv->ht, &arg, &he->node,
++						nft_hash_params);
++	if (IS_ERR(prev))
+ 		goto err2;
++
++	/* Another cpu may race to insert the element with the same key */
++	if (prev) {
++		nft_set_elem_destroy(set, he);
++		he = prev;
++	}
++
+ out:
+ 	*ext = &he->ext;
+ 	return true;
+-- 
+2.16.2
+

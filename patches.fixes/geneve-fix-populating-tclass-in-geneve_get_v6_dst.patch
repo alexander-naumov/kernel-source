@@ -1,0 +1,57 @@
+From: Daniel Borkmann <daniel@iogearbox.net>
+Date: Fri, 18 Mar 2016 18:37:58 +0100
+Subject: geneve: fix populating tclass in geneve_get_v6_dst
+Patch-mainline: v4.6-rc1
+Git-commit: 95caf6f71a9998b5382e3fb9abbca34c02e8f74f
+References: bsc#1042286
+
+The struct flowi6's flowi6_tos is not used in IPv6 route lookup, the
+traffic class information is handled in the flowi6's flowlabel member
+instead. For example, for policy routing, fib6_rule_match() uses
+ip6_tclass() that is applied on the flowlabel for matching on tclass,
+which would currently not work as expected.
+
+Fixes: 3a56f86f1be6 ("geneve: handle ipv6 priority like ipv4 tos")
+Signed-off-by: Daniel Borkmann <daniel@iogearbox.net>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ drivers/net/geneve.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/geneve.c b/drivers/net/geneve.c
+index 30efee91819d..bab7c43205ae 100644
+--- a/drivers/net/geneve.c
++++ b/drivers/net/geneve.c
+@@ -788,7 +788,7 @@ static struct dst_entry *geneve_get_v6_dst(struct sk_buff *skb,
+ 	if (info) {
+ 		fl6->daddr = info->key.u.ipv6.dst;
+ 		fl6->saddr = info->key.u.ipv6.src;
+-		fl6->flowi6_tos = RT_TOS(info->key.tos);
++		fl6->flowlabel = ip6_make_flowinfo(RT_TOS(info->key.tos), 0);
+ 	} else {
+ 		prio = geneve->tos;
+ 		if (prio == 1) {
+@@ -797,7 +797,7 @@ static struct dst_entry *geneve_get_v6_dst(struct sk_buff *skb,
+ 			prio = ip_tunnel_get_dsfield(iip, skb);
+ 		}
+ 
+-		fl6->flowi6_tos = RT_TOS(prio);
++		fl6->flowlabel = ip6_make_flowinfo(RT_TOS(prio), 0);
+ 		fl6->daddr = geneve->remote.sin6.sin6_addr;
+ 	}
+ 
+@@ -968,7 +968,8 @@ static netdev_tx_t geneve6_xmit_skb(struct sk_buff *skb, struct net_device *dev,
+ 		if (unlikely(err))
+ 			goto err;
+ 
+-		prio = ip_tunnel_ecn_encap(fl6.flowi6_tos, ip_hdr(skb), skb);
++		prio = ip_tunnel_ecn_encap(ip6_tclass(fl6.flowlabel),
++					   ip_hdr(skb), skb);
+ 		ttl = geneve->ttl;
+ 		if (!ttl && ipv6_addr_is_multicast(&fl6.daddr))
+ 			ttl = 1;
+-- 
+2.16.2
+
