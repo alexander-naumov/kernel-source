@@ -1,0 +1,42 @@
+From: Eric Garver <e@erig.me>
+Date: Mon, 17 Oct 2016 16:30:12 -0400
+Subject: flow_dissector: Check skb for VLAN only if skb specified.
+Patch-mainline: v4.9-rc4
+Git-commit: 3805a938a6c24284863732fd45cec5a04609a224
+References: bsc#1042286
+
+Fixes a panic when calling eth_get_headlen(). Noticed on i40e driver.
+
+Fixes: d5709f7ab776 ("flow_dissector: For stripped vlan, get vlan info from skb->vlan_tci")
+Signed-off-by: Eric Garver <e@erig.me>
+Reviewed-by: Jakub Sitnicki <jkbs@redhat.com>
+Acked-by: Amir Vadai <amir@vadai.me>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/core/flow_dissector.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/net/core/flow_dissector.c b/net/core/flow_dissector.c
+index f1cfbed2a098..e3a232450cb6 100644
+--- a/net/core/flow_dissector.c
++++ b/net/core/flow_dissector.c
+@@ -245,12 +245,10 @@ ipv6:
+ 	case htons(ETH_P_8021Q): {
+ 		const struct vlan_hdr *vlan;
+ 
+-		if (skb_vlan_tag_present(skb))
++		if (skb && skb_vlan_tag_present(skb))
+ 			proto = skb->protocol;
+ 
+-		if (!skb_vlan_tag_present(skb) ||
+-		    proto == cpu_to_be16(ETH_P_8021Q) ||
+-		    proto == cpu_to_be16(ETH_P_8021AD)) {
++		if (eth_type_vlan(proto)) {
+ 			struct vlan_hdr _vlan;
+ 
+ 			vlan = __skb_header_pointer(skb, nhoff, sizeof(_vlan),
+-- 
+2.16.2
+
