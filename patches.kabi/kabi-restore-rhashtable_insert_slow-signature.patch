@@ -1,0 +1,88 @@
+From: Michal Kubecek <mkubecek@suse.cz>
+Date: Tue, 13 Mar 2018 12:43:49 +0100
+Subject: kabi: restore rhashtable_insert_slow() signature
+Patch-mainline: Never, kabi workaround
+References: bsc#1042286
+
+Mainline commit 5ca8cc5bf11f ("rhashtable: add
+rhashtable_lookup_get_insert_key()") adds a pointer argument to return
+found value on collision. Rename the modified function and create
+a simple wrapper under the original name.
+
+Signed-off-by: Michal Kubecek <mkubecek@suse.cz>
+---
+ include/linux/rhashtable.h | 10 +++++++---
+ lib/rhashtable.c           | 22 +++++++++++++++++-----
+ 2 files changed, 24 insertions(+), 8 deletions(-)
+
+diff --git a/include/linux/rhashtable.h b/include/linux/rhashtable.h
+index e07eca01316c..2474368fbc98 100644
+--- a/include/linux/rhashtable.h
++++ b/include/linux/rhashtable.h
+@@ -343,8 +343,12 @@ int rhashtable_init(struct rhashtable *ht,
+ struct bucket_table *rhashtable_insert_slow(struct rhashtable *ht,
+ 					    const void *key,
+ 					    struct rhash_head *obj,
+-					    struct bucket_table *old_tbl,
+-					    void **data);
++					    struct bucket_table *old_tbl);
++struct bucket_table *rhashtable_insert_slow_ext(struct rhashtable *ht,
++						const void *key,
++						struct rhash_head *obj,
++						struct bucket_table *old_tbl,
++						void **data);
+ int rhashtable_insert_rehash(struct rhashtable *ht, struct bucket_table *tbl);
+ 
+ int rhashtable_walk_init(struct rhashtable *ht, struct rhashtable_iter *iter);
+@@ -605,7 +609,7 @@ restart:
+ 
+ 	new_tbl = rht_dereference_rcu(tbl->future_tbl, ht);
+ 	if (unlikely(new_tbl)) {
+-		tbl = rhashtable_insert_slow(ht, key, obj, new_tbl, &data);
++		tbl = rhashtable_insert_slow_ext(ht, key, obj, new_tbl, &data);
+ 		if (!IS_ERR_OR_NULL(tbl))
+ 			goto slow_path;
+ 
+diff --git a/lib/rhashtable.c b/lib/rhashtable.c
+index b2383fe17ba4..4fe58dd15eab 100644
+--- a/lib/rhashtable.c
++++ b/lib/rhashtable.c
+@@ -444,11 +444,11 @@ fail:
+ }
+ EXPORT_SYMBOL_GPL(rhashtable_insert_rehash);
+ 
+-struct bucket_table *rhashtable_insert_slow(struct rhashtable *ht,
+-					    const void *key,
+-					    struct rhash_head *obj,
+-					    struct bucket_table *tbl,
+-					    void **data)
++struct bucket_table *rhashtable_insert_slow_ext(struct rhashtable *ht,
++						const void *key,
++						struct rhash_head *obj,
++						struct bucket_table *tbl,
++						void **data)
+ {
+ 	struct rhash_head *head;
+ 	unsigned int hash;
+@@ -494,6 +494,18 @@ exit:
+ 	else
+ 		return ERR_PTR(err);
+ }
++EXPORT_SYMBOL_GPL(rhashtable_insert_slow_ext);
++
++/* kabi compatibility wrapper */
++struct bucket_table *rhashtable_insert_slow(struct rhashtable *ht,
++					    const void *key,
++					    struct rhash_head *obj,
++					    struct bucket_table *tbl)
++{
++	void *unused;
++
++	return rhashtable_insert_slow_ext(ht, key, obj, tbl, &unused);
++}
+ EXPORT_SYMBOL_GPL(rhashtable_insert_slow);
+ 
+ /**
+-- 
+2.16.2
+
