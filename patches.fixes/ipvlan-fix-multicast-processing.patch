@@ -1,0 +1,169 @@
+From: Mahesh Bandewar <maheshb@google.com>
+Date: Wed, 21 Dec 2016 17:30:16 -0800
+Subject: ipvlan: fix multicast processing
+Patch-mainline: v4.10-rc2
+Git-commit: e252536068efd1578c6e23e7323527c5e6e980bd
+References: bsc#1042286
+
+In an IPvlan setup when master is set in loopback mode e.g.
+
+  ethtool -K eth0 set loopback on
+
+  where eth0 is master device for IPvlan setup.
+
+The failure is caused by the faulty logic that determines if the
+packet is from TX-path vs. RX-path by just looking at the mac-
+addresses on the packet while processing multicast packets.
+
+In the loopback-mode where this crash was happening, the packets
+that are sent out are reflected by the NIC and are processed on
+the RX path, but mac-address check tricks into thinking this
+packet is from TX path and falsely uses dev_forward_skb() to pass
+packets to the slave (virtual) devices.
+
+This patch records the path while queueing packets and eliminates
+logic of looking at mac-addresses for the same decision.
+
+------------[ cut here ]------------
+kernel BUG at include/linux/skbuff.h:1737!
+Call Trace:
+ [<ffffffff921fbbc2>] dev_forward_skb+0x92/0xd0
+ [<ffffffffc031ac65>] ipvlan_process_multicast+0x395/0x4c0 [ipvlan]
+ [<ffffffffc031a9a7>] ? ipvlan_process_multicast+0xd7/0x4c0 [ipvlan]
+ [<ffffffff91cdfea7>] ? process_one_work+0x147/0x660
+ [<ffffffff91cdff09>] process_one_work+0x1a9/0x660
+ [<ffffffff91cdfea7>] ? process_one_work+0x147/0x660
+ [<ffffffff91ce086d>] worker_thread+0x11d/0x360
+ [<ffffffff91ce0750>] ? rescuer_thread+0x350/0x350
+ [<ffffffff91ce960b>] kthread+0xdb/0xe0
+ [<ffffffff91c05c70>] ? _raw_spin_unlock_irq+0x30/0x50
+ [<ffffffff91ce9530>] ? flush_kthread_worker+0xc0/0xc0
+ [<ffffffff92348b7a>] ret_from_fork+0x9a/0xd0
+ [<ffffffff91ce9530>] ? flush_kthread_worker+0xc0/0xc0
+
+Fixes: ba35f8588f47 ("ipvlan: Defer multicast / broadcast processing to a work-queue")
+Signed-off-by: Mahesh Bandewar <maheshb@google.com>
+CC: Eric Dumazet <edumazet@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ drivers/net/ipvlan/ipvlan.h      |  5 +++++
+ drivers/net/ipvlan/ipvlan_core.c | 26 +++++++++++++++-----------
+ 2 files changed, 20 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/ipvlan/ipvlan.h b/drivers/net/ipvlan/ipvlan.h
+index 9542b7bac61a..ec7b502f6fe1 100644
+--- a/drivers/net/ipvlan/ipvlan.h
++++ b/drivers/net/ipvlan/ipvlan.h
+@@ -99,6 +99,11 @@ struct ipvl_port {
+ 	u16			mode;
+ };
+ 
++struct ipvl_skb_cb {
++	bool tx_pkt;
++};
++#define IPVL_SKB_CB(_skb) ((struct ipvl_skb_cb *)&((_skb)->cb[0]))
++
+ static inline struct ipvl_port *ipvlan_port_get_rcu(const struct net_device *d)
+ {
+ 	return rcu_dereference(d->rx_handler_data);
+diff --git a/drivers/net/ipvlan/ipvlan_core.c b/drivers/net/ipvlan/ipvlan_core.c
+index cd25ee861579..401609db93b2 100644
+--- a/drivers/net/ipvlan/ipvlan_core.c
++++ b/drivers/net/ipvlan/ipvlan_core.c
+@@ -198,7 +198,7 @@ void ipvlan_process_multicast(struct work_struct *work)
+ 	unsigned int mac_hash;
+ 	int ret;
+ 	u8 pkt_type;
+-	bool hlocal, dlocal;
++	bool tx_pkt;
+ 
+ 	__skb_queue_head_init(&list);
+ 
+@@ -211,7 +211,7 @@ void ipvlan_process_multicast(struct work_struct *work)
+ 		bool consumed = false;
+ 
+ 		ethh = eth_hdr(skb);
+-		hlocal = ether_addr_equal(ethh->h_source, port->dev->dev_addr);
++		tx_pkt = IPVL_SKB_CB(skb)->tx_pkt;
+ 		mac_hash = ipvlan_mac_hash(ethh->h_dest);
+ 
+ 		if (ether_addr_equal(ethh->h_dest, port->dev->broadcast))
+@@ -219,13 +219,10 @@ void ipvlan_process_multicast(struct work_struct *work)
+ 		else
+ 			pkt_type = PACKET_MULTICAST;
+ 
+-		dlocal = false;
+ 		rcu_read_lock();
+ 		list_for_each_entry_rcu(ipvlan, &port->ipvlans, pnode) {
+-			if (hlocal && (ipvlan->dev == dev)) {
+-				dlocal = true;
++			if (tx_pkt && (ipvlan->dev == skb->dev))
+ 				continue;
+-			}
+ 			if (!test_bit(mac_hash, ipvlan->mac_filters))
+ 				continue;
+ 			if (!(ipvlan->dev->flags & IFF_UP))
+@@ -238,7 +235,7 @@ void ipvlan_process_multicast(struct work_struct *work)
+ 				consumed = true;
+ 				nskb->pkt_type = pkt_type;
+ 				nskb->dev = ipvlan->dev;
+-				if (hlocal)
++				if (tx_pkt)
+ 					ret = dev_forward_skb(ipvlan->dev, nskb);
+ 				else
+ 					ret = netif_rx(nskb);
+@@ -248,7 +245,7 @@ void ipvlan_process_multicast(struct work_struct *work)
+ 		}
+ 		rcu_read_unlock();
+ 
+-		if (dlocal) {
++		if (tx_pkt) {
+ 			/* If the packet originated here, send it out. */
+ 			skb->dev = port->dev;
+ 			skb->pkt_type = pkt_type;
+@@ -467,13 +464,20 @@ out:
+ }
+ 
+ static void ipvlan_multicast_enqueue(struct ipvl_port *port,
+-				     struct sk_buff *skb)
++				     struct sk_buff *skb, bool tx_pkt)
+ {
+ 	if (skb->protocol == htons(ETH_P_PAUSE)) {
+ 		kfree_skb(skb);
+ 		return;
+ 	}
+ 
++	/* Record that the deferred packet is from TX or RX path. By
++	 * looking at mac-addresses on packet will lead to erronus decisions.
++	 * (This would be true for a loopback-mode on master device or a
++	 * hair-pin mode of the switch.)
++	 */
++	IPVL_SKB_CB(skb)->tx_pkt = tx_pkt;
++
+ 	spin_lock(&port->backlog.lock);
+ 	if (skb_queue_len(&port->backlog) < IPVLAN_QBACKLOG_LIMIT) {
+ 		if (skb->dev)
+@@ -535,7 +539,7 @@ static int ipvlan_xmit_mode_l2(struct sk_buff *skb, struct net_device *dev)
+ 		return dev_forward_skb(ipvlan->phy_dev, skb);
+ 
+ 	} else if (is_multicast_ether_addr(eth->h_dest)) {
+-		ipvlan_multicast_enqueue(ipvlan->port, skb);
++		ipvlan_multicast_enqueue(ipvlan->port, skb, true);
+ 		return NET_XMIT_SUCCESS;
+ 	}
+ 
+@@ -630,7 +634,7 @@ static rx_handler_result_t ipvlan_handle_mode_l2(struct sk_buff **pskb,
+ 			 * achieved by returning RX_HANDLER_PASS.
+ 			 */
+ 			if (nskb)
+-				ipvlan_multicast_enqueue(port, nskb);
++				ipvlan_multicast_enqueue(port, nskb, false);
+ 		}
+ 	} else {
+ 		struct ipvl_addr *addr;
+-- 
+2.16.2
+

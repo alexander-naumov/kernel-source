@@ -1,0 +1,53 @@
+From: Lance Richardson <lrichard@redhat.com>
+Date: Wed, 9 Nov 2016 15:04:39 -0500
+Subject: ipv4: update comment to document GSO fragmentation cases.
+Patch-mainline: v4.9-rc6
+Git-commit: 0ace81ec7192201af48528c309ee0b4103021f55
+References: bsc#1042286
+
+This is a follow-up to commit 9ee6c5dc816a ("ipv4: allow local
+fragmentation in ip_finish_output_gso()"), updating the comment
+documenting cases in which fragmentation is needed for egress
+GSO packets.
+
+Suggested-by: Shmulik Ladkani <shmulik.ladkani@gmail.com>
+Reviewed-by: Shmulik Ladkani <shmulik.ladkani@gmail.com>
+Signed-off-by: Lance Richardson <lrichard@redhat.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/ipv4/ip_output.c | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/net/ipv4/ip_output.c b/net/ipv4/ip_output.c
+index 81ba115775b8..b2e95fe53550 100644
+--- a/net/ipv4/ip_output.c
++++ b/net/ipv4/ip_output.c
+@@ -235,12 +235,18 @@ static int ip_finish_output_gso(struct net *net, struct sock *sk,
+ 	if (skb_gso_network_seglen(skb) <= mtu)
+ 		return ip_finish_output2(net, sk, skb);
+ 
+-	/* Slowpath -  GSO segment length is exceeding the dst MTU.
++	/* Slowpath -  GSO segment length exceeds the egress MTU.
+ 	 *
+-	 * This can happen in two cases:
+-	 * 1) TCP GRO packet, DF bit not set
+-	 * 2) skb arrived via virtio-net, we thus get TSO/GSO skbs directly
+-	 * from host network stack.
++	 * This can happen in several cases:
++	 *  - Forwarding of a TCP GRO skb, when DF flag is not set.
++	 *  - Forwarding of an skb that arrived on a virtualization interface
++	 *    (virtio-net/vhost/tap) with TSO/GSO size set by other network
++	 *    stack.
++	 *  - Local GSO skb transmitted on an NETIF_F_TSO tunnel stacked over an
++	 *    interface with a smaller MTU.
++	 *  - Arriving GRO skb (or GSO skb in a virtualized environment) that is
++	 *    bridged to a NETIF_F_TSO tunnel stacked over an interface with an
++	 *    insufficent MTU.
+ 	 */
+ 	features = netif_skb_features(skb);
+ 	BUILD_BUG_ON(sizeof(*IPCB(skb)) > SKB_SGO_CB_OFFSET);
+-- 
+2.16.2
+

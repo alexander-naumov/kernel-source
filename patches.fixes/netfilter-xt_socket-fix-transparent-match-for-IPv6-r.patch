@@ -1,0 +1,62 @@
+From: KOVACS Krisztian <hidden@balabit.com>
+Date: Fri, 23 Sep 2016 11:27:42 +0200
+Subject: netfilter: xt_socket: fix transparent match for IPv6 request sockets
+Patch-mainline: v4.9-rc1
+Git-commit: 7a682575ad4829b4de3e672a6ad5f73a05826b82
+References: bsc#1042286
+
+The introduction of TCP_NEW_SYN_RECV state, and the addition of request
+sockets to the ehash table seems to have broken the --transparent option
+of the socket match for IPv6 (around commit a9407000).
+
+Now that the socket lookup finds the TCP_NEW_SYN_RECV socket instead of the
+listener, the --transparent option tries to match on the no_srccheck flag
+of the request socket.
+
+Unfortunately, that flag was only set for IPv4 sockets in tcp_v4_init_req()
+by copying the transparent flag of the listener socket. This effectively
+causes '-m socket --transparent' not match on the ACK packet sent by the
+client in a TCP handshake.
+
+Based on the suggestion from Eric Dumazet, this change moves the code
+initializing no_srccheck to tcp_conn_request(), rendering the above
+scenario working again.
+
+Fixes: a940700003 ("netfilter: xt_socket: prepare for TCP_NEW_SYN_RECV support")
+Signed-off-by: Alex Badics <alex.badics@balabit.com>
+Signed-off-by: KOVACS Krisztian <hidden@balabit.com>
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ net/ipv4/tcp_input.c | 1 +
+ net/ipv4/tcp_ipv4.c  | 1 -
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/ipv4/tcp_input.c b/net/ipv4/tcp_input.c
+index b2827866fd1f..8c1e55c33e87 100644
+--- a/net/ipv4/tcp_input.c
++++ b/net/ipv4/tcp_input.c
+@@ -6220,6 +6220,7 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
+ 
+ 	tmp_opt.tstamp_ok = tmp_opt.saw_tstamp;
+ 	tcp_openreq_init(req, &tmp_opt, skb, sk);
++	inet_rsk(req)->no_srccheck = inet_sk(sk)->transparent;
+ 
+ 	/* Note: tcp_v6_init_req() might override ir_iif for link locals */
+ 	inet_rsk(req)->ir_iif = sk->sk_bound_dev_if;
+diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
+index 61c93a93f228..133182a7cf31 100644
+--- a/net/ipv4/tcp_ipv4.c
++++ b/net/ipv4/tcp_ipv4.c
+@@ -1196,7 +1196,6 @@ static void tcp_v4_init_req(struct request_sock *req,
+ 
+ 	sk_rcv_saddr_set(req_to_sk(req), ip_hdr(skb)->daddr);
+ 	sk_daddr_set(req_to_sk(req), ip_hdr(skb)->saddr);
+-	ireq->no_srccheck = inet_sk(sk_listener)->transparent;
+ 	RCU_INIT_POINTER(ireq->ireq_opt, tcp_v4_save_options(skb));
+ }
+ 
+-- 
+2.16.2
+

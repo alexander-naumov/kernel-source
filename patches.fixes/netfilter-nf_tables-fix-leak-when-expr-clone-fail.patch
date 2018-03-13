@@ -1,0 +1,183 @@
+From: Liping Zhang <zlpnobody@gmail.com>
+Date: Sat, 22 Oct 2016 18:51:25 +0800
+Subject: netfilter: nf_tables: fix *leak* when expr clone fail
+Patch-mainline: v4.9-rc6
+Git-commit: 61f9e2924f4981d626b3a931fed935f2fa3cb4de
+References: bsc#1042286
+
+When nft_expr_clone failed, a series of problems will happen:
+
+1. module refcnt will leak, we call __module_get at the beginning but
+   we forget to put it back if ops->clone returns fail
+2. memory will be leaked, if clone fail, we just return NULL and forget
+   to free the alloced element
+3. set->nelems will become incorrect when set->size is specified. If
+   clone fail, we should decrease the set->nelems
+
+Now this patch fixes these problems. And fortunately, clone fail will
+only happen on counter expression when memory is exhausted.
+
+Fixes: 086f332167d6 ("netfilter: nf_tables: add clone interface to expression operations")
+Signed-off-by: Liping Zhang <zlpnobody@gmail.com>
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ include/net/netfilter/nf_tables.h |  6 ++++--
+ net/netfilter/nf_tables_api.c     | 11 ++++++-----
+ net/netfilter/nft_dynset.c        | 16 ++++++++++------
+ net/netfilter/nft_hash.c          |  4 ++--
+ net/netfilter/nft_rbtree.c        |  2 +-
+ 5 files changed, 23 insertions(+), 16 deletions(-)
+
+diff --git a/include/net/netfilter/nf_tables.h b/include/net/netfilter/nf_tables.h
+index 4bd7508bedc9..f1c9a85806a1 100644
+--- a/include/net/netfilter/nf_tables.h
++++ b/include/net/netfilter/nf_tables.h
+@@ -515,7 +515,8 @@ void *nft_set_elem_init(const struct nft_set *set,
+ 			const struct nft_set_ext_tmpl *tmpl,
+ 			const u32 *key, const u32 *data,
+ 			u64 timeout, gfp_t gfp);
+-void nft_set_elem_destroy(const struct nft_set *set, void *elem);
++void nft_set_elem_destroy(const struct nft_set *set, void *elem,
++			  bool destroy_expr);
+ 
+ /**
+  *	struct nft_set_gc_batch_head - nf_tables set garbage collection batch
+@@ -666,7 +667,6 @@ static inline int nft_expr_clone(struct nft_expr *dst, struct nft_expr *src)
+ {
+ 	int err;
+ 
+-	__module_get(src->ops->type->owner);
+ 	if (src->ops->clone) {
+ 		dst->ops = src->ops;
+ 		err = src->ops->clone(dst, src);
+@@ -675,6 +675,8 @@ static inline int nft_expr_clone(struct nft_expr *dst, struct nft_expr *src)
+ 	} else {
+ 		memcpy(dst, src, src->ops->size);
+ 	}
++
++	__module_get(src->ops->type->owner);
+ 	return 0;
+ }
+ 
+diff --git a/net/netfilter/nf_tables_api.c b/net/netfilter/nf_tables_api.c
+index 120e9ae04db3..9ef892870375 100644
+--- a/net/netfilter/nf_tables_api.c
++++ b/net/netfilter/nf_tables_api.c
+@@ -3349,14 +3349,15 @@ void *nft_set_elem_init(const struct nft_set *set,
+ 	return elem;
+ }
+ 
+-void nft_set_elem_destroy(const struct nft_set *set, void *elem)
++void nft_set_elem_destroy(const struct nft_set *set, void *elem,
++			  bool destroy_expr)
+ {
+ 	struct nft_set_ext *ext = nft_set_elem_ext(set, elem);
+ 
+ 	nft_data_uninit(nft_set_ext_key(ext), NFT_DATA_VALUE);
+ 	if (nft_set_ext_exists(ext, NFT_SET_EXT_DATA))
+ 		nft_data_uninit(nft_set_ext_data(ext), set->dtype);
+-	if (nft_set_ext_exists(ext, NFT_SET_EXT_EXPR))
++	if (destroy_expr && nft_set_ext_exists(ext, NFT_SET_EXT_EXPR))
+ 		nf_tables_expr_destroy(NULL, nft_set_ext_expr(ext));
+ 
+ 	kfree(elem);
+@@ -3656,7 +3657,7 @@ void nft_set_gc_batch_release(struct rcu_head *rcu)
+ 
+ 	gcb = container_of(rcu, struct nft_set_gc_batch, head.rcu);
+ 	for (i = 0; i < gcb->head.cnt; i++)
+-		nft_set_elem_destroy(gcb->head.set, gcb->elems[i]);
++		nft_set_elem_destroy(gcb->head.set, gcb->elems[i], true);
+ 	kfree(gcb);
+ }
+ EXPORT_SYMBOL_GPL(nft_set_gc_batch_release);
+@@ -3875,7 +3876,7 @@ static void nf_tables_commit_release(struct nft_trans *trans)
+ 		break;
+ 	case NFT_MSG_DELSETELEM:
+ 		nft_set_elem_destroy(nft_trans_elem_set(trans),
+-				     nft_trans_elem(trans).priv);
++				     nft_trans_elem(trans).priv, true);
+ 		break;
+ 	}
+ 	kfree(trans);
+@@ -4012,7 +4013,7 @@ static void nf_tables_abort_release(struct nft_trans *trans)
+ 		break;
+ 	case NFT_MSG_NEWSETELEM:
+ 		nft_set_elem_destroy(nft_trans_elem_set(trans),
+-				     nft_trans_elem(trans).priv);
++				     nft_trans_elem(trans).priv, true);
+ 		break;
+ 	}
+ 	kfree(trans);
+diff --git a/net/netfilter/nft_dynset.c b/net/netfilter/nft_dynset.c
+index 0a5df0cbaa28..ff2bb86ec0ae 100644
+--- a/net/netfilter/nft_dynset.c
++++ b/net/netfilter/nft_dynset.c
+@@ -43,18 +43,22 @@ static void *nft_dynset_new(struct nft_set *set, const struct nft_expr *expr,
+ 				 &regs->data[priv->sreg_key],
+ 				 &regs->data[priv->sreg_data],
+ 				 timeout, GFP_ATOMIC);
+-	if (elem == NULL) {
+-		if (set->size)
+-			atomic_dec(&set->nelems);
+-		return NULL;
+-	}
++	if (elem == NULL)
++		goto err1;
+ 
+ 	ext = nft_set_elem_ext(set, elem);
+ 	if (priv->expr != NULL &&
+ 	    nft_expr_clone(nft_set_ext_expr(ext), priv->expr) < 0)
+-		return NULL;
++		goto err2;
+ 
+ 	return elem;
++
++err2:
++	nft_set_elem_destroy(set, elem, false);
++err1:
++	if (set->size)
++		atomic_dec(&set->nelems);
++	return NULL;
+ }
+ 
+ static void nft_dynset_eval(const struct nft_expr *expr,
+diff --git a/net/netfilter/nft_hash.c b/net/netfilter/nft_hash.c
+index 3f9d45d3d9b7..a5c290fce8c4 100644
+--- a/net/netfilter/nft_hash.c
++++ b/net/netfilter/nft_hash.c
+@@ -120,7 +120,7 @@ out:
+ 	return true;
+ 
+ err2:
+-	nft_set_elem_destroy(set, he);
++	nft_set_elem_destroy(set, he, true);
+ err1:
+ 	return false;
+ }
+@@ -322,7 +322,7 @@ static int nft_hash_init(const struct nft_set *set,
+ 
+ static void nft_hash_elem_destroy(void *ptr, void *arg)
+ {
+-	nft_set_elem_destroy((const struct nft_set *)arg, ptr);
++	nft_set_elem_destroy((const struct nft_set *)arg, ptr, true);
+ }
+ 
+ static void nft_hash_destroy(const struct nft_set *set)
+diff --git a/net/netfilter/nft_rbtree.c b/net/netfilter/nft_rbtree.c
+index 1c30f41cff5b..0f58c912c99a 100644
+--- a/net/netfilter/nft_rbtree.c
++++ b/net/netfilter/nft_rbtree.c
+@@ -226,7 +226,7 @@ static void nft_rbtree_destroy(const struct nft_set *set)
+ 	while ((node = priv->root.rb_node) != NULL) {
+ 		rb_erase(node, &priv->root);
+ 		rbe = rb_entry(node, struct nft_rbtree_elem, node);
+-		nft_set_elem_destroy(set, rbe);
++		nft_set_elem_destroy(set, rbe, true);
+ 	}
+ }
+ 
+-- 
+2.16.2
+
