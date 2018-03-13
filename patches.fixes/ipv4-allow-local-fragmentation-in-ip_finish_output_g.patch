@@ -1,0 +1,93 @@
+From: Lance Richardson <lrichard@redhat.com>
+Date: Wed, 2 Nov 2016 16:36:17 -0400
+Subject: ipv4: allow local fragmentation in ip_finish_output_gso()
+Patch-mainline: v4.9-rc6
+Git-commit: 9ee6c5dc816aa8256257f2cd4008a9291ec7e985
+References: bsc#1042286
+
+Some configurations (e.g. geneve interface with default
+MTU of 1500 over an ethernet interface with 1500 MTU) result
+in the transmission of packets that exceed the configured MTU.
+While this should be considered to be a "bad" configuration,
+it is still allowed and should not result in the sending
+of packets that exceed the configured MTU.
+
+Fix by dropping the assumption in ip_finish_output_gso() that
+locally originated gso packets will never need fragmentation.
+Basic testing using iperf (observing CPU usage and bandwidth)
+have shown no measurable performance impact for traffic not
+requiring fragmentation.
+
+Fixes: c7ba65d7b649 ("net: ip: push gso skb forwarding handling down the stack")
+Reported-by: Jan Tluka <jtluka@redhat.com>
+Signed-off-by: Lance Richardson <lrichard@redhat.com>
+Acked-by: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Acked-by: Michal Kubecek <mkubecek@suse.cz>
+
+---
+ include/net/ip.h      | 1 -
+ net/ipv4/ip_forward.c | 2 +-
+ net/ipv4/ip_output.c  | 6 ++----
+ net/ipv4/ipmr.c       | 2 +-
+ 4 files changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/include/net/ip.h b/include/net/ip.h
+index 55edcd61daa0..8f45eb3bbdab 100644
+--- a/include/net/ip.h
++++ b/include/net/ip.h
+@@ -48,7 +48,6 @@ struct inet_skb_parm {
+ #define IPSKB_REROUTED		BIT(4)
+ #define IPSKB_DOREDIRECT	BIT(5)
+ #define IPSKB_FRAG_PMTU		BIT(6)
+-#define IPSKB_FRAG_SEGS		BIT(7)
+ 
+ 	u16			frag_max_size;
+ };
+diff --git a/net/ipv4/ip_forward.c b/net/ipv4/ip_forward.c
+index 76a89350a8f1..da0d7ce85844 100644
+--- a/net/ipv4/ip_forward.c
++++ b/net/ipv4/ip_forward.c
+@@ -118,7 +118,7 @@ int ip_forward(struct sk_buff *skb)
+ 	if (opt->is_strictroute && rt->rt_uses_gateway)
+ 		goto sr_failed;
+ 
+-	IPCB(skb)->flags |= IPSKB_FORWARDED | IPSKB_FRAG_SEGS;
++	IPCB(skb)->flags |= IPSKB_FORWARDED;
+ 	mtu = ip_dst_mtu_maybe_forward(&rt->dst, true);
+ 	if (ip_exceeds_mtu(skb, mtu)) {
+ 		IP_INC_STATS(net, IPSTATS_MIB_FRAGFAILS);
+diff --git a/net/ipv4/ip_output.c b/net/ipv4/ip_output.c
+index 4dee863c6feb..81ba115775b8 100644
+--- a/net/ipv4/ip_output.c
++++ b/net/ipv4/ip_output.c
+@@ -230,11 +230,9 @@ static int ip_finish_output_gso(struct net *net, struct sock *sk,
+ 	struct sk_buff *segs;
+ 	int ret = 0;
+ 
+-	/* common case: fragmentation of segments is not allowed,
+-	 * or seglen is <= mtu
++	/* common case: seglen is <= mtu
+ 	 */
+-	if (((IPCB(skb)->flags & IPSKB_FRAG_SEGS) == 0) ||
+-	      skb_gso_network_seglen(skb) <= mtu)
++	if (skb_gso_network_seglen(skb) <= mtu)
+ 		return ip_finish_output2(net, sk, skb);
+ 
+ 	/* Slowpath -  GSO segment length is exceeding the dst MTU.
+diff --git a/net/ipv4/ipmr.c b/net/ipv4/ipmr.c
+index ef0576a83518..8e77786549c6 100644
+--- a/net/ipv4/ipmr.c
++++ b/net/ipv4/ipmr.c
+@@ -1770,7 +1770,7 @@ static void ipmr_queue_xmit(struct net *net, struct mr_table *mrt,
+ 		vif->dev->stats.tx_bytes += skb->len;
+ 	}
+ 
+-	IPCB(skb)->flags |= IPSKB_FORWARDED | IPSKB_FRAG_SEGS;
++	IPCB(skb)->flags |= IPSKB_FORWARDED;
+ 
+ 	/*
+ 	 * RFC1584 teaches, that DVMRP/PIM router must deliver packets locally
+-- 
+2.16.2
+
