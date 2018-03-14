@@ -1,9 +1,11 @@
 From: Nathan Sullivan <nathan.sullivan@ni.com>
 Date: Mon, 15 Aug 2016 17:20:14 -0500
-Subject: leds: do not overflow sysfs buffer in led_trigger_show
+Subject: [PATCH] leds: do not overflow sysfs buffer in led_trigger_show
+Patch-mainline: 4.4.121
+References: bnc#1012382 bsc#1080464
 Git-commit: 3b9b95363c45365d606ad4bbba16acca75fdf6d3
-Patch-mainline: v4.9-rc1
-References: bsc#1080464
+
+commit 3b9b95363c45365d606ad4bbba16acca75fdf6d3 upstream.
 
 Per the documentation, use scnprintf instead of sprintf to ensure there
 is never more than PAGE_SIZE bytes of trigger names put into the
@@ -12,14 +14,19 @@ buffer.
 Signed-off-by: Nathan Sullivan <nathan.sullivan@ni.com>
 Signed-off-by: Zach Brown <zach.brown@ni.com>
 Signed-off-by: Jacek Anaszewski <j.anaszewski@samsung.com>
-Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
+Cc: Willy Tarreau <w@1wt.eu>
+Cc: Vlastimil Babka <vbabka@suse.cz>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- drivers/leds/led-triggers.c |   12 +++++++-----
+ drivers/leds/led-triggers.c | 12 +++++++-----
  1 file changed, 7 insertions(+), 5 deletions(-)
 
+diff --git a/drivers/leds/led-triggers.c b/drivers/leds/led-triggers.c
+index e8b1120f486d..eef3e64ca0a8 100644
 --- a/drivers/leds/led-triggers.c
 +++ b/drivers/leds/led-triggers.c
-@@ -88,21 +88,23 @@ ssize_t led_trigger_show(struct device *
+@@ -88,21 +88,23 @@ ssize_t led_trigger_show(struct device *dev, struct device_attribute *attr,
  	down_read(&led_cdev->trigger_lock);
  
  	if (!led_cdev->trigger)
@@ -48,3 +55,6 @@ Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
  	return len;
  }
  EXPORT_SYMBOL_GPL(led_trigger_show);
+-- 
+2.16.2
+

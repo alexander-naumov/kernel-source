@@ -14,15 +14,13 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
 Acked-by: Michal Kubecek <mkubecek@suse.cz>
 
 ---
- net/ipv4/udp.c | 7 +++++--
+ net/ipv4/udp.c |    7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/net/ipv4/udp.c b/net/ipv4/udp.c
-index 0bbac5686308..bc57bab164b7 100644
 --- a/net/ipv4/udp.c
 +++ b/net/ipv4/udp.c
-@@ -1746,8 +1746,11 @@ static inline int udp4_csum_init(struct sk_buff *skb, struct udphdr *uh,
- 			return err;
+@@ -1751,8 +1751,11 @@ static inline int udp4_csum_init(struct
+ 		}
  	}
  
 -	return skb_checksum_init_zero_check(skb, proto, uh->check,
@@ -35,6 +33,3 @@ index 0bbac5686308..bc57bab164b7 100644
  }
  
  /*
--- 
-2.16.2
-

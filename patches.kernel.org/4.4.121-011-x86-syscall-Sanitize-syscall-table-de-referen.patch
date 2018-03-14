@@ -1,9 +1,10 @@
 From: Jiri Slaby <jslaby@suse.cz>
-Date: Wed, 7 Mar 2018 08:55:33 +0100
-Subject: x86/syscall: Sanitize syscall table de-references under speculation
- fix
-Patch-mainline: submitted, in 4.4.121
-References: bsc#1068032 CVE-2017-5753
+Date: Wed, 7 Mar 2018 08:56:23 +0100
+Subject: [PATCH] x86/syscall: Sanitize syscall table de-references under
+ speculation fix
+References: bnc#1012382 bsc#1068032 CVE-2017-5753
+Patch-mainline: 4.4.121
+Git-commit: 5fed0b3532cb69b27d286b27ea4377ea44e686e5
 
 In 4.4.118, we have commit c8961332d6da (x86/syscall: Sanitize syscall
 table de-references under speculation), which is a backport of upstream
@@ -34,10 +35,13 @@ Cc: Andy Lutomirski <luto@kernel.org>
 Cc: alan@linux.intel.com
 Cc: Jinpu Wang <jinpu.wang@profitbricks.com>
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- arch/x86/entry/entry_64.S |   16 ++++++++++------
+ arch/x86/entry/entry_64.S | 16 ++++++++++------
  1 file changed, 10 insertions(+), 6 deletions(-)
 
+diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+index a03b22c615d9..59a4e1604a36 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -178,12 +178,14 @@ GLOBAL(entry_SYSCALL_64_after_swapgs)
@@ -76,3 +80,6 @@ Signed-off-by: Jiri Slaby <jslaby@suse.cz>
  	movq	%r10, %rcx			/* fixup for C */
  #ifdef CONFIG_RETPOLINE
  	movq	sys_call_table(, %rax, 8), %rax
+-- 
+2.16.2
+
