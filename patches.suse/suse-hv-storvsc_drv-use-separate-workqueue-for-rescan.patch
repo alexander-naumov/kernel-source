@@ -1,0 +1,129 @@
+From: Hannes Reinecke <hare@suse.de>
+Date: Mon, 26 Feb 2018 13:26:57 +0100
+Patch-mainline: Not yet, submission by hare outstanding
+Subject: storvsc_drv: use separate workqueue for rescan
+References: bsc#1070536, bsc#1057734
+
+We should be using a separate workqueue for rescanning and
+device add/remove as we need to flush the workqueue entries
+before resetting the host; otherwise we might end up with
+loads of pointless rescan/remove calls.
+
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Acked-by: <ohering@suse.de>
+---
+ drivers/scsi/storvsc_drv.c | 28 ++++++++++++++++++++++------
+ 1 file changed, 22 insertions(+), 6 deletions(-)
+
+--- a/drivers/scsi/storvsc_drv.c
++++ b/drivers/scsi/storvsc_drv.c
+@@ -448,6 +448,11 @@ struct storvsc_device {
+ 	wait_queue_head_t waiting_to_drain;
+ 
+ 	/*
++	 * Work queue for device rescan
++	 */
++	struct workqueue_struct *scan_wq;
++
++	/*
+ 	 * Work queue element for host rescan
+ 	 */
+ 	struct work_struct host_rescan_work;
+@@ -495,12 +500,15 @@ static void storvsc_device_scan(struct w
+ 	struct scsi_device *sdev;
+ 
+ 	wrk = container_of(work, struct storvsc_scan_work, work);
++	if (!scsi_host_get(wrk->host))
++		goto done;
+ 
+ 	sdev = scsi_device_lookup(wrk->host, 0, wrk->tgt_id, wrk->lun);
+ 	if (!sdev)
+ 		goto done;
+ 	scsi_rescan_device(&sdev->sdev_gendev);
+ 	scsi_device_put(sdev);
++	scsi_host_put(wrk->host);
+ 
+ done:
+ 	kfree(wrk);
+@@ -979,7 +987,7 @@ static void storvsc_handle_error(struct
+ 	wrk->lun = vm_srb->lun;
+ 	wrk->tgt_id = vm_srb->target_id;
+ 	INIT_WORK(&wrk->work, process_err_fn);
+-	schedule_work(&wrk->work);
++	queue_work(stor_device->scan_wq, &wrk->work);
+ }
+ 
+ 
+@@ -1114,7 +1122,8 @@ static void storvsc_on_receive(struct st
+ 
+ 	case VSTOR_OPERATION_REMOVE_DEVICE:
+ 	case VSTOR_OPERATION_ENUMERATE_BUS:
+-		schedule_work(&stor_device->host_rescan_work);
++		queue_work(stor_device->scan_wq,
++			   &stor_device->host_rescan_work);
+ 		break;
+ 
+ 	case VSTOR_OPERATION_FCHBA_DATA:
+@@ -1393,7 +1402,7 @@ static int storvsc_host_reset_handler(st
+ 	 * Cancel all outstanding rescans
+ 	 */
+ 	stor_device->host_reset = true;
+-	cancel_work_sync(&stor_device->host_rescan_work);
++	flush_workqueue(stor_device->scan_wq);
+ 	request = &stor_device->reset_request;
+ 	vstor_packet = &request->vstor_packet;
+ 
+@@ -1702,13 +1711,17 @@ static int storvsc_probe(struct hv_devic
+ 	init_waitqueue_head(&stor_device->waiting_to_drain);
+ 	stor_device->device = device;
+ 	stor_device->host = host;
++	stor_device->scan_wq =
++		create_singlethread_workqueue(dev_name(&device->device));
++	if (!stor_device->scan_wq)
++		goto err_out1;
+ 	INIT_WORK(&stor_device->host_rescan_work, storvsc_host_scan);
+ 	hv_set_drvdata(device, stor_device);
+ 
+ 	stor_device->port_number = host->host_no;
+ 	ret = storvsc_connect_to_vsp(device, storvsc_ringbuffer_size, is_fc);
+ 	if (ret)
+-		goto err_out1;
++		goto err_out2;
+ 
+ 	host_dev->path = stor_device->path_id;
+ 	host_dev->target = stor_device->target_id;
+@@ -1752,7 +1765,7 @@ static int storvsc_probe(struct hv_devic
+ 	/* Register the HBA and start the scsi bus scan */
+ 	ret = scsi_add_host(host, &device->device);
+ 	if (ret != 0)
+-		goto err_out2;
++		goto err_out3;
+ 
+ 	if (!dev_is_ide) {
+ 		scsi_scan_host(host);
+@@ -1773,7 +1786,7 @@ static int storvsc_probe(struct hv_devic
+ #endif
+ 	return 0;
+ 
+-err_out2:
++err_out3:
+ 	/*
+ 	 * Once we have connected with the host, we would need to
+ 	 * to invoke storvsc_dev_remove() to rollback this state and
+@@ -1783,6 +1796,8 @@ err_out2:
+ 	storvsc_dev_remove(device);
+ 	goto err_out0;
+ 
++err_out2:
++	destroy_workqueue(stor_device->scan_wq);
+ err_out1:
+ 	kfree(stor_device);
+ 
+@@ -1801,6 +1816,7 @@ static int storvsc_remove(struct hv_devi
+ 		fc_remove_host(host);
+ #endif
+ 	scsi_remove_host(host);
++	destroy_workqueue(stor_device->scan_wq);
+ 	storvsc_dev_remove(dev);
+ 	scsi_host_put(host);
+ 
