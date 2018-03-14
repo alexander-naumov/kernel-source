@@ -1,0 +1,136 @@
+From: Hannes Reinecke <hare@suse.de>
+Date: Mon, 26 Feb 2018 12:46:26 +0100
+Patch-mainline: Not yet, submission by hare outstanding
+Subject: storvsc_drv: use embedded work structure for host rescan
+References: bsc#1070536, bsc#1057734
+
+When queueing a host rescan we should be using an embedded work
+structure; this allows us to wait for any outstanding rescan
+during host reset and also will drop any duplicate rescan requests.
+
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Acked-by: <ohering@suse.de>
+---
+ drivers/scsi/storvsc_drv.c | 39 +++++++++++++++++++++++----------------
+ 1 file changed, 23 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
+index 4fcafcfab84c..c42d33d4cc77 100644
+--- a/drivers/scsi/storvsc_drv.c
++++ b/drivers/scsi/storvsc_drv.c
+@@ -441,12 +441,18 @@ struct storvsc_device {
+ 	bool	 destroy;
+ 	bool	 drain_notify;
+ 	bool	 open_sub_channel;
++	bool	 host_reset;
+ 	atomic_t num_outstanding_req;
+ 	struct Scsi_Host *host;
+ 
+ 	wait_queue_head_t waiting_to_drain;
+ 
+ 	/*
++	 * Work queue element for host rescan
++	 */
++	struct work_struct host_rescan_work;
++
++	/*
+ 	 * Each unique Port/Path/Target represents 1 channel ie scsi
+ 	 * controller. In reality, the pathid, targetid is always 0
+ 	 * and the port is set by us
+@@ -511,13 +517,16 @@ static void storvsc_device_scan(struct work_struct *work)
+ 
+ static void storvsc_host_scan(struct work_struct *work)
+ {
+-	struct storvsc_scan_work *wrk;
++	struct storvsc_device *stor_device;
+ 	struct Scsi_Host *host;
+ 	struct scsi_device *sdev;
+ 
+-	wrk = container_of(work, struct storvsc_scan_work, work);
+-	host = wrk->host;
++	stor_device = container_of(work, struct storvsc_device,
++				   host_rescan_work);
++	if (stor_device->host_reset)
++		return;
+ 
++	host = stor_device->host;
+ 	/*
+ 	 * Before scanning the host, first check to see if any of the
+ 	 * currrently known devices have been hot removed. We issue a
+@@ -537,8 +546,6 @@ static void storvsc_host_scan(struct work_struct *work)
+ 	 * Now scan the host to discover LUNs that may have been added.
+ 	 */
+ 	scsi_scan_host(host);
+-
+-	kfree(wrk);
+ }
+ 
+ static void storvsc_remove_lun(struct work_struct *work)
+@@ -1113,8 +1120,6 @@ static void storvsc_on_receive(struct storvsc_device *stor_device,
+ 			     struct vstor_packet *vstor_packet,
+ 			     struct storvsc_cmd_request *request)
+ {
+-	struct storvsc_scan_work *work;
+-
+ 	switch (vstor_packet->operation) {
+ 	case VSTOR_OPERATION_COMPLETE_IO:
+ 		storvsc_on_io_completion(stor_device, vstor_packet, request);
+@@ -1122,13 +1127,7 @@ static void storvsc_on_receive(struct storvsc_device *stor_device,
+ 
+ 	case VSTOR_OPERATION_REMOVE_DEVICE:
+ 	case VSTOR_OPERATION_ENUMERATE_BUS:
+-		work = kmalloc(sizeof(struct storvsc_scan_work), GFP_ATOMIC);
+-		if (!work)
+-			return;
+-
+-		INIT_WORK(&work->work, storvsc_host_scan);
+-		work->host = stor_device->host;
+-		schedule_work(&work->work);
++		schedule_work(&stor_device->host_rescan_work);
+ 		break;
+ 
+ 	case VSTOR_OPERATION_FCHBA_DATA:
+@@ -1465,6 +1464,11 @@ static int storvsc_host_reset_handler(struct scsi_cmnd *scmnd)
+ 	if (!stor_device)
+ 		return FAILED;
+ 
++	/*
++	 * Cancel all outstanding rescans
++	 */
++	stor_device->host_reset = true;
++	cancel_work_sync(&stor_device->host_rescan_work);
+ 	request = &stor_device->reset_request;
+ 	vstor_packet = &request->vstor_packet;
+ 
+@@ -1484,8 +1488,10 @@ static int storvsc_host_reset_handler(struct scsi_cmnd *scmnd)
+ 		return FAILED;
+ 
+ 	t = wait_for_completion_timeout(&request->wait_event, 5*HZ);
+-	if (t == 0)
++	if (t == 0) {
++		stor_device->host_reset = false;
+ 		return TIMEOUT_ERROR;
++	}
+ 
+ 
+ 	/*
+@@ -1497,7 +1503,7 @@ static int storvsc_host_reset_handler(struct scsi_cmnd *scmnd)
+ 	 * before we return from here.
+ 	 */
+ 	storvsc_wait_to_drain(stor_device);
+-
++	stor_device->host_reset = false;
+ 	return SUCCESS;
+ }
+ 
+@@ -1766,6 +1772,7 @@ static int storvsc_probe(struct hv_device *device,
+ 	init_waitqueue_head(&stor_device->waiting_to_drain);
+ 	stor_device->device = device;
+ 	stor_device->host = host;
++	INIT_WORK(&stor_device->host_rescan_work, storvsc_host_scan);
+ 	hv_set_drvdata(device, stor_device);
+ 
+ 	stor_device->port_number = host->host_no;
+-- 
+2.12.3
+
