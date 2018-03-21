@@ -1,0 +1,42 @@
+From: Miroslav Benes <mbenes@suse.cz>
+Subject: x86/kaiser: Remove a user mapping of cpu_tss structure
+Patch-mainline: No, SUSE-specific
+References: bsc#1077560 bsc#1083836
+
+The original cpu_tss should not be used for anything serious now. Remove
+its user mapping.
+
+Signed-off-by: Miroslav Benes <mbenes@suse.cz>
+---
+ arch/x86/include/asm/processor.h |    4 ----
+ arch/x86/kernel/process.c        |    4 ----
+ 2 files changed, 8 deletions(-)
+
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -309,11 +309,7 @@ struct tss_struct {
+ 
+ } ____cacheline_aligned;
+ 
+-#ifndef __GENKSYMS__
+-DECLARE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss);
+-#else
+ DECLARE_PER_CPU_SHARED_ALIGNED(struct tss_struct, cpu_tss);
+-#endif
+ 
+ #ifdef CONFIG_X86_32
+ DECLARE_PER_CPU(unsigned long, cpu_current_top_of_stack);
+--- a/arch/x86/kernel/process.c
++++ b/arch/x86/kernel/process.c
+@@ -39,11 +39,7 @@
+  * section. Since TSS's are completely CPU-local, we want them
+  * on exact cacheline boundaries, to eliminate cacheline ping-pong.
+  */
+-#if defined(CONFIG_GENKSYMS)
+ __visible DEFINE_PER_CPU_SHARED_ALIGNED(struct tss_struct, cpu_tss) = {
+-#else
+-__visible DEFINE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss) = {
+-#endif
+ 	.x86_tss = {
+ 		.sp0 = TOP_OF_INIT_STACK,
+ #ifdef CONFIG_X86_32

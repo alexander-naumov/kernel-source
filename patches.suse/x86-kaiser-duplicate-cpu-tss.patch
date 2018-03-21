@@ -1,0 +1,294 @@
+From: Miroslav Benes <mbenes@suse.cz>
+Subject: x86/kaiser: Duplicate cpu_tss for an entry trampoline usage
+Patch-mainline: No, SUSE-specific
+References: bsc#1077560 bsc#1083836
+
+Upstream commit 9aaefe7b59ae ("x86/entry/64: Separate
+cpu_current_top_of_stack from TSS.sp0") stores the current top of stack
+in TSS_sp1. It would be nice to do the same, but we would break kABI.
+There are KMPs calling current_thread_info() which expects to find
+thread info in TSS_sp0.
+
+We take a different approach. TSS_sp0 still points to the current top of
+stack but it is not stored in CPU GDT. GDT points to a duplicated TSS
+whose sp0 will containt entry trampoline. kABI is thus preserved.
+
+It must be done carefully not to break other aspects of TSS. Let's be
+paranoid and always do the same for both the original TSS and its
+trampoline copy.
+
+Signed-off-by: Miroslav Benes <mbenes@suse.cz>
+---
+ arch/x86/entry/entry_64.S        |    2 -
+ arch/x86/include/asm/processor.h |    2 +
+ arch/x86/include/asm/switch_to.h |    2 +
+ arch/x86/kernel/cpu/common.c     |   11 +++++--
+ arch/x86/kernel/ioport.c         |    7 +++-
+ arch/x86/kernel/process.c        |   57 ++++++++++++++++++++++++++++-----------
+ arch/x86/kernel/process_64.c     |    8 ++++-
+ arch/x86/lib/delay.c             |    2 -
+ arch/x86/power/cpu.c             |    2 -
+ 9 files changed, 67 insertions(+), 26 deletions(-)
+
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -778,7 +778,7 @@ apicinterrupt IRQ_WORK_VECTOR			irq_work
+ /*
+  * Exception entry points.
+  */
+-#define CPU_TSS_IST(x) PER_CPU_VAR(cpu_tss) + (TSS_ist + ((x) - 1) * 8)
++#define CPU_TSS_IST(x) PER_CPU_VAR(cpu_tss_tramp) + (TSS_ist + ((x) - 1) * 8)
+ 
+ .macro idtentry sym do_sym has_error_code:req paranoid=0 shift_ist=-1
+ ENTRY(\sym)
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -317,6 +317,8 @@ DECLARE_PER_CPU_SHARED_ALIGNED(struct ts
+ 
+ #ifdef CONFIG_X86_32
+ DECLARE_PER_CPU(unsigned long, cpu_current_top_of_stack);
++#else
++DECLARE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss_tramp);
+ #endif
+ 
+ /*
+--- a/arch/x86/include/asm/switch_to.h
++++ b/arch/x86/include/asm/switch_to.h
+@@ -9,6 +9,8 @@ __visible struct task_struct *__switch_t
+ struct tss_struct;
+ void __switch_to_xtra(struct task_struct *prev_p, struct task_struct *next_p,
+ 		      struct tss_struct *tss);
++void __switch_to_xtra_io(struct task_struct *prev_p, struct task_struct *next_p,
++			 struct tss_struct *tss);
+ 
+ #ifdef CONFIG_X86_32
+ 
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -1417,7 +1417,7 @@ void cpu_init(void)
+ {
+ 	struct orig_ist *oist;
+ 	struct task_struct *me;
+-	struct tss_struct *t;
++	struct tss_struct *t, *t_orig;
+ 	unsigned long v;
+ 	int cpu = stack_smp_processor_id();
+ 	int i;
+@@ -1444,7 +1444,8 @@ void cpu_init(void)
+ 	 */
+ 	load_ucode_ap();
+ 
+-	t = &per_cpu(cpu_tss, cpu);
++	t = &per_cpu(cpu_tss_tramp, cpu);
++	t_orig = &per_cpu(cpu_tss, cpu);
+ 	oist = &per_cpu(orig_ist, cpu);
+ 
+ #ifdef CONFIG_NUMA
+@@ -1495,13 +1496,16 @@ void cpu_init(void)
+ 	}
+ 
+ 	t->x86_tss.io_bitmap_base = offsetof(struct tss_struct, io_bitmap);
++	t_orig->x86_tss.io_bitmap_base = offsetof(struct tss_struct, io_bitmap);
+ 
+ 	/*
+ 	 * <= is required because the CPU will access up to
+ 	 * 8 bits beyond the end of the IO permission bitmap.
+ 	 */
+-	for (i = 0; i <= IO_BITMAP_LONGS; i++)
++	for (i = 0; i <= IO_BITMAP_LONGS; i++) {
+ 		t->io_bitmap[i] = ~0UL;
++		t_orig->io_bitmap[i] = ~0UL;
++	}
+ 
+ 	atomic_inc(&init_mm.mm_count);
+ 	me->active_mm = &init_mm;
+@@ -1509,6 +1513,7 @@ void cpu_init(void)
+ 	enter_lazy_tlb(&init_mm, me);
+ 
+ 	load_sp0(t, &current->thread);
++	load_sp0(t_orig, &current->thread);
+ 	set_tss_desc(cpu, t);
+ 	load_TR_desc();
+ 	load_mm_ldt(&init_mm);
+--- a/arch/x86/kernel/ioport.c
++++ b/arch/x86/kernel/ioport.c
+@@ -25,7 +25,7 @@ asmlinkage long sys_ioperm(unsigned long
+ {
+ 	struct thread_struct *t = &current->thread;
+ 	struct tss_struct *tss;
+-	unsigned int i, max_long, bytes, bytes_updated;
++	unsigned int i, max_long, bytes, bytes_updated, cpu;
+ 
+ 	if ((from + num <= from) || (from + num > IO_BITMAP_BITS))
+ 		return -EINVAL;
+@@ -55,7 +55,8 @@ asmlinkage long sys_ioperm(unsigned long
+ 	 * because the ->io_bitmap_max value must match the bitmap
+ 	 * contents:
+ 	 */
+-	tss = &per_cpu(cpu_tss, get_cpu());
++	cpu = get_cpu();
++	tss = &per_cpu(cpu_tss_tramp, cpu);
+ 
+ 	if (turn_on)
+ 		bitmap_clear(t->io_bitmap_ptr, from, num);
+@@ -78,6 +79,8 @@ asmlinkage long sys_ioperm(unsigned long
+ 
+ 	/* Update the TSS: */
+ 	memcpy(tss->io_bitmap, t->io_bitmap_ptr, bytes_updated);
++	tss = &per_cpu(cpu_tss, cpu);
++	memcpy(tss->io_bitmap, t->io_bitmap_ptr, bytes_updated);
+ 
+ 	put_cpu();
+ 
+--- a/arch/x86/kernel/process.c
++++ b/arch/x86/kernel/process.c
+@@ -64,6 +64,19 @@ __visible DEFINE_PER_CPU_SHARED_ALIGNED_
+ };
+ EXPORT_PER_CPU_SYMBOL(cpu_tss);
+ 
++/*
++ * Duplicated cpu_tss for entry trampoline usage. We need to preserve the
++ * original cpu_tss and its .x86_tss.sp0 pointing to a thread stack due to kABI.
++ */
++#ifdef CONFIG_X86_64
++__visible DEFINE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss_tramp) = {
++	.x86_tss = {
++		.sp0 = TOP_OF_INIT_STACK,
++	 },
++};
++EXPORT_PER_CPU_SYMBOL(cpu_tss_tramp);
++#endif
++
+ #ifdef CONFIG_X86_64
+ static DEFINE_PER_CPU(unsigned char, is_idle);
+ static ATOMIC_NOTIFIER_HEAD(idle_notifier);
+@@ -105,7 +118,11 @@ void exit_thread(struct task_struct *tsk
+ 	struct fpu *fpu = &t->fpu;
+ 
+ 	if (bp) {
+-		struct tss_struct *tss = &per_cpu(cpu_tss, get_cpu());
++		struct tss_struct *tss;
++		unsigned int cpu;
++
++		cpu = get_cpu();
++		tss = &per_cpu(cpu_tss_tramp, cpu);
+ 
+ 		t->io_bitmap_ptr = NULL;
+ 		clear_thread_flag(TIF_IO_BITMAP);
+@@ -113,6 +130,8 @@ void exit_thread(struct task_struct *tsk
+ 		 * Careful, clear this in the TSS too:
+ 		 */
+ 		memset(tss->io_bitmap, 0xff, t->io_bitmap_max);
++		tss = &per_cpu(cpu_tss, cpu);
++		memset(tss->io_bitmap, 0xff, t->io_bitmap_max);
+ 		t->io_bitmap_max = 0;
+ 		put_cpu();
+ 		kfree(bp);
+@@ -191,14 +210,32 @@ int set_tsc_mode(unsigned int val)
+ 	return 0;
+ }
+ 
+-void __switch_to_xtra(struct task_struct *prev_p, struct task_struct *next_p,
+-		      struct tss_struct *tss)
++void __switch_to_xtra_io(struct task_struct *prev_p, struct task_struct *next_p,
++			 struct tss_struct *tss)
+ {
+ 	struct thread_struct *prev, *next;
+ 
+ 	prev = &prev_p->thread;
+ 	next = &next_p->thread;
+ 
++	if (test_tsk_thread_flag(next_p, TIF_IO_BITMAP)) {
++		/*
++		 * Copy the relevant range of the IO bitmap.
++		 * Normally this is 128 bytes or less:
++		 */
++		memcpy(tss->io_bitmap, next->io_bitmap_ptr,
++		       max(prev->io_bitmap_max, next->io_bitmap_max));
++	} else if (test_tsk_thread_flag(prev_p, TIF_IO_BITMAP)) {
++		/*
++		 * Clear any possible leftover bits:
++		 */
++		memset(tss->io_bitmap, 0xff, prev->io_bitmap_max);
++	}
++}
++
++void __switch_to_xtra(struct task_struct *prev_p, struct task_struct *next_p,
++		      struct tss_struct *tss)
++{
+ 	if (test_tsk_thread_flag(prev_p, TIF_BLOCKSTEP) ^
+ 	    test_tsk_thread_flag(next_p, TIF_BLOCKSTEP)) {
+ 		unsigned long debugctl = get_debugctlmsr();
+@@ -219,19 +256,7 @@ void __switch_to_xtra(struct task_struct
+ 			hard_enable_TSC();
+ 	}
+ 
+-	if (test_tsk_thread_flag(next_p, TIF_IO_BITMAP)) {
+-		/*
+-		 * Copy the relevant range of the IO bitmap.
+-		 * Normally this is 128 bytes or less:
+-		 */
+-		memcpy(tss->io_bitmap, next->io_bitmap_ptr,
+-		       max(prev->io_bitmap_max, next->io_bitmap_max));
+-	} else if (test_tsk_thread_flag(prev_p, TIF_IO_BITMAP)) {
+-		/*
+-		 * Clear any possible leftover bits:
+-		 */
+-		memset(tss->io_bitmap, 0xff, prev->io_bitmap_max);
+-	}
++	__switch_to_xtra_io(prev_p, next_p, tss);
+ 	propagate_user_return_notify(prev_p, next_p);
+ }
+ 
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -279,7 +279,8 @@ __switch_to(struct task_struct *prev_p,
+ 	struct fpu *prev_fpu = &prev->fpu;
+ 	struct fpu *next_fpu = &next->fpu;
+ 	int cpu = smp_processor_id();
+-	struct tss_struct *tss = &per_cpu(cpu_tss, cpu);
++	struct tss_struct *tss = &per_cpu(cpu_tss_tramp, cpu);
++	struct tss_struct *tss_orig = &per_cpu(cpu_tss, cpu);
+ 	unsigned fsindex, gsindex;
+ 	fpu_switch_t fpu_switch;
+ 
+@@ -404,13 +405,16 @@ __switch_to(struct task_struct *prev_p,
+ 
+ 	/* Reload esp0 and ss1.  This changes current_thread_info(). */
+ 	load_sp0(tss, next);
++	load_sp0(tss_orig, next);
+ 
+ 	/*
+ 	 * Now maybe reload the debug registers and handle I/O bitmaps
+ 	 */
+ 	if (unlikely(task_thread_info(next_p)->flags & _TIF_WORK_CTXSW_NEXT ||
+-		     task_thread_info(prev_p)->flags & _TIF_WORK_CTXSW_PREV))
++		     task_thread_info(prev_p)->flags & _TIF_WORK_CTXSW_PREV)) {
+ 		__switch_to_xtra(prev_p, next_p, tss);
++		__switch_to_xtra_io(prev_p, next_p, tss_orig);
++	}
+ 
+ #ifdef CONFIG_XEN
+ 	/*
+--- a/arch/x86/lib/delay.c
++++ b/arch/x86/lib/delay.c
+@@ -114,7 +114,7 @@ static void delay_mwaitx(unsigned long _
+ 		 * Use cpu_tss as a cacheline-aligned, seldomly
+ 		 * accessed per-cpu variable as the monitor target.
+ 		 */
+-		__monitorx(this_cpu_ptr(&cpu_tss), 0, 0);
++		__monitorx(this_cpu_ptr(&cpu_tss_tramp), 0, 0);
+ 
+ 		/*
+ 		 * AMD, like Intel, supports the EAX hint and EAX=0xf
+--- a/arch/x86/power/cpu.c
++++ b/arch/x86/power/cpu.c
+@@ -135,7 +135,7 @@ static void do_fpu_end(void)
+ static void fix_processor_context(void)
+ {
+ 	int cpu = smp_processor_id();
+-	struct tss_struct *t = &per_cpu(cpu_tss, cpu);
++	struct tss_struct *t = &per_cpu(cpu_tss_tramp, cpu);
+ #ifdef CONFIG_X86_64
+ 	struct desc_struct *desc = get_cpu_gdt_table(cpu);
+ 	tss_desc tss;
