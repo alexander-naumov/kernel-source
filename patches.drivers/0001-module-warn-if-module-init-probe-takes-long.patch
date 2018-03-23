@@ -84,13 +84,18 @@ revisted in terms of design.
 Signed-off-by: Luis R. Rodriguez <mcgrof@suse.com>
 Acked-by: Michal Hocko <mhocko@suse.cz>
 ---
- kernel/module.c |   19 ++++++++++++++++++-
- 1 file changed, 18 insertions(+), 1 deletion(-)
+ kernel/module.c | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
 
+diff --git a/kernel/module.c b/kernel/module.c
+index 85eb9718ed08..c9273eb5dce9 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -3535,6 +3535,8 @@ static int load_module(struct load_info
+@@ -3548,8 +3548,11 @@ static int load_module(struct load_info *info, const char __user *uargs,
+ 		       int flags)
+ {
  	struct module *mod;
++	static char modname[MODULE_NAME_LEN+1];
  	long err;
  	char *after_dashes;
 +	unsigned long time_start, time_end;
@@ -98,7 +103,16 @@ Acked-by: Michal Hocko <mhocko@suse.cz>
  
  	err = module_sig_check(info, flags);
  	if (err)
-@@ -3646,7 +3648,22 @@ static int load_module(struct load_info
+@@ -3566,6 +3569,8 @@ static int load_module(struct load_info *info, const char __user *uargs,
+ 		goto free_copy;
+ 	}
+ 
++	strlcpy(modname, mod->name, sizeof(modname));
++
+ 	/* Reserve our place in the list. */
+ 	err = add_unformed_module(mod);
+ 	if (err)
+@@ -3661,7 +3666,22 @@ static int load_module(struct load_info *info, const char __user *uargs,
  	/* Done! */
  	trace_module_load(mod);
  
@@ -116,7 +130,7 @@ Acked-by: Michal Hocko <mhocko@suse.cz>
 +	 */
 +	WARN(delta >= 300000,
 +	     "Device driver %s initialization / probe took %d ms to complete, report this\n",
-+	     mod->name, delta);
++	     modname, delta);
 +
 +	return err;
  
