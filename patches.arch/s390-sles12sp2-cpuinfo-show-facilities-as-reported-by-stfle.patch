@@ -1,0 +1,64 @@
+From: Heiko Carstens <heiko.carstens@de.ibm.com>
+Subject: s390/cpuinfo: show facilities as reported by stfle
+Patch-mainline: v4.12-rc1
+Git-commit: 157467ba9fb7e379f0540707dd89111de441e45e
+References: bnc#1076847, LTC#163740
+
+Add a new line to /proc/cpuinfo which shows all available facilities
+as reported by the stfle instruction:
+
+> cat /proc/cpuinfo
+...
+facilities      : 0 1 2 3 4 6 7 ...
+...
+
+Reviewed-by: Peter Oberparleiter <oberpar@linux.vnet.ibm.com>
+Signed-off-by: Heiko Carstens <heiko.carstens@de.ibm.com>
+Signed-off-by: Martin Schwidefsky <schwidefsky@de.ibm.com>
+Acked-by: Johannes Thumshirn <jthumshirn@suse.de>
+---
+ arch/s390/kernel/processor.c |   17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+--- a/arch/s390/kernel/processor.c
++++ b/arch/s390/kernel/processor.c
+@@ -11,8 +11,10 @@
+ #include <linux/seq_file.h>
+ #include <linux/delay.h>
+ #include <linux/cpu.h>
++#include <linux/bitops.h>
+ #include <asm/diag.h>
+ #include <asm/elf.h>
++#include <asm/facility.h>
+ #include <asm/lowcore.h>
+ #include <asm/param.h>
+ #include <asm/smp.h>
+@@ -52,6 +54,20 @@ int cpu_have_feature(unsigned int num)
+ }
+ EXPORT_SYMBOL(cpu_have_feature);
+ 
++static void show_facilities(struct seq_file *m)
++{
++	unsigned int bit;
++	long *facilities;
++
++	facilities = (long *)&S390_lowcore.stfle_fac_list;
++	seq_puts(m, "facilities      :");
++	for (bit = find_first_bit_inv(facilities, MAX_FACILITY_BIT);
++	     bit < MAX_FACILITY_BIT;
++	     bit = find_next_bit_inv(facilities, MAX_FACILITY_BIT, bit + 1))
++		seq_printf(m, " %d", bit);
++	seq_putc(m, '\n');
++}
++
+ /*
+  * show_cpuinfo - Get information on one CPU for use by procfs.
+  */
+@@ -83,6 +99,7 @@ static int show_cpuinfo(struct seq_file
+ 			if (int_hwcap_str[i] && (int_hwcap & (1UL << i)))
+ 				seq_printf(m, "%s ", int_hwcap_str[i]);
+ 		seq_puts(m, "\n");
++		show_facilities(m);
+ 		show_cacheinfo(m);
+ 	}
+ 	get_online_cpus();
