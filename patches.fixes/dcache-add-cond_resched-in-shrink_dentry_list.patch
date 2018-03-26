@@ -1,0 +1,223 @@
+From: Nikolay Borisov <nborisov@suse.com>
+Date: Thu, 22 Mar 2018 11:33:43 +0200
+Subject: dcache: Add cond_resched in shrink_dentry_list
+Git-commit: 3819372c2f30f1419eb0d5db69b7325d49fd48a9
+Patch-mainline: v4.17 or v4.16-rc7 (next release)
+References: bsc#1086194
+
+As previously [1] reported it's possible to call shrink_dentry_list
+with a large number of dentries (> 10000). This, in turn, could
+trigger the softlockup detector and possibly trigger a panic.
+In addition to the unmount path being vulnerable to this scenario,
+at SuSE we've observed similar situation happening during process
+exit on processes that touch a lot of dentries. Here is an excerpt
+from a crash dump. The number after the colon are the number of
+dentries on the list passed to shrink_dentry_list:
+
+PID 99760: 10722
+PID 107530: 215
+PID 108809: 24134
+PID 108877: 21331
+PID 141708: 16487
+
+So we want to kill between 15k-25k dentries without yielding.
+
+And one possible call stack looks like:
+
+4 [ffff8839ece41db0] _raw_spin_lock at ffffffff8152a5f8
+5 [ffff8839ece41db0] evict at ffffffff811c3026
+6 [ffff8839ece41dd0] __dentry_kill at ffffffff811bf258
+7 [ffff8839ece41df0] shrink_dentry_list at ffffffff811bf593
+8 [ffff8839ece41e18] shrink_dcache_parent at ffffffff811bf830
+9 [ffff8839ece41e50] proc_flush_task at ffffffff8120dd61
+10 [ffff8839ece41ec0] release_task at ffffffff81059ebd
+11 [ffff8839ece41f08] do_exit at ffffffff8105b8ce
+12 [ffff8839ece41f78] sys_exit at ffffffff8105bd53
+13 [ffff8839ece41f80] system_call_fastpath at ffffffff81532909
+
+While some of the callers of shrink_dentry_list do use cond_resched,
+this is not sufficient to prevent softlockups. So just move
+cond_resched into shrink_dentry_list from its callers.
+
+[1] https://patchwork.kernel.org/patch/8642031/
+
+Acked-by: Nikolay Borisov <nborisov@suse.com>
+---
+ fs/dcache.c |   39 +++++++++++++++++++--------------------
+ 1 file changed, 19 insertions(+), 20 deletions(-)
+
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -256,14 +256,14 @@ static void __d_free(struct rcu_head *he
+ {
+ 	struct dentry *dentry = container_of(head, struct dentry, d_u.d_rcu);
+ 
+-	kmem_cache_free(dentry_cache, dentry); 
++	kmem_cache_free(dentry_cache, dentry);
+ }
+ 
+ static void __d_free_external(struct rcu_head *head)
+ {
+ 	struct dentry *dentry = container_of(head, struct dentry, d_u.d_rcu);
+ 	kfree(external_name(dentry));
+-	kmem_cache_free(dentry_cache, dentry); 
++	kmem_cache_free(dentry_cache, dentry);
+ }
+ 
+ static inline int dname_external(const struct dentry *dentry)
+@@ -752,7 +752,7 @@ static inline bool fast_dput(struct dent
+ }
+ 
+ 
+-/* 
++/*
+  * This is dput
+  *
+  * This is complicated by the fact that we do not want to put
+@@ -771,7 +771,7 @@ static inline bool fast_dput(struct dent
+ 
+ /*
+  * dput - release a dentry
+- * @dentry: dentry to release 
++ * @dentry: dentry to release
+  *
+  * Release a dentry. This will drop the usage count and if appropriate
+  * call the dentry unlink method as well as removing it from the queues and
+@@ -970,6 +970,9 @@ static void shrink_dentry_list(struct li
+ 
+ 	while (!list_empty(list)) {
+ 		struct inode *inode;
++
++		cond_resched();
++
+ 		dentry = list_entry(list->prev, struct dentry, d_lru);
+ 		spin_lock(&dentry->d_lock);
+ 		parent = lock_parent(dentry);
+@@ -1165,7 +1168,6 @@ void shrink_dcache_sb(struct super_block
+ 
+ 		this_cpu_sub(nr_dentry_unused, freed);
+ 		shrink_dentry_list(&dispose);
+-		cond_resched();
+ 	} while (list_lru_count(&sb->s_dentry_lru) > 0);
+ }
+ EXPORT_SYMBOL(shrink_dcache_sb);
+@@ -1438,7 +1440,6 @@ void shrink_dcache_parent(struct dentry
+ 			break;
+ 
+ 		shrink_dentry_list(&data.dispose);
+-		cond_resched();
+ 	}
+ }
+ EXPORT_SYMBOL(shrink_dcache_parent);
+@@ -1566,8 +1567,6 @@ void d_invalidate(struct dentry *dentry)
+ 
+ 		if (!data.mountpoint && !data.select.found)
+ 			break;
+-
+-		cond_resched();
+ 	}
+ }
+ EXPORT_SYMBOL(d_invalidate);
+@@ -1581,7 +1580,7 @@ EXPORT_SYMBOL(d_invalidate);
+  * available. On a success the dentry is returned. The name passed in is
+  * copied and the copy passed in may be reused after this call.
+  */
+- 
++
+ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
+ {
+ 	struct dentry *dentry;
+@@ -1602,7 +1601,7 @@ struct dentry *__d_alloc(struct super_bl
+ 		size_t size = offsetof(struct external_name, name[1]);
+ 		struct external_name *p = kmalloc(size + name->len, GFP_KERNEL);
+ 		if (!p) {
+-			kmem_cache_free(dentry_cache, dentry); 
++			kmem_cache_free(dentry_cache, dentry);
+ 			return NULL;
+ 		}
+ 		atomic_set(&p->u.count, 1);
+@@ -1612,7 +1611,7 @@ struct dentry *__d_alloc(struct super_bl
+ 				round_up(name->len + 1,	sizeof(unsigned long)));
+ 	} else  {
+ 		dname = dentry->d_iname;
+-	}	
++	}
+ 
+ 	dentry->d_name.len = name->len;
+ 	dentry->d_name.hash = name->hash;
+@@ -1810,7 +1809,7 @@ static void __d_instantiate(struct dentr
+  * (or otherwise set) by the caller to indicate that it is now
+  * in use by the dcache.
+  */
+- 
++
+ void d_instantiate(struct dentry *entry, struct inode * inode)
+ {
+ 	BUG_ON(!hlist_unhashed(&entry->d_u.d_alias));
+@@ -2334,7 +2333,7 @@ struct dentry *__d_lookup(const struct d
+ 	 * See Documentation/filesystems/path-lookup.txt for more details.
+ 	 */
+ 	rcu_read_lock();
+-	
++
+ 	hlist_bl_for_each_entry_rcu(dentry, node, b, d_hash) {
+ 
+ 		if (dentry->d_name.hash != hash)
+@@ -2410,7 +2409,7 @@ EXPORT_SYMBOL(d_hash_and_lookup);
+  * it from the hash queues and waiting for
+  * it to be deleted later when it has no users
+  */
+- 
++
+ /**
+  * d_delete - delete a dentry
+  * @dentry: The dentry to delete
+@@ -2418,7 +2417,7 @@ EXPORT_SYMBOL(d_hash_and_lookup);
+  * Turn the dentry into a negative dentry if possible, otherwise
+  * remove it from the hash queues so it can be deleted later
+  */
+- 
++
+ void d_delete(struct dentry * dentry)
+ {
+ 	struct inode *inode;
+@@ -2470,7 +2469,7 @@ static void _d_rehash(struct dentry * en
+  *
+  * Adds a dentry to the hash according to its name.
+  */
+- 
++
+ void d_rehash(struct dentry * entry)
+ {
+ 	spin_lock(&entry->d_lock);
+@@ -3183,7 +3182,7 @@ char *simple_dname(struct dentry *dentry
+ 	/* these dentries are never renamed, so d_lock is not needed */
+ 	if (prepend(&end, &buflen, " (deleted)", 11) ||
+ 	    prepend(&end, &buflen, dentry->d_name.name, dentry->d_name.len) ||
+-	    prepend(&end, &buflen, "/", 1))  
++	    prepend(&end, &buflen, "/", 1))
+ 		end = ERR_PTR(-ENAMETOOLONG);
+ 	return end;
+ }
+@@ -3355,7 +3354,7 @@ out:
+  * Returns 0 otherwise.
+  * Caller must ensure that "new_dentry" is pinned before calling is_subdir()
+  */
+-  
++
+ int is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
+ {
+ 	int result;
+@@ -3457,10 +3456,10 @@ static void __init dcache_init(void)
+ {
+ 	unsigned int loop;
+ 
+-	/* 
++	/*
+ 	 * A constructor could be added for stable state like the lists,
+ 	 * but it is probably not worth it because of the cache nature
+-	 * of the dcache. 
++	 * of the dcache.
+ 	 */
+ 	dentry_cache = KMEM_CACHE(dentry,
+ 		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD);
