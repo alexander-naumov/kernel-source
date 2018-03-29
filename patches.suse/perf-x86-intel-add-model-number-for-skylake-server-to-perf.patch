@@ -1,0 +1,44 @@
+From: Andi Kleen <ak@linux.intel.com>
+Date: Fri, 15 Apr 2016 13:25:33 -0700
+Subject: perf/x86/intel: Add model number for Skylake Server to perf
+Git-commit: b89c173788c3a8ed571652c203bf59a0e9d700aa
+Patch-mainline: v4.6-rc6
+References: FATE#321269
+References: bsc#1078922,bsc#1070936
+Signed-off-by: Tony Jones <tonyj@suse.de>
+
+    [suse: adjust for e1069839dd6893d2135b2fc4d96e5d03d73c2c3d
+      perf/x86: Move perf_event_intel.c => x86/events/intel/core.c
+    ]
+
+    perf/x86/intel: Add model number for Skylake Server to perf
+    
+    Everything the same as base Skylake, just a new model number.
+    
+    Signed-off-by: Andi Kleen <ak@linux.intel.com>
+    Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+    Cc: Alexander Shishkin <alexander.shishkin@linux.intel.com>
+    Cc: Arnaldo Carvalho de Melo <acme@redhat.com>
+    Cc: Jiri Olsa <jolsa@redhat.com>
+    Cc: Linus Torvalds <torvalds@linux-foundation.org>
+    Cc: Peter Zijlstra <peterz@infradead.org>
+    Cc: Stephane Eranian <eranian@google.com>
+    Cc: Thomas Gleixner <tglx@linutronix.de>
+    Cc: Vince Weaver <vincent.weaver@maine.edu>
+    Link: http://lkml.kernel.org/r/1460751933-2264-1-git-send-email-andi@firstfloor.org
+    Signed-off-by: Ingo Molnar <mingo@kernel.org>
+
+---
+ arch/x86/kernel/cpu/perf_event_intel.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/arch/x86/kernel/cpu/perf_event_intel.c
++++ b/arch/x86/kernel/cpu/perf_event_intel.c
+@@ -3637,6 +3637,7 @@ __init int intel_pmu_init(void)
+ 
+ 	case 78: /* 14nm Skylake Mobile */
+ 	case 94: /* 14nm Skylake Desktop */
++	case 85: /* 14nm Skylake Server */
+ 		x86_pmu.late_ack = true;
+ 		memcpy(hw_cache_event_ids, skl_hw_cache_event_ids, sizeof(hw_cache_event_ids));
+ 		memcpy(hw_cache_extra_regs, skl_hw_cache_extra_regs, sizeof(hw_cache_extra_regs));
