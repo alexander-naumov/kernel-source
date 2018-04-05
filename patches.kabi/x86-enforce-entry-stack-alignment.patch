@@ -1,0 +1,25 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: KABI: x86/kaiser: properly align trampoline stack
+Patch-mainline: Never, SUSE specific
+References: bsc#1087260
+
+Hide the change in tss_struct from kABI checker; we've changed the semantics
+of this structure with trampoline entry anway.
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/x86/include/asm/processor.h |    2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -306,7 +306,9 @@ struct tss_struct {
+ 	 * Space for the temporary SYSENTER stack:
+ 	 */
+ 	/* IRQ stacks have to maintain 16-bytes alignment! */
++#ifndef __GENKSYMS__
+ 	u8			pad;
++#endif
+ 	unsigned long		SYSENTER_stack[64];
+ 
+ } __attribute__((__aligned__(PAGE_SIZE)));

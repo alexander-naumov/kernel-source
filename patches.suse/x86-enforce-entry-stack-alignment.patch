@@ -1,0 +1,105 @@
+From: Jiri Kosina <jkosina@suse.cz>
+Subject: x86/kaiser: enforce trampoline stack alignment
+References: bsc#1087260
+Patch-mainline: Never, SUSE specific
+
+If 16-byte alignment of the trampoline stack top is not maintained, int 0x80
+(or generally anything going through GATE_INTERRUPT) issued by compat 32bit
+binary observes this exception stackframe on a trampoline stack:
+
+	00000000f7ff382b 0000000000000023 0000000000000296 00000000ffffd554
+	000000000000002b 000000000000002b 0000000000000000 0000000000000000
+	0000000000000000 0000000000000000 0000000000000000 0000000000000000
+
+This is wrong, as there is duplicated 0x2b (user stack segment) pushed at
+tss->sp0, which confuses anything that assumes that pt_regs + iret frame
+ends exactly at the address tss->sp0 points to (such as, but not strictly
+limited to, task_pt_regs()).
+
+This happens because
+
+- on every INT instruction, it's guaranteed that the CPU aligns the stack
+  to 16-bytes
+- the places in the kernel that construct the iret frame manually (such
+  as x86_64 SYSENTER) don't perform this re-alignment
+
+Therefore the spurious 0x2b observed on the compat int 0x80 trampoline
+stack is a leftover from e.g. previous 64bit SYSENTER, and anything that
+starts processing pt_regs + iret frame from tss->sp0 gets immediately
+8 bytes offset.
+
+Once proper 16-byte alignment is established, the discrepancy is gone
+and ia32_syscall observes correct entry stack layout
+
+        00000000f7ff382b 0000000000000023 0000000000000296 00000000ffffd554
+        000000000000002b 0000000000000000 0000000000000000 0000000000000000
+        0000000000000000 0000000000000000 0000000000000000 0000000000000000
+
+While inserting the padding, let's also install a build-time check whether
+the alignment didn't get broken by mistake.
+
+In addition to that, let's make sure that TSS is page-aligned, as that's
+what Intel SDM requires (specifically, it requires first 104 bytes to be
+in the same PFN, otherwise behavior is undefined).
+
+Signed-off-by: Jiri Kosina <jkosina@suse.cz>
+---
+ arch/x86/include/asm/processor.h |    6 ++++--
+ arch/x86/kernel/cpu/common.c     |    6 ++++++
+ arch/x86/kernel/process.c        |    4 ++--
+ 3 files changed, 12 insertions(+), 4 deletions(-)
+
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -305,12 +305,14 @@ struct tss_struct {
+ 	/*
+ 	 * Space for the temporary SYSENTER stack:
+ 	 */
++	/* IRQ stacks have to maintain 16-bytes alignment! */
++	u8			pad;
+ 	unsigned long		SYSENTER_stack[64];
+ 
+-} ____cacheline_aligned;
++} __attribute__((__aligned__(PAGE_SIZE)));
+ 
+ #ifndef __GENKSYMS__
+-DECLARE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss);
++DECLARE_PER_CPU_PAGE_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss);
+ #else
+ DECLARE_PER_CPU_SHARED_ALIGNED(struct tss_struct, cpu_tss);
+ #endif
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -1571,6 +1571,12 @@ void cpu_init(void)
+ 	load_TR_desc();
+ 	load_mm_ldt(&init_mm);
+ 
++	/*
++	 * Entry stack has to be 16-bytes aligned so that it can serve as stack
++	 * for IRQ handlers (INT instruction implicitly aligns %rsp to 16-bytes)
++	 */
++	BUILD_BUG_ON(offsetofend(struct tss_struct, SYSENTER_stack) % 16 != 0);
++
+ 	clear_all_debug_regs();
+ 	dbg_restore_debug_regs();
+ 
+--- a/arch/x86/kernel/process.c
++++ b/arch/x86/kernel/process.c
+@@ -42,7 +42,7 @@
+ #if defined(CONFIG_GENKSYMS)
+ __visible DEFINE_PER_CPU_SHARED_ALIGNED(struct tss_struct, cpu_tss) = {
+ #else
+-__visible DEFINE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss) = {
++__visible DEFINE_PER_CPU_PAGE_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss) = {
+ #endif
+ 	.x86_tss = {
+ 		.sp0 = TOP_OF_INIT_STACK,
+@@ -69,7 +69,7 @@ EXPORT_PER_CPU_SYMBOL(cpu_tss);
+  * original cpu_tss and its .x86_tss.sp0 pointing to a thread stack due to kABI.
+  */
+ #ifdef CONFIG_X86_64
+-__visible DEFINE_PER_CPU_SHARED_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss_tramp) = {
++__visible DEFINE_PER_CPU_PAGE_ALIGNED_USER_MAPPED(struct tss_struct, cpu_tss_tramp) = {
+ 	.x86_tss = {
+ 		.sp0 = TOP_OF_INIT_STACK,
+ 	 },
